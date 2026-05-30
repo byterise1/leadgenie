@@ -80,7 +80,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
-      <main className="py-16">
+      <main className="pt-16 pb-24">
         <div className="container">
 
           {/* Tabs */}
