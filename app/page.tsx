@@ -55,35 +55,84 @@ export default function HomePage() {
 
         {/* ── HERO ── */}
         <section className="hero-gradient">
-          <div className="container text-center pt-20 pb-10">
+          <div className="container text-center pt-14 pb-10">
+
+            {/* Announcement badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-7 flex justify-center"
+            >
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/20 border border-white/20 rounded-full px-4 py-2 transition-colors"
+              >
+                <span className="text-xs font-semibold bg-blue-400/30 text-white rounded-full px-2 py-0.5">NEW</span>
+                <span className="text-xs text-white font-medium">AI Reply Agent is now live →</span>
+              </Link>
+            </motion.div>
+
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight"
+              className="text-4xl sm:text-5xl lg:text-[64px] font-bold text-white leading-[1.1] tracking-tight"
             >
-              Find Clients{' '}
-              <span className="inline-flex items-center gap-1">
-                <span className="inline-flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-blue-600 text-white text-xl border-2 border-white/30">⚡</span>
-              </span>{' '}
-              Instantly
+              Find &amp; Close Clients
+              <br />
+              <span className="text-blue-200">On Autopilot with AI</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="mt-4 text-base sm:text-lg text-blue-100"
+              className="mt-5 text-base sm:text-lg text-blue-100 max-w-lg mx-auto leading-relaxed"
             >
-              Get more clients by chatting to AI
+              LeadGenie finds your ideal prospects, writes personalised outreach, and books meetings — while you sleep.
             </motion.p>
 
+            {/* CTA buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.18 }}
+              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
+            >
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 bg-white text-blue-700 font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-blue-50 transition-colors shadow-lg"
+              >
+                Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-white/10 transition-colors"
+              >
+                Sign In
+              </Link>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.28 }}
+              className="mt-4 text-xs text-blue-200"
+            >
+              No credit card required · Free plan available · Setup in 2 minutes
+            </motion.p>
+
+            {/* AI search bar */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-8 mx-auto max-w-xl"
+              transition={{ duration: 0.6, delay: 0.35 }}
+              className="mt-10 mx-auto max-w-xl"
             >
-              <div className="flex items-center bg-white rounded-full shadow-lg px-5 py-3 gap-3">
+              <div className="flex items-center bg-white rounded-full shadow-xl px-5 py-3.5 gap-3">
                 <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -91,7 +140,7 @@ export default function HomePage() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ask Co-pilot to Find What's Driving the Market..."
+                  placeholder="Ask AI to find leads, write emails, build campaigns…"
                   className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder:text-gray-400"
                 />
                 <button className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors">
@@ -100,32 +149,50 @@ export default function HomePage() {
                   </svg>
                 </button>
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-5 flex flex-wrap items-center justify-center gap-3"
-            >
-              {['Create Sales Agent', 'Create Reply Agent', 'Find Leads'].map((label) => (
-                <button
-                  key={label}
-                  className="text-xs sm:text-sm text-gray-700 bg-white/90 hover:bg-white border border-gray-200 rounded-full px-4 py-2 transition-colors shadow-sm"
-                >
-                  {label}
-                </button>
-              ))}
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                {['Create Sales Agent', 'Create Reply Agent', 'Find Leads'].map((label) => (
+                  <button
+                    key={label}
+                    className="text-xs text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-3.5 py-1.5 transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </motion.div>
           </div>
 
+          {/* Social proof bar */}
           <div className="container pb-14 text-center">
-            <p className="text-sm text-blue-200 mb-6">Used by the world's leading companies</p>
-            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
-              {companies.map((co) => (
-                <span key={co} className="text-sm font-semibold text-blue-100/80 tracking-wide">
-                  {co}
-                </span>
+            <div className="border-t border-white/10 pt-10">
+              <p className="text-xs font-semibold text-blue-300 uppercase tracking-widest mb-6">
+                Trusted by 30,000+ companies worldwide
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+                {companies.map((co) => (
+                  <span key={co} className="text-sm font-bold text-white/60 tracking-wide hover:text-white/90 transition-colors cursor-default">
+                    {co}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SOCIAL PROOF STATS ── */}
+        <section className="bg-white py-16 border-b border-gray-100">
+          <div className="container">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+              {[
+                { value: '30,000+', label: 'Companies' },
+                { value: '500M+', label: 'Emails Sent' },
+                { value: '18%', label: 'Avg Reply Rate' },
+                { value: '4.9 / 5', label: 'Customer Rating' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <p className="text-3xl sm:text-4xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="mt-1.5 text-sm text-gray-500 font-medium">{stat.label}</p>
+                </div>
               ))}
             </div>
           </div>
@@ -140,15 +207,21 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.6 }}
             >
+              <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 rounded-full px-3 py-1 mb-4 uppercase tracking-wider">
+                Lead Generation
+              </span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">Reach Clients On Autopilot</h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto">
                 Use LeadGenie AI to find perfect leads, create AI Sales Agents and automate your outreach &amp; sales.
               </p>
               <Link
-                href="/pricing"
-                className="mt-6 inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
               >
                 Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
             </motion.div>
 
@@ -200,10 +273,13 @@ export default function HomePage() {
                 Create &amp; Launch campaigns in minutes. Let LeadGenie AI craft and personalise outreach at scale.
               </p>
               <Link
-                href="/pricing"
-                className="mt-6 inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
               >
                 Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
             </motion.div>
 
@@ -270,10 +346,13 @@ export default function HomePage() {
                 Workflows that just work. When a lead visits your site, replies, or books a meeting, LeadGenie automatically routes them, tags them, and triggers next-step campaigns — no manual setup needed.
               </p>
               <Link
-                href="/pricing"
-                className="mt-6 inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
               >
                 Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
             </motion.div>
 
@@ -346,10 +425,13 @@ export default function HomePage() {
                 the products you're already using.
               </p>
               <Link
-                href="/pricing"
-                className="mt-6 inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
               >
                 Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
             </motion.div>
 
@@ -392,10 +474,13 @@ export default function HomePage() {
                 Track campaign performance beyond vanity metrics with Opportunities, Pipeline, Conversions, and Revenue. Automatically pause the campaigns that need work and scale the ones that drive real business growth.
               </p>
               <Link
-                href="/pricing"
-                className="mt-6 inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-6 py-3 hover:bg-gray-800 transition-colors"
               >
                 Start For Free
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
             </motion.div>
 
@@ -515,14 +600,14 @@ export default function HomePage() {
               </p>
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                  href="/pricing"
-                  className="bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-800 transition-colors"
+                  href="/signup"
+                  className="bg-white text-blue-700 font-semibold text-sm rounded-full px-7 py-3.5 hover:bg-blue-50 transition-colors shadow-lg"
                 >
-                  Get Started
+                  Get Started Free →
                 </Link>
                 <Link
                   href="/pricing"
-                  className="border border-white/40 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-white/10 transition-colors"
+                  className="border border-white/40 text-white text-sm font-semibold rounded-full px-7 py-3.5 hover:bg-white/10 transition-colors"
                 >
                   See Pricing
                 </Link>
