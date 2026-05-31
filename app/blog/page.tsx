@@ -17,7 +17,6 @@ export default function BlogPage() {
       <main>
         <section className="border-b border-gray-100 py-16 text-center">
           <div className="container max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Blog</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Resources</h1>
             <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
               Guides, strategies, and data-driven insights to help you land in the inbox,

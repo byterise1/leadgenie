@@ -95,7 +95,6 @@ export default function PricingPage() {
         {/* Header */}
         <section className="border-b border-gray-100 py-16 text-center">
           <div className="container max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Pricing</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
               Simple, transparent pricing
             </h1>
