@@ -124,7 +124,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           1. UNLIMITED SENDING ACCOUNTS — white bg
       ══════════════════════════════════════════ */}
-      <section className="bg-white py-24">
+      <section id="sending-accounts" className="bg-white py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -193,7 +193,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           2. EMAIL WARMUP — teal gradient
       ══════════════════════════════════════════ */}
-      <section className="teal-gradient py-24">
+      <section id="warmup" className="teal-gradient py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -257,7 +257,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           3. CAMPAIGN BUILDER — white/gray bg
       ══════════════════════════════════════════ */}
-      <section className="bg-gray-50 py-24">
+      <section id="campaigns" className="bg-gray-50 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -348,7 +348,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           4. UNIBOX — purple gradient
       ══════════════════════════════════════════ */}
-      <section className="bg-gray-50 py-24">
+      <section id="unibox" className="bg-gray-50 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -418,7 +418,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           5. ANALYTICS & TRACKING — teal gradient
       ══════════════════════════════════════════ */}
-      <section className="teal-gradient py-24">
+      <section id="analytics" className="teal-gradient py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -497,7 +497,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           6. AI WORKFLOWS — white/gray
       ══════════════════════════════════════════ */}
-      <section className="bg-gray-50 py-24">
+      <section id="workflows" className="bg-gray-50 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -547,7 +547,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           7. CONNECT YOUR TOOLS — purple gradient
       ══════════════════════════════════════════ */}
-      <section className="bg-gray-50 py-24">
+      <section id="integrations" className="bg-gray-50 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>

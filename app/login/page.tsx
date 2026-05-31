@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,20 +22,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="px-6 py-5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-gray-900">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold">
-            ⚡
-          </span>
-          LeadGenie
-        </Link>
-        <p className="text-sm text-gray-500">
-          No account?{' '}
-          <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-            Sign up free
-          </Link>
-        </p>
-      </header>
+      <Navbar />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-[420px]">
@@ -79,7 +68,7 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-sm font-medium text-gray-700">Password</label>
-                  <Link href="#" className="text-xs text-blue-600 hover:text-blue-700 transition-colors">
+                  <Link href="/contact" className="text-xs text-blue-600 hover:text-blue-700 transition-colors">
                     Forgot password?
                   </Link>
                 </div>
@@ -139,6 +128,7 @@ export default function LoginPage() {
           </p>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -1,26 +1,28 @@
-'use client';
-
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-white text-slate-950">
+    <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
-      <main className="container grid min-h-[600px] items-center justify-center gap-8 py-20 text-center">
-        <div className="space-y-4">
-          <h1 className="text-6xl font-semibold text-slate-950">404</h1>
-          <p className="text-xl text-slate-600">Page not found</p>
-          <p className="max-w-2xl text-base leading-7 text-slate-500">
-            The page you're looking for doesn't exist or has been moved. Let's get you back on track.
+      <main className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center px-4">
+          <p className="text-6xl font-extrabold text-blue-600 mb-4">404</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Page not found</h1>
+          <p className="text-gray-500 text-base max-w-sm mx-auto mb-8 leading-relaxed">
+            The page you&apos;re looking for doesn&apos;t exist. It may have moved or the URL might be wrong.
           </p>
-          <Link
-            href="/"
-            className="inline-flex rounded-full bg-slate-950 px-7 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Return home
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/"
+              className="bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
+              Back to Home
+            </Link>
+            <Link href="/help"
+              className="border border-gray-200 text-gray-700 text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-50 transition-colors">
+              Help Center
+            </Link>
+          </div>
         </div>
       </main>
       <Footer />

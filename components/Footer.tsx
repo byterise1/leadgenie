@@ -6,58 +6,52 @@ const cols = [
   {
     heading: 'Product',
     links: [
-      { label: 'Campaigns',           href: '/campaigns'      },
-      { label: 'Email Accounts',      href: '/accounts'       },
-      { label: 'Email Warmup',        href: '/warmup'         },
-      { label: 'Unibox',              href: '/unibox'         },
-      { label: 'Lead Database',       href: '/leads'          },
-      { label: 'AI Personalization',  href: '/ai'             },
-      { label: 'Analytics',           href: '/analytics'      },
-      { label: 'Deliverability',      href: '/deliverability' },
+      { label: 'Campaigns',          href: '/#campaigns'        },
+      { label: 'Email Accounts',     href: '/#sending-accounts' },
+      { label: 'Email Warmup',       href: '/#warmup'           },
+      { label: 'Unibox',             href: '/#unibox'           },
+      { label: 'Analytics',          href: '/#analytics'        },
+      { label: 'Integrations',       href: '/#integrations'     },
+      { label: 'Pricing',            href: '/pricing'           },
     ],
   },
   {
     heading: 'Use Cases',
     links: [
-      { label: 'Agency',      href: '/use-cases/agency'      },
-      { label: 'B2B Sales',   href: '/use-cases/b2b-sales'   },
-      { label: 'SaaS',        href: '/use-cases/saas'        },
-      { label: 'Recruitment', href: '/use-cases/recruitment' },
-      { label: 'E-commerce',  href: '/use-cases/ecommerce'   },
-      { label: 'Consulting',  href: '/use-cases/consulting'  },
+      { label: 'Agency',      href: '/signup' },
+      { label: 'B2B Sales',   href: '/signup' },
+      { label: 'SaaS',        href: '/signup' },
+      { label: 'Recruitment', href: '/signup' },
+      { label: 'E-commerce',  href: '/signup' },
+      { label: 'Consulting',  href: '/signup' },
     ],
   },
   {
     heading: 'Resources',
     links: [
-      { label: 'Blog',                  href: '/blog'       },
-      { label: 'Help Center',           href: '/help'       },
-      { label: 'API Docs',              href: '/api-docs'   },
-      { label: 'Community',             href: '/community'  },
-      { label: 'Email Templates',       href: '/templates'  },
-      { label: 'Cold Email Benchmark',  href: '/benchmark'  },
-      { label: 'Changelog',             href: '/changelog'  },
+      { label: 'Help Center',     href: '/help'      },
+      { label: 'Blog',            href: '/blog'      },
+      { label: 'Email Templates', href: '/templates' },
+      { label: 'Pricing',         href: '/pricing'   },
     ],
   },
   {
     heading: 'Company',
     links: [
-      { label: 'About',      href: '/about'    },
-      { label: 'Pricing',    href: '/pricing'  },
-      { label: 'Affiliates', href: '/affiliates' },
-      { label: 'Contact',    href: '/contact'  },
-      { label: 'Careers',    href: '/careers'  },
-      { label: 'Status',     href: '/status'   },
+      { label: 'About',   href: '/about'   },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Login',   href: '/login'   },
+      { label: 'Sign Up', href: '/signup'  },
     ],
   },
 ];
 
 const legal = [
-  { label: 'Privacy Policy',  href: '/privacy' },
-  { label: 'Terms of Service', href: '/terms'  },
-  { label: 'Cookie Policy',   href: '/cookies' },
-  { label: 'GDPR',            href: '/gdpr'    },
-  { label: 'Anti-Spam',       href: '/anti-spam' },
+  { label: 'Privacy Policy',   href: '/privacy'   },
+  { label: 'Terms of Service', href: '/terms'     },
+  { label: 'Cookie Policy',    href: '/cookies'   },
+  { label: 'GDPR',             href: '/gdpr'      },
+  { label: 'Anti-Spam',        href: '/anti-spam' },
 ];
 
 export function Footer() {
@@ -74,19 +68,20 @@ export function Footer() {
               LeadGenie
             </Link>
             <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
-              The cold email outreach platform trusted by 30,000+ teams to send more emails,
-              book more meetings, and close more deals — on autopilot.
+              The cold email outreach platform trusted by 30,000+ teams to book more meetings
+              and close more deals — on autopilot.
             </p>
-            {/* Social icons */}
+            {/* Social */}
             <div className="flex items-center gap-3">
               {[
-                { name: 'Twitter/X', href: '#', icon: <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/> },
-                { name: 'LinkedIn',  href: '#', icon: <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z"/> },
-                { name: 'YouTube',   href: '#', icon: <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/> },
+                { label: 'X',        href: '#', path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
+                { label: 'LinkedIn', href: '#', path: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z' },
               ].map(s => (
-                <Link key={s.name} href={s.href}
-                  className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">{s.icon}</svg>
+                <Link key={s.label} href={s.href}
+                  className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d={s.path}/>
+                  </svg>
                 </Link>
               ))}
             </div>

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 
 export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -18,20 +20,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="px-6 py-5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-gray-900">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold">
-            ⚡
-          </span>
-          LeadGenie
-        </Link>
-        <p className="text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-            Sign in
-          </Link>
-        </p>
-      </header>
+      <Navbar />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-[420px]">
@@ -144,6 +133,7 @@ export default function SignupPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
