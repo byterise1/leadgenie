@@ -18,12 +18,12 @@ const cols = [
   {
     heading: 'Use Cases',
     links: [
-      { label: 'Agency',      href: '/signup' },
-      { label: 'B2B Sales',   href: '/signup' },
-      { label: 'SaaS',        href: '/signup' },
-      { label: 'Recruitment', href: '/signup' },
-      { label: 'E-commerce',  href: '/signup' },
-      { label: 'Consulting',  href: '/signup' },
+      { label: 'Agency',      href: '/use-cases/agency'      },
+      { label: 'B2B Sales',   href: '/use-cases/b2b-sales'   },
+      { label: 'SaaS',        href: '/use-cases/saas'        },
+      { label: 'Recruitment', href: '/use-cases/recruitment' },
+      { label: 'E-commerce',  href: '/signup'                },
+      { label: 'Consulting',  href: '/signup'                },
     ],
   },
   {
