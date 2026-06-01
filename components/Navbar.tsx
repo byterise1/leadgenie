@@ -30,8 +30,8 @@ const useCases = [
   { label: 'B2B Sales',   desc: 'Fill your pipeline with qualified meetings',     href: '/use-cases/b2b-sales'   },
   { label: 'SaaS',        desc: 'Drive signups and demos with targeted outreach', href: '/use-cases/saas'        },
   { label: 'Recruitment', desc: 'Reach passive candidates automatically',         href: '/use-cases/recruitment' },
-  { label: 'E-commerce',  desc: 'Prospect wholesale and retail partners',         href: '/signup'                },
-  { label: 'Consulting',  desc: 'Book discovery calls with your ideal clients',   href: '/signup'                },
+  { label: 'E-commerce',  desc: 'Prospect wholesale and retail partners',         href: '/use-cases/ecommerce'   },
+  { label: 'Consulting',  desc: 'Book discovery calls with your ideal clients',   href: '/use-cases/consulting'  },
 ];
 
 const resources = [

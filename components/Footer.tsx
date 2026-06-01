@@ -22,8 +22,8 @@ const cols = [
       { label: 'B2B Sales',   href: '/use-cases/b2b-sales'   },
       { label: 'SaaS',        href: '/use-cases/saas'        },
       { label: 'Recruitment', href: '/use-cases/recruitment' },
-      { label: 'E-commerce',  href: '/signup'                },
-      { label: 'Consulting',  href: '/signup'                },
+      { label: 'E-commerce',  href: '/use-cases/ecommerce'   },
+      { label: 'Consulting',  href: '/use-cases/consulting'  },
     ],
   },
   {
