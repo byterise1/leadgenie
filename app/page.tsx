@@ -21,6 +21,42 @@ const testimonials = [
   },
 ];
 
+const emailTemplates = {
+  agency: {
+    to: 'James Reid · Head of Growth, Momentum Agency',
+    subject: 'How agencies like yours 3x client results with cold email',
+    body: `Hi James,\n\nI noticed Momentum Agency just took on 3 new enterprise clients — congrats!\n\nWe help agencies manage cold email outreach across all their clients from one dashboard. Teams like yours typically see:\n• 3x more replies per campaign\n• Zero deliverability issues across client domains\n• Full reporting by client in one place\n\nWorth a 15-min call this week?\n\n— Alex`,
+  },
+  saas: {
+    to: 'Sarah Chen · VP Marketing, CloudStack',
+    subject: 'How CloudStack could book 40+ demos/month from cold email',
+    body: `Hi Sarah,\n\nLove what CloudStack is doing in the DevOps space — saw your Product Hunt launch last week.\n\nWe help SaaS companies like yours run AI-personalised cold email campaigns that consistently book 30-50 demos/month. No SDR required.\n\nOur best SaaS customers see a 61% open rate within the first 30 days.\n\nOpen to a quick 10-min chat?\n\n— Alex`,
+  },
+  sales: {
+    to: 'Tom Park · Director of Sales, GrowthForce',
+    subject: 'Filling your pipeline — a faster way',
+    body: `Hi Tom,\n\nI came across GrowthForce while researching fast-growing B2B sales teams.\n\nMost sales directors I talk to say the same thing: outbound is broken because reps spend hours on manual prospecting. We fix that.\n\nLeadGenie automates your entire cold email outreach — personalised at scale, with warmup built in so you actually land in the inbox.\n\nWould you be open to seeing how it works?\n\n— Alex`,
+  },
+  default: {
+    to: 'Emma Wilson · CEO, ScaleUp Co.',
+    subject: 'Quick question about your outbound strategy',
+    body: `Hi Emma,\n\nI noticed ScaleUp Co. has been growing fast — congrats on the recent expansion!\n\nI wanted to reach out because we help companies like yours book more qualified meetings through cold email, without adding headcount.\n\nOur customers average a 61% open rate and book their first meeting within 7 days of going live.\n\nWould it make sense to connect for 15 minutes this week?\n\n— Alex`,
+  },
+};
+
+type EmailTemplate = typeof emailTemplates.default;
+
+function getTemplate(q: string): EmailTemplate {
+  const lower = q.toLowerCase();
+  if (lower.includes('agency') || lower.includes('client'))
+    return emailTemplates.agency;
+  if (lower.includes('saas') || lower.includes('software') || lower.includes('demo') || lower.includes('startup'))
+    return emailTemplates.saas;
+  if (lower.includes('sales') || lower.includes('b2b') || lower.includes('meeting') || lower.includes('pipeline'))
+    return emailTemplates.sales;
+  return emailTemplates.default;
+}
+
 function SectionBadge({ icon, label, dark = false }: { icon: string; label: string; dark?: boolean }) {
   return (
     <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${
@@ -35,6 +71,18 @@ function SectionBadge({ icon, label, dark = false }: { icon: string; label: stri
 
 export default function HomePage() {
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generatedEmail, setGeneratedEmail] = useState<EmailTemplate | null>(null);
+
+  function handleSearch() {
+    if (!query.trim()) return;
+    setLoading(true);
+    setGeneratedEmail(null);
+    setTimeout(() => {
+      setGeneratedEmail(getTemplate(query));
+      setLoading(false);
+    }, 1800);
+  }
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -83,15 +131,61 @@ export default function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input type="text" value={query} onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="Ask AI to write your first cold email campaign..."
                 className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder:text-gray-400" />
-              <button className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+              <button onClick={handleSearch}
+                disabled={loading}
+                className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
             </div>
           </motion.div>
+
+          {/* AI-generated email result */}
+          {(loading || generatedEmail) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+              className="mt-4 mx-auto max-w-[560px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
+              {loading ? (
+                <div className="flex items-center gap-3 px-5 py-4">
+                  <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" />
+                  <p className="text-sm text-gray-500 font-medium">AI is writing your email...</p>
+                </div>
+              ) : generatedEmail && (
+                <>
+                  <div className="px-5 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+                    <span className="text-blue-600">✨</span>
+                    <p className="text-xs font-semibold text-blue-700">Your email is ready</p>
+                  </div>
+                  <div className="px-5 py-4 space-y-2.5">
+                    <div className="flex items-start gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">To</span>
+                      <span className="text-xs text-gray-700 font-medium">{generatedEmail.to}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">Subject</span>
+                      <span className="text-xs text-gray-900 font-semibold">{generatedEmail.subject}</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 leading-relaxed whitespace-pre-line">
+                      {generatedEmail.body}
+                    </div>
+                  </div>
+                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <p className="text-xs text-gray-400">No credit card required</p>
+                    <Link href="/signup"
+                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
+                      Use this template — Start Free
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                      </svg>
+                    </Link>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
 
           {/* Step-by-step flow */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
