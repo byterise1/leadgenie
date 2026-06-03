@@ -73,12 +73,12 @@ export function Navbar() {
         <nav className="hidden md:flex items-center gap-0.5 text-sm font-medium">
           {([['products','Products'],['usecases','Use Cases'],['resources','Resources']] as [DropKey,string][]).map(([k,l]) => (
             <button key={k} onClick={() => setDrop(p => p===k ? null : k)}
-              className={`flex items-center gap-1 px-3.5 py-2 rounded-lg transition-colors
-                ${drop===k ? 'text-blue-600' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'}`}>
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-colors
+                ${drop===k ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'}`}>
               {l}
-              <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${drop===k?'rotate-180':''}`}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              <svg className={`w-4 h-4 transition-transform duration-200 ${drop===k ? 'rotate-180 text-blue-500' : 'text-gray-400'}`}
+                fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
               </svg>
             </button>
           ))}

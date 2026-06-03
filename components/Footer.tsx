@@ -110,12 +110,16 @@ export function Footer() {
           <p className="text-sm text-gray-400 order-2 sm:order-1">
             © 2026 LeadGenie, Inc. All rights reserved.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 order-1 sm:order-2">
-            {legal.map(item => (
-              <Link key={item.label} href={item.href}
-                className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
-                {item.label}
-              </Link>
+          <div className="flex flex-wrap items-center justify-center gap-2 order-1 sm:order-2">
+            <span className="text-xs font-semibold text-gray-400 mr-1">Legal:</span>
+            {legal.map((item, i) => (
+              <span key={item.label} className="flex items-center gap-2">
+                <Link href={item.href}
+                  className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
+                  {item.label}
+                </Link>
+                {i < legal.length - 1 && <span className="text-gray-200 text-xs">·</span>}
+              </span>
             ))}
           </div>
         </div>
