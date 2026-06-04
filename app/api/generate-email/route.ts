@@ -4,16 +4,17 @@ import { NextRequest, NextResponse } from 'next/server';
 const client = new Anthropic();
 
 export async function POST(req: NextRequest) {
-  const { query } = await req.json();
+  try {
+    const { query } = await req.json();
 
-  if (!query?.trim()) {
-    return NextResponse.json({ error: 'Query required' }, { status: 400 });
-  }
+    if (!query?.trim()) {
+      return NextResponse.json({ error: 'Query required' }, { status: 400 });
+    }
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 500,
-    system: `You are LeadGenie's AI cold email writer. Generate one realistic, personalized cold email based on the user's description.
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: `You are LeadGenie's AI cold email writer. Generate one realistic, personalized cold email based on the user's description.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
@@ -29,15 +30,23 @@ Rules:
 - Include one believable specific detail about their business
 - End with a simple, low-friction CTA (short call or quick question)
 - Sign off as "— Alex"`,
-    messages: [{ role: 'user', content: `Write a cold email for: ${query}` }],
-  });
+      messages: [{ role: 'user', content: `Write a cold email for: ${query}` }],
+    });
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.content[0].type === 'text' ? message.content[0].text : '';
 
-  try {
-    const parsed = JSON.parse(text);
-    return NextResponse.json(parsed);
-  } catch {
-    return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
+    try {
+      const parsed = JSON.parse(text);
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json({ error: 'AI returned invalid format — try again' }, { status: 500 });
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    const isAuthError = msg.includes('401') || msg.includes('auth') || msg.includes('API key');
+    return NextResponse.json(
+      { error: isAuthError ? 'Invalid API key — check ANTHROPIC_API_KEY in .env.local' : msg },
+      { status: 500 }
+    );
   }
 }
