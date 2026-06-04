@@ -21,7 +21,9 @@ const testimonials = [
   },
 ];
 
-type EmailResult = { to: string; subject: string; body: string };
+type AIResult =
+  | { type: 'email'; to: string; subject: string; body: string }
+  | { type: 'answer'; answer: string };
 
 function SectionBadge({ icon, label, dark = false }: { icon: string; label: string; dark?: boolean }) {
   return (
@@ -38,13 +40,13 @@ function SectionBadge({ icon, label, dark = false }: { icon: string; label: stri
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [generatedEmail, setGeneratedEmail] = useState<EmailResult | null>(null);
+  const [result, setResult] = useState<AIResult | null>(null);
   const [error, setError] = useState('');
 
   async function handleSearch() {
     if (!query.trim() || loading) return;
     setLoading(true);
-    setGeneratedEmail(null);
+    setResult(null);
     setError('');
     try {
       const res = await fetch('/api/generate-email', {
@@ -54,9 +56,9 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
-      setGeneratedEmail(data);
+      setResult(data);
     } catch {
-      setError('Could not generate email. Check your GROQ_API_KEY in .env.local.');
+      setError('Something went wrong. Check your GROQ_API_KEY in .env.local.');
     } finally {
       setLoading(false);
     }
@@ -122,21 +124,52 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* AI-generated email result */}
-          {(loading || generatedEmail || error) && (
+          {/* AI response card */}
+          {(loading || result || error) && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[560px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
-              {error ? (
+
+              {/* Error */}
+              {error && (
                 <div className="flex items-center gap-3 px-5 py-4">
                   <span className="text-red-500">⚠️</span>
                   <p className="text-sm text-red-600 font-medium">{error}</p>
                 </div>
-              ) : loading ? (
+              )}
+
+              {/* Loading */}
+              {loading && (
                 <div className="flex items-center gap-3 px-5 py-4">
                   <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" />
-                  <p className="text-sm text-gray-500 font-medium">AI is writing your email...</p>
+                  <p className="text-sm text-gray-500 font-medium">LeadGenie AI is thinking...</p>
                 </div>
-              ) : generatedEmail && (
+              )}
+
+              {/* Answer mode */}
+              {result?.type === 'answer' && (
+                <>
+                  <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2">
+                    <span>🤖</span>
+                    <p className="text-xs font-semibold text-indigo-700">LeadGenie AI</p>
+                  </div>
+                  <div className="px-5 py-4">
+                    <p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p>
+                  </div>
+                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <p className="text-xs text-gray-400">Want to see it in action?</p>
+                    <Link href="/signup"
+                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
+                      Try LeadGenie Free
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                      </svg>
+                    </Link>
+                  </div>
+                </>
+              )}
+
+              {/* Email mode */}
+              {result?.type === 'email' && (
                 <>
                   <div className="px-5 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                     <span className="text-blue-600">✨</span>
@@ -145,14 +178,14 @@ export default function HomePage() {
                   <div className="px-5 py-4 space-y-2.5">
                     <div className="flex items-start gap-2">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">To</span>
-                      <span className="text-xs text-gray-700 font-medium">{generatedEmail.to}</span>
+                      <span className="text-xs text-gray-700 font-medium">{result.to}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">Subject</span>
-                      <span className="text-xs text-gray-900 font-semibold">{generatedEmail.subject}</span>
+                      <span className="text-xs text-gray-900 font-semibold">{result.subject}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 leading-relaxed whitespace-pre-line">
-                      {generatedEmail.body}
+                      {result.body}
                     </div>
                   </div>
                   <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
@@ -167,6 +200,7 @@ export default function HomePage() {
                   </div>
                 </>
               )}
+
             </motion.div>
           )}
 
