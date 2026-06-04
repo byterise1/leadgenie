@@ -56,7 +56,7 @@ export default function HomePage() {
       if (!res.ok) throw new Error(data.error || 'Failed');
       setGeneratedEmail(data);
     } catch {
-      setError('Could not generate email. Check your API key in .env.local.');
+      setError('Could not generate email. Check your GROQ_API_KEY in .env.local.');
     } finally {
       setLoading(false);
     }

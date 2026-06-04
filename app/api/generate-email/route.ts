@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const client = new Anthropic();
+const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,10 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Query required' }, { status: 400 });
     }
 
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 500,
-      system: `You are LeadGenie's AI cold email writer. Generate one realistic, personalized cold email based on the user's description.
+      messages: [
+        {
+          role: 'system',
+          content: `You are LeadGenie's AI cold email writer. Generate one realistic, personalized cold email based on the user's description.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
@@ -30,10 +33,15 @@ Rules:
 - Include one believable specific detail about their business
 - End with a simple, low-friction CTA (short call or quick question)
 - Sign off as "— Alex"`,
-      messages: [{ role: 'user', content: `Write a cold email for: ${query}` }],
+        },
+        {
+          role: 'user',
+          content: `Write a cold email for: ${query}`,
+        },
+      ],
     });
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = completion.choices[0]?.message?.content ?? '';
 
     try {
       const parsed = JSON.parse(text);
@@ -43,9 +51,9 @@ Rules:
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    const isAuthError = msg.includes('401') || msg.includes('auth') || msg.includes('API key');
+    const isAuthError = msg.includes('401') || msg.includes('auth') || msg.toLowerCase().includes('api key');
     return NextResponse.json(
-      { error: isAuthError ? 'Invalid API key — check ANTHROPIC_API_KEY in .env.local' : msg },
+      { error: isAuthError ? 'Invalid API key — check GROQ_API_KEY in .env.local' : msg },
       { status: 500 }
     );
   }
