@@ -21,41 +21,7 @@ const testimonials = [
   },
 ];
 
-const emailTemplates = {
-  agency: {
-    to: 'James Reid · Head of Growth, Momentum Agency',
-    subject: 'How agencies like yours 3x client results with cold email',
-    body: `Hi James,\n\nI noticed Momentum Agency just took on 3 new enterprise clients — congrats!\n\nWe help agencies manage cold email outreach across all their clients from one dashboard. Teams like yours typically see:\n• 3x more replies per campaign\n• Zero deliverability issues across client domains\n• Full reporting by client in one place\n\nWorth a 15-min call this week?\n\n— Alex`,
-  },
-  saas: {
-    to: 'Sarah Chen · VP Marketing, CloudStack',
-    subject: 'How CloudStack could book 40+ demos/month from cold email',
-    body: `Hi Sarah,\n\nLove what CloudStack is doing in the DevOps space — saw your Product Hunt launch last week.\n\nWe help SaaS companies like yours run AI-personalised cold email campaigns that consistently book 30-50 demos/month. No SDR required.\n\nOur best SaaS customers see a 61% open rate within the first 30 days.\n\nOpen to a quick 10-min chat?\n\n— Alex`,
-  },
-  sales: {
-    to: 'Tom Park · Director of Sales, GrowthForce',
-    subject: 'Filling your pipeline — a faster way',
-    body: `Hi Tom,\n\nI came across GrowthForce while researching fast-growing B2B sales teams.\n\nMost sales directors I talk to say the same thing: outbound is broken because reps spend hours on manual prospecting. We fix that.\n\nLeadGenie automates your entire cold email outreach — personalised at scale, with warmup built in so you actually land in the inbox.\n\nWould you be open to seeing how it works?\n\n— Alex`,
-  },
-  default: {
-    to: 'Emma Wilson · CEO, ScaleUp Co.',
-    subject: 'Quick question about your outbound strategy',
-    body: `Hi Emma,\n\nI noticed ScaleUp Co. has been growing fast — congrats on the recent expansion!\n\nI wanted to reach out because we help companies like yours book more qualified meetings through cold email, without adding headcount.\n\nOur customers average a 61% open rate and book their first meeting within 7 days of going live.\n\nWould it make sense to connect for 15 minutes this week?\n\n— Alex`,
-  },
-};
-
-type EmailTemplate = typeof emailTemplates.default;
-
-function getTemplate(q: string): EmailTemplate {
-  const lower = q.toLowerCase();
-  if (lower.includes('agency') || lower.includes('client'))
-    return emailTemplates.agency;
-  if (lower.includes('saas') || lower.includes('software') || lower.includes('demo') || lower.includes('startup'))
-    return emailTemplates.saas;
-  if (lower.includes('sales') || lower.includes('b2b') || lower.includes('meeting') || lower.includes('pipeline'))
-    return emailTemplates.sales;
-  return emailTemplates.default;
-}
+type EmailResult = { to: string; subject: string; body: string };
 
 function SectionBadge({ icon, label, dark = false }: { icon: string; label: string; dark?: boolean }) {
   return (
@@ -72,16 +38,28 @@ function SectionBadge({ icon, label, dark = false }: { icon: string; label: stri
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [generatedEmail, setGeneratedEmail] = useState<EmailTemplate | null>(null);
+  const [generatedEmail, setGeneratedEmail] = useState<EmailResult | null>(null);
+  const [error, setError] = useState('');
 
-  function handleSearch() {
-    if (!query.trim()) return;
+  async function handleSearch() {
+    if (!query.trim() || loading) return;
     setLoading(true);
     setGeneratedEmail(null);
-    setTimeout(() => {
-      setGeneratedEmail(getTemplate(query));
+    setError('');
+    try {
+      const res = await fetch('/api/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setGeneratedEmail(data);
+    } catch {
+      setError('Could not generate email. Check your API key in .env.local.');
+    } finally {
       setLoading(false);
-    }, 1800);
+    }
   }
 
   return (
@@ -145,10 +123,15 @@ export default function HomePage() {
           </motion.div>
 
           {/* AI-generated email result */}
-          {(loading || generatedEmail) && (
+          {(loading || generatedEmail || error) && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[560px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
-              {loading ? (
+              {error ? (
+                <div className="flex items-center gap-3 px-5 py-4">
+                  <span className="text-red-500">⚠️</span>
+                  <p className="text-sm text-red-600 font-medium">{error}</p>
+                </div>
+              ) : loading ? (
                 <div className="flex items-center gap-3 px-5 py-4">
                   <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" />
                   <p className="text-sm text-gray-500 font-medium">AI is writing your email...</p>
