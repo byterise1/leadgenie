@@ -52,21 +52,20 @@ button, input, textarea, select { font: inherit; }
   to   { transform: translateX(-50%); }
 }
 .animate-marquee {
-  animation: marquee-scroll 42s linear infinite;
+  animation: marquee-scroll 55s linear infinite;
   will-change: transform;
 }
 .animate-marquee-r {
-  animation: marquee-scroll 48s linear infinite reverse;
+  animation: marquee-scroll 65s linear infinite reverse;
   will-change: transform;
 }
-.animate-marquee-reviews {
-  animation: marquee-scroll 80s linear infinite;
+.animate-testimonials {
+  animation: marquee-scroll 110s linear infinite;
   will-change: transform;
 }
-.animate-marquee:hover,
-.animate-marquee-r:hover,
-.animate-marquee-reviews:hover {
-  animation-play-state: paused;
+.animate-testimonials-r {
+  animation: marquee-scroll 130s linear infinite reverse;
+  will-change: transform;
 }
 
 /* ── Force Montserrat everywhere ── */
