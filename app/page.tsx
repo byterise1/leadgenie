@@ -142,6 +142,14 @@ function IcServer({ c = 'w-4 h-4' }: { c?: string }) {
     </svg>
   );
 }
+function IcAtSign({ c = 'w-4 h-4' }: { c?: string }) {
+  return (
+    <svg className={c} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94" />
+    </svg>
+  );
+}
 
 /* ════════════════════════════════════════════════════════════
    PERSON AVATAR — CSS gradient background + SVG silhouette
@@ -166,23 +174,24 @@ function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
+        background: `linear-gradient(145deg, ${from} 0%, ${to} 100%)`,
         overflow: 'hidden',
         flexShrink: 0,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        position: 'relative',
       }}>
       <svg
-        width={size * 0.9}
-        height={size * 0.88}
-        viewBox="0 0 90 88"
+        width={size}
+        height={size}
+        viewBox="0 0 100 100"
         fill="none"
-        style={{ display: 'block' }}>
-        {/* Head */}
-        <circle cx="45" cy="30" r="22" fill="rgba(255,255,255,0.93)" />
-        {/* Shoulders / body */}
-        <ellipse cx="45" cy="88" rx="45" ry="30" fill="rgba(255,255,255,0.93)" />
+        style={{ display: 'block', position: 'absolute', inset: 0 }}>
+        {/* Head — prominent, well-sized circle */}
+        <circle cx="50" cy="35" r="21" fill="rgba(255,255,255,0.94)" />
+        {/* Shoulders — smooth cubic-bezier curve for natural look */}
+        <path
+          d="M 4 100 C 4 68 18 60 50 60 C 82 60 96 68 96 100 Z"
+          fill="rgba(255,255,255,0.94)"
+        />
       </svg>
     </div>
   );
@@ -477,7 +486,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
             className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
             {[
-              { n: '1', label: 'Add Email Account', icon: <IcServer c="w-4 h-4" /> },
+              { n: '1', label: 'Add Email Account', icon: <IcAtSign c="w-4 h-4" /> },
               { n: '2', label: 'Upload Prospects',   icon: <IcUsers c="w-4 h-4" /> },
               { n: '3', label: 'Launch Campaign',    icon: <IcRocket c="w-4 h-4" /> },
               { n: '4', label: 'Book Meetings',      icon: <IcCalendar c="w-4 h-4" /> },
@@ -537,22 +546,28 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           STATS BAR
       ══════════════════════════════════════════ */}
-      <section className="bg-gray-50 border-b border-gray-100 py-14">
+      <section className="bg-white border-b border-gray-100">
         <div className="container">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
             {[
-              { v: '8,500+', l: 'Active Users',     icon: <IcUsers c="w-5 h-5" />,  color: 'text-blue-600',   bg: 'bg-blue-100'   },
-              { v: '42M+',   l: 'Emails Delivered', icon: <IcMail c="w-5 h-5" />,   color: 'text-indigo-600', bg: 'bg-indigo-100' },
-              { v: '58%',    l: 'Avg Open Rate',    icon: <IcTrend c="w-5 h-5" />,  color: 'text-green-600',  bg: 'bg-green-100'  },
-              { v: '4.9/5',  l: 'G2 Rating',        icon: <IcStar c="w-5 h-5" />,   color: 'text-yellow-600', bg: 'bg-yellow-100' },
+              { v: '8,500+', l: 'Active Users',     sub: 'and growing every week',  icon: <IcUsers c="w-6 h-6" />,  accent: '#3b82f6', iconBg: 'bg-blue-600'   },
+              { v: '42M+',   l: 'Emails Delivered', sub: 'with 97%+ inbox rate',    icon: <IcMail c="w-6 h-6" />,   accent: '#6366f1', iconBg: 'bg-indigo-600' },
+              { v: '58%',    l: 'Avg Open Rate',    sub: '2× industry average',     icon: <IcTrend c="w-6 h-6" />,  accent: '#10b981', iconBg: 'bg-emerald-500' },
+              { v: '4.9/5',  l: 'G2 Rating',        sub: 'from 1,200+ reviews',     icon: <IcStar c="w-6 h-6" />,   accent: '#f59e0b', iconBg: 'bg-amber-500'  },
             ].map((s, i) => (
               <motion.div key={s.l}
-                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.08 }}
-                className="flex flex-col items-center text-center bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <span className={`w-11 h-11 flex items-center justify-center rounded-2xl ${s.bg} ${s.color} mb-3 shadow-sm`}>{s.icon}</span>
-                <p className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">{s.v}</p>
-                <p className="mt-1.5 text-sm text-gray-500 font-semibold">{s.l}</p>
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="flex flex-col items-center text-center py-12 px-6 hover:bg-gray-50/60 transition-colors group relative overflow-hidden">
+                {/* Colored top accent line */}
+                <div className="absolute top-0 left-0 right-0 h-[3px] rounded-b-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{ background: s.accent }} />
+                <span className={`w-14 h-14 flex items-center justify-center rounded-2xl ${s.iconBg} text-white mb-5 shadow-md group-hover:scale-110 transition-transform duration-200`}>
+                  {s.icon}
+                </span>
+                <p className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight leading-none">{s.v}</p>
+                <p className="mt-2 text-sm font-bold text-gray-700">{s.l}</p>
+                <p className="mt-1 text-xs text-gray-400 font-medium">{s.sub}</p>
               </motion.div>
             ))}
           </div>
@@ -590,7 +605,7 @@ export default function HomePage() {
               <div className="bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <div className="flex items-center gap-2.5">
-                    <IcServer c="w-4 h-4 text-blue-500" />
+                    <IcAtSign c="w-4 h-4 text-blue-500" />
                     <p className="text-sm font-bold text-gray-900">Email Accounts</p>
                     <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">5 active</span>
                   </div>
@@ -979,58 +994,72 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 max-w-2xl mx-auto space-y-3">
+            className="mt-14 max-w-3xl mx-auto space-y-4">
             {[
               {
-                trigger: 'Lead opens your email',
-                action: 'Auto-send follow-up in 2 days',
-                result: '+24% reply rate',
-                tBg: 'bg-blue-50 text-blue-700 border-blue-100',
-                aBg: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-                rBg: 'text-green-700 bg-green-50 border border-green-100',
-                tIcon: <IcMailOpen c="w-3.5 h-3.5" />,
-                aIcon: <IcClock c="w-3.5 h-3.5" />,
+                when: 'Lead opens email',
+                then: 'Auto follow-up in 2 days',
+                result: '+24% more replies',
+                wIcon: <IcMailOpen c="w-4 h-4" />,
+                tIcon: <IcClock c="w-4 h-4" />,
+                wBg: 'bg-blue-50 text-blue-700 border-blue-200',
+                tBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                rBg: 'bg-green-100 text-green-700',
+                rIcon: '↑',
               },
               {
-                trigger: 'Lead replies positively',
-                action: 'Tag as Interested, route to Unibox',
+                when: 'Lead replies positively',
+                then: 'Tag Interested + route to Unibox',
                 result: 'Zero missed hot leads',
-                tBg: 'bg-green-50 text-green-700 border-green-100',
-                aBg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                rBg: 'text-emerald-700 bg-emerald-50 border border-emerald-100',
-                tIcon: <IcChat c="w-3.5 h-3.5" />,
-                aIcon: <IcInbox c="w-3.5 h-3.5" />,
+                wIcon: <IcChat c="w-4 h-4" />,
+                tIcon: <IcInbox c="w-4 h-4" />,
+                wBg: 'bg-green-50 text-green-700 border-green-200',
+                tBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                rBg: 'bg-emerald-100 text-emerald-700',
+                rIcon: '✓',
               },
               {
-                trigger: 'Meeting booked via calendar',
-                action: 'Remove from sequence, sync to CRM',
+                when: 'Meeting booked',
+                then: 'Remove from sequence + sync CRM',
                 result: 'No duplicate outreach',
-                tBg: 'bg-purple-50 text-purple-700 border-purple-100',
-                aBg: 'bg-violet-50 text-violet-700 border-violet-100',
-                rBg: 'text-violet-700 bg-violet-50 border border-violet-100',
-                tIcon: <IcCalendar c="w-3.5 h-3.5" />,
-                aIcon: <IcDatabase c="w-3.5 h-3.5" />,
+                wIcon: <IcCalendar c="w-4 h-4" />,
+                tIcon: <IcDatabase c="w-4 h-4" />,
+                wBg: 'bg-purple-50 text-purple-700 border-purple-200',
+                tBg: 'bg-violet-50 text-violet-700 border-violet-200',
+                rBg: 'bg-violet-100 text-violet-700',
+                rIcon: '✓',
               },
             ].map((wf, i) => (
               <motion.div key={i}
-                initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold shrink-0 ${wf.tBg}`}>
-                    {wf.tIcon}
-                    <span>When: {wf.trigger}</span>
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+                <div className="flex items-stretch">
+                  {/* Step number */}
+                  <div className="w-14 flex items-center justify-center bg-gray-50 border-r border-gray-100 shrink-0">
+                    <span className="text-lg font-extrabold text-gray-300">{i + 1}</span>
                   </div>
-                  <svg className="w-4 h-4 text-gray-300 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold flex-1 ${wf.aBg}`}>
-                    {wf.aIcon}
-                    <span>Then: {wf.action}</span>
+                  {/* Content */}
+                  <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
+                    {/* WHEN pill */}
+                    <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 ${wf.wBg}`}>
+                      {wf.wIcon}
+                      <span>When: {wf.when}</span>
+                    </div>
+                    {/* Arrow */}
+                    <svg className="w-4 h-4 text-gray-300 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                    {/* THEN pill */}
+                    <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 ${wf.tBg}`}>
+                      {wf.tIcon}
+                      <span>Then: {wf.then}</span>
+                    </div>
+                    {/* Result */}
+                    <span className={`ml-auto inline-flex items-center gap-1 text-xs font-extrabold px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 ${wf.rBg}`}>
+                      <span>{wf.rIcon}</span> {wf.result}
+                    </span>
                   </div>
-                  <span className={`text-xs font-black px-3 py-1.5 rounded-full shrink-0 ${wf.rBg}`}>
-                    → {wf.result}
-                  </span>
                 </div>
               </motion.div>
             ))}
