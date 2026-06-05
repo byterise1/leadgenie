@@ -60,7 +60,7 @@ export default function ConsultingPage() {
           <div className="container max-w-3xl text-center">
             <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now LeadGenie does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">DM</div>
+              <img src="https://i.pravatar.cc/150?img=12" alt="David Marsh" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
                 <p className="text-sm font-bold text-gray-900">David Marsh</p>
                 <p className="text-xs text-gray-500">Principal, Marsh Strategy Group</p>

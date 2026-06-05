@@ -60,7 +60,7 @@ export default function SaaSPage() {
           <div className="container max-w-3xl text-center">
             <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Our open rates jumped from 28% to 61% after switching to LeadGenie. The AI personalisation is genuinely impressive — it sounds human on every email.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">AB</div>
+              <img src="https://i.pravatar.cc/150?img=3" alt="Alex Baldovin" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
                 <p className="text-sm font-bold text-gray-900">Alex Baldovin</p>
                 <p className="text-xs text-gray-500">CEO, Authbound</p>

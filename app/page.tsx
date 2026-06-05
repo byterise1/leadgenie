@@ -893,16 +893,10 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Row 1 — scrolls left */}
-        <div className="relative mb-5" style={maskFade}>
-          <div className="flex w-max gap-5 animate-testimonials">
-            {[...testimonials, ...testimonials].map((t, i) => <TestimonialCard key={i} t={t} />)}
-          </div>
-        </div>
-        {/* Row 2 — scrolls right */}
-        <div className="relative" style={maskFade}>
-          <div className="flex w-max gap-5 animate-testimonials-r">
-            {[...testimonials.slice(3), ...testimonials.slice(0, 3), ...testimonials.slice(3), ...testimonials.slice(0, 3)].map((t, i) => <TestimonialCard key={i} t={t} />)}
+        {/* Single scrollable row — scroll with mouse wheel or drag */}
+        <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+          <div className="flex gap-5 px-6" style={{ width: 'max-content' }}>
+            {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
           </div>
         </div>
       </section>

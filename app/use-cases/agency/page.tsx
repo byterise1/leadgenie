@@ -64,7 +64,7 @@ export default function AgencyPage() {
           <div className="container max-w-3xl text-center">
             <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;LeadGenie is the backbone of our agency. We manage 40+ client campaigns from one dashboard, and our average client sees 20%+ reply rates within the first month. Nothing else comes close.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">ME</div>
+              <img src="https://i.pravatar.cc/150?img=47" alt="Mike Ellis" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
                 <p className="text-sm font-bold text-gray-900">Mike Ellis</p>
                 <p className="text-xs text-gray-500">Co-Founder, Kale Acquisition</p>

@@ -60,7 +60,7 @@ export default function RecruitmentPage() {
           <div className="container max-w-3xl text-center">
             <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We used to spend hours on LinkedIn finding candidates. Now LeadGenie does it automatically and we spend our time on actual interviews. Our placement rate is up 40%.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">SR</div>
+              <img src="https://i.pravatar.cc/150?img=5" alt="Sarah Reynolds" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
                 <p className="text-sm font-bold text-gray-900">Sarah Reynolds</p>
                 <p className="text-xs text-gray-500">Head of Talent, Growthbound Recruiting</p>

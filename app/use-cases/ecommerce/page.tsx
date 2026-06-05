@@ -60,7 +60,7 @@ export default function EcommercePage() {
           <div className="container max-w-3xl text-center">
             <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We opened 23 new wholesale accounts in 60 days using LeadGenie. Reaching retail buyers used to take months of trade shows — now we do it from our laptop with a 20% reply rate.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">TK</div>
+              <img src="https://i.pravatar.cc/150?img=44" alt="Tom Kim" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
                 <p className="text-sm font-bold text-gray-900">Tom Kim</p>
                 <p className="text-xs text-gray-500">Head of Wholesale, Brightleaf Goods</p>

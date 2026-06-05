@@ -67,6 +67,10 @@ button, input, textarea, select { font: inherit; }
   animation: marquee-scroll 130s linear infinite reverse;
   will-change: transform;
 }
+.animate-marquee:hover,
+.animate-marquee-r:hover {
+  animation-play-state: paused;
+}
 
 /* ── Force Montserrat everywhere ── */
 html, body, * {
