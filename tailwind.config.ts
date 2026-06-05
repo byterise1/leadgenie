@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', 'Montserrat', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 4px 24px rgba(0,0,0,0.06)',

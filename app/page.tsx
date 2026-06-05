@@ -152,47 +152,213 @@ function IcAtSign({ c = 'w-4 h-4' }: { c?: string }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   PERSON AVATAR — CSS gradient background + SVG silhouette
-   Uses a DIV wrapper so overflow:hidden + border-radius work
+   ILLUSTRATED PERSON AVATARS — 8 unique male + female faces
+   Each is a hand-crafted flat-design SVG illustration
 ════════════════════════════════════════════════════════════ */
-const AVATAR_GRADS: [string, string][] = [
-  ['#3b82f6', '#6366f1'],  // blue-indigo
-  ['#8b5cf6', '#ec4899'],  // purple-pink
-  ['#10b981', '#0ea5e9'],  // emerald-sky
-  ['#f59e0b', '#ef4444'],  // amber-red
-  ['#06b6d4', '#7c3aed'],  // cyan-violet
-  ['#f97316', '#db2777'],  // orange-pink
-  ['#14b8a6', '#3b82f6'],  // teal-blue
-  ['#a855f7', '#6366f1'],  // violet-indigo
-];
+function getAvatarSVG(idx: number): React.ReactNode {
+  const s = {
+    viewBox: '0 0 100 100', fill: 'none' as const,
+    style: { width: '100%', height: '100%', display: 'block' } as React.CSSProperties,
+  };
+  switch (idx % 8) {
+
+    /* ── 0: FEMALE · light-peach · dark bun · indigo ── */
+    case 0: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#EEF2FF"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#4F46E5"/>
+        <path d="M43 75 L50 82 L57 75" stroke="#6366F1" strokeWidth="1.5" fill="none"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#FFBFAB"/>
+        <ellipse cx="31" cy="47" rx="4.5" ry="5.5" fill="#FFBFAB"/>
+        <ellipse cx="69" cy="47" rx="4.5" ry="5.5" fill="#FFBFAB"/>
+        <ellipse cx="50" cy="46" rx="19" ry="22" fill="#FFBFAB"/>
+        <path d="M31 44 Q31 22 50 22 Q69 22 69 44" fill="#2C1810"/>
+        <circle cx="50" cy="22" r="8" fill="#2C1810"/>
+        <circle cx="50" cy="22" r="5" fill="#3D2B16"/>
+        <path d="M39 40 Q43 37 47 40" stroke="#2C1810" strokeWidth="1.3" strokeLinecap="round" fill="none"/>
+        <path d="M53 40 Q57 37 61 40" stroke="#2C1810" strokeWidth="1.3" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#1E293B"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#1E293B"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M48 51 Q50 53 52 51" stroke="#E8967A" strokeWidth="1" strokeLinecap="round" fill="none"/>
+        <path d="M43 56 Q50 61 57 56" stroke="#D46060" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <ellipse cx="37" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.5"/>
+        <ellipse cx="63" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.5"/>
+      </svg>
+    );
+
+    /* ── 1: MALE · medium-brown skin · short black hair · teal ── */
+    case 1: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#CCFBF1"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#0D9488"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#C68642"/>
+        <ellipse cx="31" cy="47" rx="4.5" ry="5.5" fill="#C68642"/>
+        <ellipse cx="69" cy="47" rx="4.5" ry="5.5" fill="#C68642"/>
+        <ellipse cx="50" cy="46" rx="19" ry="22" fill="#C68642"/>
+        <path d="M31 43 Q31 23 50 23 Q69 23 69 43" fill="#1A0F00"/>
+        <rect x="31" y="40" width="5" height="7" rx="2" fill="#1A0F00"/>
+        <rect x="64" y="40" width="5" height="7" rx="2" fill="#1A0F00"/>
+        <path d="M39 40 Q43 38 47 40" stroke="#1A0F00" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <path d="M53 40 Q57 38 61 40" stroke="#1A0F00" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#1A1A1A"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#1A1A1A"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M47.5 51 Q50 53.5 52.5 51" stroke="#A06030" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+        <path d="M44 56 Q50 60 56 56" stroke="#8B4010" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      </svg>
+    );
+
+    /* ── 2: FEMALE · dark skin · afro · purple ── */
+    case 2: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#EDE9FE"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#7C3AED"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#8B5E3C"/>
+        <ellipse cx="31" cy="47" rx="4.5" ry="5.5" fill="#8B5E3C"/>
+        <ellipse cx="69" cy="47" rx="4.5" ry="5.5" fill="#8B5E3C"/>
+        <circle cx="50" cy="38" r="24" fill="#150D05"/>
+        <ellipse cx="50" cy="46" rx="17" ry="20" fill="#8B5E3C"/>
+        <path d="M39 40 Q43 37.5 47 40" stroke="#150D05" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <path d="M53 40 Q57 37.5 61 40" stroke="#150D05" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#0A0500"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#0A0500"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M47 51 Q50 53 53 51" stroke="#6B3B1A" strokeWidth="1" strokeLinecap="round" fill="none"/>
+        <path d="M43 56 Q50 61 57 56" stroke="#6B3B1A" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <ellipse cx="37" cy="53" rx="4" ry="2.5" fill="#FF9A88" opacity="0.3"/>
+        <ellipse cx="63" cy="53" rx="4" ry="2.5" fill="#FF9A88" opacity="0.3"/>
+      </svg>
+    );
+
+    /* ── 3: MALE · light skin · sandy blonde · orange ── */
+    case 3: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#FFEDD5"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#F97316"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#FDDBB8"/>
+        <ellipse cx="30" cy="47" rx="5" ry="6" fill="#FDDBB8"/>
+        <ellipse cx="70" cy="47" rx="5" ry="6" fill="#FDDBB8"/>
+        <ellipse cx="50" cy="46" rx="20" ry="22" fill="#FDDBB8"/>
+        <path d="M30 44 Q30 22 50 22 Q70 22 70 44" fill="#C8A04A"/>
+        <path d="M35 28 Q45 24 55 26 Q60 27 65 32" stroke="#A07828" strokeWidth="1.5" fill="none"/>
+        <path d="M38.5 40 Q43 38 47.5 40" stroke="#A07828" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <path d="M52.5 40 Q57 38 61.5 40" stroke="#A07828" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#2563EB"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#2563EB"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M47.5 51 Q50 53.5 52.5 51" stroke="#D4956A" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+        <path d="M44 56 Q50 60 56 56" stroke="#B07050" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      </svg>
+    );
+
+    /* ── 4: FEMALE · olive/tan · long dark hair · rose ── */
+    case 4: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#FFF1F2"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#E11D48"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#D4916A"/>
+        <ellipse cx="28" cy="55" rx="7" ry="18" fill="#3D1F0A"/>
+        <ellipse cx="72" cy="55" rx="7" ry="18" fill="#3D1F0A"/>
+        <ellipse cx="31" cy="47" rx="4.5" ry="5.5" fill="#D4916A"/>
+        <ellipse cx="69" cy="47" rx="4.5" ry="5.5" fill="#D4916A"/>
+        <ellipse cx="50" cy="46" rx="19" ry="22" fill="#D4916A"/>
+        <path d="M31 44 Q31 22 50 22 Q69 22 69 44" fill="#3D1F0A"/>
+        <path d="M39 40 Q43 37 47 39.5" stroke="#3D1F0A" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <path d="M53 39.5 Q57 37 61 40" stroke="#3D1F0A" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#5C2E08"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#5C2E08"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M39.5 43 Q43 41 46.5 43" stroke="#3D1F0A" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+        <path d="M53.5 43 Q57 41 60.5 43" stroke="#3D1F0A" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+        <path d="M48 51 Q50 53 52 51" stroke="#B06840" strokeWidth="1" strokeLinecap="round" fill="none"/>
+        <path d="M43 56 Q50 61 57 56" stroke="#C05050" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <ellipse cx="37" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.45"/>
+        <ellipse cx="63" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.45"/>
+      </svg>
+    );
+
+    /* ── 5: MALE · deep brown · buzz cut · emerald ── */
+    case 5: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#D1FAE5"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#059669"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#6B3A2A"/>
+        <ellipse cx="30" cy="47" rx="5" ry="6" fill="#6B3A2A"/>
+        <ellipse cx="70" cy="47" rx="5" ry="6" fill="#6B3A2A"/>
+        <ellipse cx="50" cy="46" rx="20" ry="22" fill="#6B3A2A"/>
+        <path d="M30 43 Q30 23 50 23 Q70 23 70 43" fill="#1A0A05"/>
+        <path d="M38 40 Q43 37.5 48 40" stroke="#1A0A05" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+        <path d="M52 40 Q57 37.5 62 40" stroke="#1A0A05" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#0A0500"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#0A0500"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M46 51 Q50 53.5 54 51" stroke="#4A2010" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <path d="M43 56 Q50 61.5 57 56" stroke="#4A2010" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+      </svg>
+    );
+
+    /* ── 6: FEMALE · medium · wavy auburn · sky ── */
+    case 6: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#E0F2FE"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#0EA5E9"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#E8A882"/>
+        <path d="M27 50 Q25 38 29 27 Q36 20 50 20 Q64 20 71 27 Q75 38 73 50 Q70 60 68 68" fill="#8B2500"/>
+        <ellipse cx="31" cy="47" rx="4.5" ry="5.5" fill="#E8A882"/>
+        <ellipse cx="69" cy="47" rx="4.5" ry="5.5" fill="#E8A882"/>
+        <ellipse cx="50" cy="46" rx="19" ry="22" fill="#E8A882"/>
+        <path d="M31 43 Q31 22 50 22 Q69 22 69 43" fill="#8B2500"/>
+        <path d="M35 30 Q40 27 42 31 Q44 34 47 30" stroke="#A03010" strokeWidth="1.5" fill="none" opacity="0.6"/>
+        <path d="M39 40 Q43 37 47 39.5" stroke="#8B2500" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <path d="M53 39.5 Q57 37 61 40" stroke="#8B2500" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#15803D"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#15803D"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M48 51 Q50 53 52 51" stroke="#C07050" strokeWidth="1" strokeLinecap="round" fill="none"/>
+        <path d="M43 56 Q50 61 57 56" stroke="#C05050" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <ellipse cx="37" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.45"/>
+        <ellipse cx="63" cy="53" rx="5" ry="3" fill="#FFB3A3" opacity="0.45"/>
+      </svg>
+    );
+
+    /* ── 7: MALE · fair · silver hair · navy ── */
+    default: return (
+      <svg {...s}>
+        <circle cx="50" cy="50" r="50" fill="#DBEAFE"/>
+        <path d="M14 100 C14 78 28 72 50 72 C72 72 86 78 86 100Z" fill="#1E40AF"/>
+        <rect x="43" y="63" width="14" height="13" rx="4" fill="#FDDFC7"/>
+        <ellipse cx="30" cy="47" rx="5" ry="6" fill="#FDDFC7"/>
+        <ellipse cx="70" cy="47" rx="5" ry="6" fill="#FDDFC7"/>
+        <ellipse cx="50" cy="46" rx="20" ry="22" fill="#FDDFC7"/>
+        <path d="M30 44 Q30 22 50 22 Q70 22 70 44" fill="#9CA3AF"/>
+        <path d="M38 28 Q43 25 45 30" stroke="#CBD5E1" strokeWidth="1.5" fill="none" opacity="0.7"/>
+        <path d="M52 27 Q57 24 60 29" stroke="#CBD5E1" strokeWidth="1.5" fill="none" opacity="0.7"/>
+        <path d="M38.5 40 Q43 38 47.5 40" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <path d="M52.5 40 Q57 38 61.5 40" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <ellipse cx="43" cy="45" rx="3.5" ry="3" fill="#374151"/>
+        <ellipse cx="57" cy="45" rx="3.5" ry="3" fill="#374151"/>
+        <circle cx="44.8" cy="43.5" r="1.3" fill="white"/>
+        <circle cx="58.8" cy="43.5" r="1.3" fill="white"/>
+        <path d="M47.5 51 Q50 53.5 52.5 51" stroke="#C4956A" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+        <path d="M44 56 Q50 60 56 56" stroke="#B07050" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <ellipse cx="50" cy="61" rx="10" ry="3.5" fill="#D4956A" opacity="0.12"/>
+      </svg>
+    );
+  }
+}
 
 function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
-  const [from, to] = AVATAR_GRADS[idx % AVATAR_GRADS.length];
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: `linear-gradient(145deg, ${from} 0%, ${to} 100%)`,
-        overflow: 'hidden',
-        flexShrink: 0,
-        position: 'relative',
-      }}>
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 100 100"
-        fill="none"
-        style={{ display: 'block', position: 'absolute', inset: 0 }}>
-        {/* Head — prominent, well-sized circle */}
-        <circle cx="50" cy="35" r="21" fill="rgba(255,255,255,0.94)" />
-        {/* Shoulders — smooth cubic-bezier curve for natural look */}
-        <path
-          d="M 4 100 C 4 68 18 60 50 60 C 82 60 96 68 96 100 Z"
-          fill="rgba(255,255,255,0.94)"
-        />
-      </svg>
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+      {getAvatarSVG(idx)}
     </div>
   );
 }
@@ -482,26 +648,31 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {/* Step-by-step flow */}
+          {/* Step-by-step flow — each step its own vivid color */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
+            className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1.5">
             {[
-              { n: '1', label: 'Add Email Account', icon: <IcAtSign c="w-4 h-4" /> },
-              { n: '2', label: 'Upload Prospects',   icon: <IcUsers c="w-4 h-4" /> },
-              { n: '3', label: 'Launch Campaign',    icon: <IcRocket c="w-4 h-4" /> },
-              { n: '4', label: 'Book Meetings',      icon: <IcCalendar c="w-4 h-4" /> },
+              { n: '1', label: 'Add Email Account', icon: <IcAtSign c="w-4 h-4" />, from: '#6366f1', to: '#8b5cf6', shadow: '0 4px 16px rgba(99,102,241,0.45)' },
+              { n: '2', label: 'Upload Prospects',   icon: <IcUsers c="w-4 h-4" />,  from: '#0ea5e9', to: '#06b6d4', shadow: '0 4px 16px rgba(14,165,233,0.45)' },
+              { n: '3', label: 'Launch Campaign',    icon: <IcRocket c="w-4 h-4" />, from: '#f97316', to: '#ef4444', shadow: '0 4px 16px rgba(249,115,22,0.45)' },
+              { n: '4', label: 'Book Meetings',      icon: <IcCalendar c="w-4 h-4" />, from: '#10b981', to: '#059669', shadow: '0 4px 16px rgba(16,185,129,0.45)' },
             ].map((step, i) => (
               <div key={step.n} className="flex items-center">
-                <div className="flex items-center gap-2.5 bg-white/14 border border-white/22 rounded-2xl px-4 py-2.5 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-default group">
-                  <span className="h-6 w-6 rounded-full bg-blue-600/80 text-white text-[11px] font-black flex items-center justify-center shrink-0 shadow-md group-hover:bg-blue-500 transition-colors">
+                <div
+                  className="flex items-center gap-2.5 rounded-2xl px-4 py-2.5 text-white cursor-default hover:scale-105 active:scale-95 transition-transform duration-150"
+                  style={{
+                    background: `linear-gradient(135deg, ${step.from} 0%, ${step.to} 100%)`,
+                    boxShadow: step.shadow,
+                  }}>
+                  <span className="h-6 w-6 rounded-full bg-white/25 text-white text-[11px] font-black flex items-center justify-center shrink-0">
                     {step.n}
                   </span>
-                  <span className="text-white/65 shrink-0">{step.icon}</span>
-                  <span className="text-xs sm:text-sm font-semibold text-white/92 whitespace-nowrap">{step.label}</span>
+                  <span className="opacity-90 shrink-0">{step.icon}</span>
+                  <span className="text-xs sm:text-sm font-bold whitespace-nowrap">{step.label}</span>
                 </div>
                 {i < 3 && (
-                  <svg className="w-4 h-4 text-white/25 mx-1.5 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  <svg className="w-4 h-4 text-white/30 mx-1 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 )}
               </div>
