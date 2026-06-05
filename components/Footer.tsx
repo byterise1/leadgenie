@@ -2,17 +2,24 @@
 
 import Link from 'next/link';
 
+function IcLightning() {
+  return (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  );
+}
+
 const cols = [
   {
     heading: 'Product',
     links: [
-      { label: 'Campaigns',          href: '/#campaigns'        },
-      { label: 'Email Accounts',     href: '/#sending-accounts' },
-      { label: 'Email Warmup',       href: '/#warmup'           },
-      { label: 'Unibox',             href: '/#unibox'           },
-      { label: 'Analytics',          href: '/#analytics'        },
-      { label: 'Integrations',       href: '/#integrations'     },
-      { label: 'Pricing',            href: '/pricing'           },
+      { label: 'Campaigns',      href: '/#campaigns'        },
+      { label: 'Email Accounts', href: '/#sending-accounts' },
+      { label: 'Email Warmup',   href: '/#warmup'           },
+      { label: 'Unibox',         href: '/#unibox'           },
+      { label: 'Analytics',      href: '/#analytics'        },
+      { label: 'Pricing',        href: '/pricing'           },
     ],
   },
   {
@@ -63,24 +70,34 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 font-bold text-[17px] text-gray-900 mb-4">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">⚡</span>
+            <Link href="/" className="flex items-center gap-2 font-bold text-[17px] text-gray-900 mb-4 group">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white group-hover:bg-blue-700 transition-colors">
+                <IcLightning />
+              </span>
               LeadGenie
             </Link>
             <p className="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">
-              The cold email outreach platform trusted by 30,000+ teams to book more meetings
-              and close more deals — on autopilot.
+              The cold email outreach platform trusted by 8,500+ sales teams to book more
+              meetings and close more deals — on autopilot.
             </p>
             {/* Social */}
             <div className="flex items-center gap-3">
               {[
-                { label: 'X',        href: '#', path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
-                { label: 'LinkedIn', href: '#', path: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z' },
+                {
+                  label: 'X',
+                  href: '#',
+                  path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
+                },
+                {
+                  label: 'LinkedIn',
+                  href: '#',
+                  path: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z',
+                },
               ].map(s => (
                 <Link key={s.label} href={s.href}
-                  className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors">
+                  className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-200 transition-colors">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d={s.path}/>
+                    <path d={s.path} />
                   </svg>
                 </Link>
               ))}

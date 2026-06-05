@@ -14,7 +14,7 @@ body {
   min-height: 100vh;
   background: #fff;
   color: #111827;
-  font-family: var(--font-sans), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans), 'Montserrat', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -26,17 +26,17 @@ button, input, textarea, select { font: inherit; }
   margin: 0 auto;
 }
 
-/* ── Hero blue gradient (matches Instantly exactly) ── */
+/* ── Hero blue gradient ── */
 .hero-gradient {
   background: linear-gradient(160deg, #1a3480 0%, #1d4ed8 28%, #2563eb 52%, #3b82f6 75%, #93c5fd 100%);
 }
 
-/* ── Teal section (Automate + Revenue) ── */
+/* ── Teal section ── */
 .teal-gradient {
   background: linear-gradient(135deg, #0e7490 0%, #0284c7 55%, #1d4ed8 100%);
 }
 
-/* ── Purple section (Connect Tools) ── */
+/* ── Purple section ── */
 .purple-gradient {
   background: linear-gradient(135deg, #5b21b6 0%, #4338ca 48%, #1d4ed8 100%);
 }
@@ -44,4 +44,17 @@ button, input, textarea, select { font: inherit; }
 /* ── CTA section ── */
 .cta-gradient {
   background: linear-gradient(150deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #3b82f6 100%);
+}
+
+/* ── Marquee / logos ticker ── */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee-scroll 38s linear infinite;
+  will-change: transform;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
 }

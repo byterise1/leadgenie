@@ -1,27 +1,30 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Montserrat } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+const montserrat = Montserrat({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
 });
 
 export const metadata: Metadata = {
-  title: 'LeadGenie — Find Clients Instantly with AI',
-  description: 'LeadGenie helps you find perfect leads, create AI Sales Agents, and automate your outreach & sales.',
-  metadataBase: new URL('https://example.com'),
+  title: 'LeadGenie — Cold Email Outreach That Books Meetings',
+  description:
+    'LeadGenie is the #1 cold email outreach platform. Send unlimited emails, auto-warm your domains, and book more meetings with AI-personalised sequences. Trusted by 8,500+ sales teams.',
+  metadataBase: new URL('https://leadgenie.io'),
   openGraph: {
-    title: 'LeadGenie — Find Clients Instantly with AI',
-    description: 'Get more clients by chatting to AI. Find leads, automate outreach, and grow your pipeline.',
+    title: 'LeadGenie — Cold Email Outreach That Books Meetings',
+    description:
+      'Send unlimited cold emails, auto-warm your domains, and book more B2B meetings with AI outreach. Start free — no credit card.',
     type: 'website',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={montserrat.variable}>
       <body className="bg-white text-gray-900 antialiased font-sans">{children}</body>
     </html>
   );
