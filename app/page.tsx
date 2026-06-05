@@ -155,8 +155,9 @@ function IcAtSign({ c = 'w-4 h-4' }: { c?: string }) {
    PERSON AVATAR — DiceBear illustrated avatars (HD quality)
    8 seeds → distinct male + female illustrated characters
 ════════════════════════════════════════════════════════════ */
-const AVATAR_SEEDS = ['Sarah', 'Marcus', 'Emma', 'Jake', 'Priya', 'Daniel', 'Aisha', 'Alex'];
-const AVATAR_BG    = ['b6e3f4','c0aede','d1d4f9','ffd5dc','ffdfbf','c0e8c8','b6e3f4','d4edff'];
+// DiceBear "personas" — illustrated people that look like real humans
+const AVATAR_SEEDS = ['Sarah','Marcus','Emma','Jake','Priya','Daniel','Aisha','Alex'];
+const AVATAR_BG    = ['b6e3f4','c0aede','d1d4f9','ffd5dc','c0e8c8','ffdfbf','b6e3f4','cceeff'];
 
 function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
   const i    = idx % 8;
@@ -165,11 +166,11 @@ function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: `#${bg}` }}>
       <img
-        src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&scale=90&backgroundColor=${bg}`}
+        src={`https://api.dicebear.com/7.x/personas/svg?seed=${seed}&size=100&backgroundColor=${bg}`}
         alt={seed}
         width={size}
         height={size}
-        style={{ width: '100%', height: '100%', display: 'block' }}
+        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }}
       />
     </div>
   );
@@ -528,10 +529,10 @@ export default function HomePage() {
         <div className="container">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
             {[
-              { v: '8,500+', l: 'Active Users',     sub: 'and growing every week',  icon: <IcUsers c="w-6 h-6" />,  accent: '#3b82f6', iconBg: 'bg-blue-600'   },
-              { v: '42M+',   l: 'Emails Delivered', sub: 'with 97%+ inbox rate',    icon: <IcMail c="w-6 h-6" />,   accent: '#6366f1', iconBg: 'bg-indigo-600' },
-              { v: '58%',    l: 'Avg Open Rate',    sub: '2× industry average',     icon: <IcTrend c="w-6 h-6" />,  accent: '#10b981', iconBg: 'bg-emerald-500' },
-              { v: '4.9/5',  l: 'G2 Rating',        sub: 'from 1,200+ reviews',     icon: <IcStar c="w-6 h-6" />,   accent: '#f59e0b', iconBg: 'bg-amber-500'  },
+              { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',    icon: <IcUsers c="w-6 h-6" />,  accent: '#3b82f6', iconBg: 'bg-blue-600'   },
+              { v: '42M+',   l: 'Emails Delivered', sub: '97%+ inbox placement',     icon: <IcMail c="w-6 h-6" />,   accent: '#6366f1', iconBg: 'bg-indigo-600' },
+              { v: '47%',    l: 'Avg Open Rate',    sub: 'vs 21% industry average',  icon: <IcTrend c="w-6 h-6" />,  accent: '#10b981', iconBg: 'bg-emerald-500' },
+              { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',      icon: <IcStar c="w-6 h-6" />,   accent: '#f59e0b', iconBg: 'bg-amber-500'  },
             ].map((s, i) => (
               <motion.div key={s.l}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -970,78 +971,68 @@ export default function HomePage() {
             </Link>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 max-w-3xl mx-auto space-y-4">
+          <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
               {
-                when: 'Lead opens email',
-                then: 'Auto follow-up in 2 days',
-                result: '+24% more replies',
-                wIcon: <IcMailOpen c="w-4 h-4" />,
-                tIcon: <IcClock c="w-4 h-4" />,
-                wBg: 'bg-blue-50 text-blue-700 border-blue-200',
-                tBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                rBg: 'bg-green-100 text-green-700',
-                rIcon: '↑',
+                icon: <IcMailOpen c="w-7 h-7" />,
+                iconBg: 'bg-blue-100', iconColor: 'text-blue-600',
+                accent: 'from-blue-500 to-indigo-500',
+                when: 'Lead Opens Your Email',
+                then: 'Auto-sends personalised follow-up in 2 days',
+                desc: 'The moment a prospect opens your email, LeadGenie queues a personalised follow-up automatically — no manual work, no missed timing.',
+                result: '+24% reply rate',
+                resultBg: 'bg-blue-50 text-blue-700',
               },
               {
-                when: 'Lead replies positively',
-                then: 'Tag Interested + route to Unibox',
+                icon: <IcChat c="w-7 h-7" />,
+                iconBg: 'bg-green-100', iconColor: 'text-green-600',
+                accent: 'from-green-500 to-emerald-500',
+                when: 'Lead Replies Positively',
+                then: 'Tagged as Interested + routed to Unibox',
+                desc: "When a prospect replies with interest, LeadGenie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.",
                 result: 'Zero missed hot leads',
-                wIcon: <IcChat c="w-4 h-4" />,
-                tIcon: <IcInbox c="w-4 h-4" />,
-                wBg: 'bg-green-50 text-green-700 border-green-200',
-                tBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                rBg: 'bg-emerald-100 text-emerald-700',
-                rIcon: '✓',
+                resultBg: 'bg-green-50 text-green-700',
               },
               {
-                when: 'Meeting booked',
-                then: 'Remove from sequence + sync CRM',
+                icon: <IcCalendar c="w-7 h-7" />,
+                iconBg: 'bg-purple-100', iconColor: 'text-purple-600',
+                accent: 'from-purple-500 to-violet-500',
+                when: 'Meeting Gets Booked',
+                then: 'Removed from all sequences + CRM synced',
+                desc: 'Once a meeting is booked, LeadGenie instantly stops all outreach for that lead, syncs to your CRM, and notifies your team — zero duplicate messages.',
                 result: 'No duplicate outreach',
-                wIcon: <IcCalendar c="w-4 h-4" />,
-                tIcon: <IcDatabase c="w-4 h-4" />,
-                wBg: 'bg-purple-50 text-purple-700 border-purple-200',
-                tBg: 'bg-violet-50 text-violet-700 border-violet-200',
-                rBg: 'bg-violet-100 text-violet-700',
-                rIcon: '✓',
+                resultBg: 'bg-purple-50 text-purple-700',
               },
             ].map((wf, i) => (
               <motion.div key={i}
-                initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-                <div className="flex items-stretch">
-                  {/* Step number */}
-                  <div className="w-14 flex items-center justify-center bg-gray-50 border-r border-gray-100 shrink-0">
-                    <span className="text-lg font-extrabold text-gray-300">{i + 1}</span>
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
-                    {/* WHEN pill */}
-                    <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 ${wf.wBg}`}>
-                      {wf.wIcon}
-                      <span>When: {wf.when}</span>
-                    </div>
-                    {/* Arrow */}
-                    <svg className="w-4 h-4 text-gray-300 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                    {/* THEN pill */}
-                    <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 ${wf.tBg}`}>
-                      {wf.tIcon}
-                      <span>Then: {wf.then}</span>
-                    </div>
-                    {/* Result */}
-                    <span className={`ml-auto inline-flex items-center gap-1 text-xs font-extrabold px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 ${wf.rBg}`}>
-                      <span>{wf.rIcon}</span> {wf.result}
-                    </span>
-                  </div>
+                initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.13 }}
+                className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden group text-left">
+                {/* Gradient top accent — grows on hover */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${wf.accent} group-hover:h-1.5 transition-all duration-300`} />
+                {/* Icon */}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${wf.iconBg} ${wf.iconColor}`}>
+                  {wf.icon}
+                </div>
+                {/* When label */}
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${wf.iconColor}`}>TRIGGER</p>
+                <h3 className="text-lg font-extrabold text-gray-900 leading-tight mb-2">{wf.when}</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                  </svg>
+                  <p className="text-xs text-gray-400 font-semibold">{wf.then}</p>
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed">{wf.desc}</p>
+                <div className={`mt-6 inline-flex items-center gap-2 text-xs font-black px-4 py-2 rounded-full ${wf.resultBg}`}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  {wf.result}
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
