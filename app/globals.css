@@ -59,7 +59,17 @@ button, input, textarea, select { font: inherit; }
   animation: marquee-scroll 48s linear infinite reverse;
   will-change: transform;
 }
+.animate-marquee-reviews {
+  animation: marquee-scroll 80s linear infinite;
+  will-change: transform;
+}
 .animate-marquee:hover,
-.animate-marquee-r:hover {
+.animate-marquee-r:hover,
+.animate-marquee-reviews:hover {
   animation-play-state: paused;
+}
+
+/* ── Force Montserrat everywhere ── */
+html, body, * {
+  font-family: var(--font-sans), 'Montserrat', system-ui, sans-serif !important;
 }

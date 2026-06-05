@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
@@ -150,29 +150,51 @@ function IcAtSign({ c = 'w-4 h-4' }: { c?: string }) {
     </svg>
   );
 }
+function IcChevronLeft({ c = 'w-5 h-5' }: { c?: string }) {
+  return (
+    <svg className={c} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  );
+}
+function IcChevronRight({ c = 'w-5 h-5' }: { c?: string }) {
+  return (
+    <svg className={c} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
 
 /* ════════════════════════════════════════════════════════════
-   PERSON AVATAR — DiceBear illustrated avatars (HD quality)
-   8 seeds → distinct male + female illustrated characters
+   REAL PERSON AVATARS — diverse professional photo portraits
 ════════════════════════════════════════════════════════════ */
-// DiceBear "personas" — illustrated people that look like real humans
-const AVATAR_SEEDS = ['Sarah','Marcus','Emma','Jake','Priya','Daniel','Aisha','Alex'];
-const AVATAR_BG    = ['b6e3f4','c0aede','d1d4f9','ffd5dc','c0e8c8','ffdfbf','b6e3f4','cceeff'];
+const AVATAR_PHOTOS = [
+  'https://i.pravatar.cc/150?img=47',
+  'https://i.pravatar.cc/150?img=68',
+  'https://i.pravatar.cc/150?img=48',
+  'https://i.pravatar.cc/150?img=3',
+  'https://i.pravatar.cc/150?img=44',
+  'https://i.pravatar.cc/150?img=12',
+  'https://i.pravatar.cc/150?img=5',
+  'https://i.pravatar.cc/150?img=65',
+  'https://i.pravatar.cc/150?img=32',
+];
 
 function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
-  const i    = idx % 8;
-  const seed = AVATAR_SEEDS[i];
-  const bg   = AVATAR_BG[i];
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: `#${bg}` }}>
-      <img
-        src={`https://api.dicebear.com/7.x/personas/svg?seed=${seed}&size=100&backgroundColor=${bg}`}
-        alt={seed}
-        width={size}
-        height={size}
-        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }}
-      />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={AVATAR_PHOTOS[idx % AVATAR_PHOTOS.length]}
+      alt="user"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        flexShrink: 0,
+        display: 'block',
+      }}
+    />
   );
 }
 
@@ -253,16 +275,40 @@ const BRANDS_ROW2: Brand[] = [
 ════════════════════════════════════════════════════════════ */
 const testimonials = [
   {
-    quote: "LeadGenie completely transformed our agency. We went from sending 2,000 emails a week to over 200,000 — across 40+ client domains — without a single deliverability issue. The warmup alone is worth 10x the price.",
-    name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 6,
+    quote: "LeadGenie completely transformed our agency. We went from sending 2,000 emails a week to 200,000+ — across 40+ client domains — without a single deliverability issue. The warmup alone is worth 10x the price.",
+    name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0,
   },
   {
-    quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — I had our first 5-step sequence running in under 20 minutes. The Unibox makes managing replies from 12 accounts feel effortless.",
-    name: 'Briken Bufi', role: 'CEO & Co-Founder, Aella Creative Force', company: 'Aella', avatarIdx: 7,
+    quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — 5-step sequence running in under 20 minutes. Managing replies from 12 accounts in the Unibox is effortless.",
+    name: 'Briken Bufi', role: 'CEO, Aella Creative Force', company: 'Aella', avatarIdx: 1,
   },
   {
-    quote: "I've tried Instantly, Lemlist, and Mailshake. LeadGenie beats them all on deliverability and ease of use. Our open rates jumped from 28% to 61% after switching. The AI personalisation is genuinely impressive.",
-    name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 5,
+    quote: "I've tried Instantly, Lemlist, and Mailshake. LeadGenie beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive — prospects actually respond.",
+    name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3,
+  },
+  {
+    quote: "The AI warmup feature is a total game changer. We went from landing in spam 40% of the time to virtually zero. Deliverability scores are the best they've ever been across all 30 of our sending accounts.",
+    name: 'David Park', role: 'Head of Growth, Ripple Labs', company: 'Ripple', avatarIdx: 5,
+  },
+  {
+    quote: "I manage 8 client accounts from one dashboard. LeadGenie saves me 20+ hours a week. The Unibox alone is worth the subscription — managing replies across 50+ email accounts is completely seamless.",
+    name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6,
+  },
+  {
+    quote: "Switched from Apollo + Lemlist combo. LeadGenie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list. The ROI is genuinely unbelievable.",
+    name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7,
+  },
+  {
+    quote: "Finally a platform that handles everything — prospecting, warmup, sequences, and replies — all in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+.",
+    name: 'Tom Brady', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2,
+  },
+  {
+    quote: "LeadGenie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close for this price point.",
+    name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4,
+  },
+  {
+    quote: "We run a 12-person SDR team. LeadGenie scaled our outreach 10x without adding headcount. The campaign analytics helped us cut underperforming sequences and double down on what works. Game changer.",
+    name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8,
   },
 ];
 
@@ -287,14 +333,14 @@ function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; la
 }
 
 /* ════════════════════════════════════════════════════════════
-   BRAND PILL  (used in marquee rows)
+   BRAND PILL  — bordered box style (not filled)
 ════════════════════════════════════════════════════════════ */
 function BrandPill({ brand }: { brand: Brand }) {
   return (
     <div className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default select-none">
       <span
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm"
-        style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}>
+        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border-2 border-gray-200 bg-white"
+        style={{ color: brand.from }}>
         {brand.icon}
       </span>
       <span className="text-sm font-bold text-gray-700 whitespace-nowrap tracking-tight">{brand.name}</span>
@@ -311,6 +357,21 @@ export default function HomePage() {
   const [result, setResult] = useState<AIResult | null>(null);
   const [error, setError] = useState('');
 
+  /* Testimonial slider */
+  const [slideIdx, setSlideIdx] = useState(0);
+  const [slidePaused, setSlidePaused] = useState(false);
+  const TOTAL = testimonials.length;
+
+  useEffect(() => {
+    if (slidePaused) return;
+    const id = setInterval(() => setSlideIdx(i => (i + 1) % TOTAL), 4800);
+    return () => clearInterval(id);
+  }, [slidePaused, TOTAL]);
+
+  function prevSlide() { setSlideIdx(i => (i - 1 + TOTAL) % TOTAL); }
+  function nextSlide() { setSlideIdx(i => (i + 1) % TOTAL); }
+
+  /* AI search */
   async function handleSearch() {
     if (!query.trim() || loading) return;
     setLoading(true);
@@ -331,6 +392,12 @@ export default function HomePage() {
       setLoading(false);
     }
   }
+
+  /* Compute which 3 testimonials to show */
+  const visibleCards = [0, 1, 2].map(offset => ({
+    data: testimonials[(slideIdx + offset) % TOTAL],
+    key: (slideIdx + offset) % TOTAL,
+  }));
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -355,14 +422,10 @@ export default function HomePage() {
             </Link>
           </motion.div>
 
-          {/* H1 */}
+          {/* H1 — no lightning icon */}
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
             className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
-            Cold Email Outreach That{' '}
-            <span className="inline-flex items-center justify-center h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-white/20 border-2 border-white/30 align-middle mx-1 text-white shadow-lg">
-              <IcLightning c="w-5 h-5 sm:w-7 sm:h-7" />
-            </span>{' '}
-            Books Meetings
+            Cold Email Outreach That Books Meetings
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08 }}
@@ -461,7 +524,7 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {/* Step-by-step flow — clean glass pills, all uniform */}
+          {/* Step-by-step flow */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
             className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
             {[
@@ -523,30 +586,30 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          STATS BAR
+          STATS BAR — horizontal icon + number
       ══════════════════════════════════════════ */}
       <section className="bg-white border-b border-gray-100">
         <div className="container">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
             {[
-              { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',    icon: <IcUsers c="w-6 h-6" />,  accent: '#3b82f6', iconBg: 'bg-blue-600'   },
-              { v: '42M+',   l: 'Emails Delivered', sub: '97%+ inbox placement',     icon: <IcMail c="w-6 h-6" />,   accent: '#6366f1', iconBg: 'bg-indigo-600' },
-              { v: '47%',    l: 'Avg Open Rate',    sub: 'vs 21% industry average',  icon: <IcTrend c="w-6 h-6" />,  accent: '#10b981', iconBg: 'bg-emerald-500' },
-              { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',      icon: <IcStar c="w-6 h-6" />,   accent: '#f59e0b', iconBg: 'bg-amber-500'  },
+              { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',    icon: <IcUsers c="w-5 h-5" />,    color: '#3b82f6', bg: 'bg-blue-50'    },
+              { v: '42M+',   l: 'Emails Delivered', sub: '97%+ inbox placement',      icon: <IcMail c="w-5 h-5" />,     color: '#6366f1', bg: 'bg-indigo-50'  },
+              { v: '76%',    l: 'Avg Open Rate',    sub: 'vs 21% industry average',   icon: <IcTrend c="w-5 h-5" />,    color: '#10b981', bg: 'bg-emerald-50' },
+              { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',       icon: <IcStar c="w-5 h-5" />,     color: '#f59e0b', bg: 'bg-amber-50'   },
             ].map((s, i) => (
               <motion.div key={s.l}
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex flex-col items-center text-center py-12 px-6 hover:bg-gray-50/60 transition-colors group relative overflow-hidden">
-                {/* Colored top accent line */}
-                <div className="absolute top-0 left-0 right-0 h-[3px] rounded-b-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: s.accent }} />
-                <span className={`w-14 h-14 flex items-center justify-center rounded-2xl ${s.iconBg} text-white mb-5 shadow-md group-hover:scale-110 transition-transform duration-200`}>
+                className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors group">
+                <div className={`w-12 h-12 flex items-center justify-center rounded-2xl ${s.bg} shrink-0 group-hover:scale-110 transition-transform duration-200`}
+                  style={{ color: s.color }}>
                   {s.icon}
-                </span>
-                <p className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight leading-none">{s.v}</p>
-                <p className="mt-2 text-sm font-bold text-gray-700">{s.l}</p>
-                <p className="mt-1 text-xs text-gray-400 font-medium">{s.sub}</p>
+                </div>
+                <div className="text-left">
+                  <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
+                  <p className="text-xs font-bold text-gray-700 mt-0.5">{s.l}</p>
+                  <p className="text-[10px] text-gray-400 font-medium">{s.sub}</p>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -578,9 +641,9 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/6 hover:shadow-3xl transition-shadow duration-300"
+            className="mt-14 mx-auto max-w-4xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/6 hover:shadow-3xl transition-shadow duration-300"
             style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 50%,#3b82f6 100%)' }}>
-            <div className="p-8 sm:p-10">
+            <div className="p-5 sm:p-7">
               <div className="bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <div className="flex items-center gap-2.5">
@@ -594,14 +657,14 @@ export default function HomePage() {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {[
-                    { email: 'alex@company.io',    provider: 'Gmail',   health: 98, status: 'Active',  sends: '142/200' },
-                    { email: 'sarah@outreach.co',  provider: 'Outlook', health: 95, status: 'Active',  sends: '87/200'  },
-                    { email: 'mike@growthco.com',  provider: 'Gmail',   health: 71, status: 'Warming', sends: '30/50'   },
-                    { email: 'leads@salesteam.io', provider: 'SMTP',    health: 99, status: 'Active',  sends: '198/300' },
-                    { email: 'outreach@scale.ai',  provider: 'Gmail',   health: 43, status: 'Warming', sends: '12/30'   },
-                  ].map((acc, i) => (
+                    { email: 'alex@company.io',    provider: 'Gmail',   health: 98, status: 'Active',  sends: '142/200', avatarIdx: 0 },
+                    { email: 'sarah@outreach.co',  provider: 'Outlook', health: 95, status: 'Active',  sends: '87/200',  avatarIdx: 1 },
+                    { email: 'mike@growthco.com',  provider: 'Gmail',   health: 71, status: 'Warming', sends: '30/50',   avatarIdx: 2 },
+                    { email: 'leads@salesteam.io', provider: 'SMTP',    health: 99, status: 'Active',  sends: '198/300', avatarIdx: 3 },
+                    { email: 'outreach@scale.ai',  provider: 'Gmail',   health: 43, status: 'Warming', sends: '12/30',   avatarIdx: 4 },
+                  ].map((acc) => (
                     <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 transition-colors">
-                      <PersonAvatar idx={i} size={36} />
+                      <PersonAvatar idx={acc.avatarIdx} size={36} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
                         <p className="text-xs text-gray-400">{acc.provider}</p>
@@ -653,7 +716,7 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 mx-auto max-w-3xl">
+            className="mt-14 mx-auto max-w-4xl">
             <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <div>
@@ -720,14 +783,14 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
+            className="mt-14 mx-auto max-w-4xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
             style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 50%,#3b82f6 100%)' }}>
-            <div className="p-8 sm:p-10">
+            <div className="p-5 sm:p-7">
               <div className="grid sm:grid-cols-2 gap-5 text-left">
                 {/* Sequence steps */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
-                    <IcLightning c="w-4 h-4 text-blue-600" />
+                    <IcRocket c="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-bold text-gray-900">Campaign: SaaS Founders Q3</p>
                   </div>
                   <div className="space-y-2.5">
@@ -819,9 +882,9 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
+            className="mt-14 mx-auto max-w-4xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
             style={{ background: 'linear-gradient(135deg,#5b21b6 0%,#4338ca 50%,#1d4ed8 100%)' }}>
-            <div className="p-8 sm:p-10">
+            <div className="p-5 sm:p-7">
               <div className="bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/70">
@@ -893,7 +956,7 @@ export default function HomePage() {
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-14 mx-auto max-w-3xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
+            className="mt-14 mx-auto max-w-4xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
               <div>
                 <p className="text-sm font-bold text-gray-900">Campaign Analytics</p>
@@ -1008,13 +1071,10 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.13 }}
                 className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden group text-left">
-                {/* Gradient top accent — grows on hover */}
                 <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${wf.accent} group-hover:h-1.5 transition-all duration-300`} />
-                {/* Icon */}
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${wf.iconBg} ${wf.iconColor}`}>
                   {wf.icon}
                 </div>
-                {/* When label */}
                 <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${wf.iconColor}`}>TRIGGER</p>
                 <h3 className="text-lg font-extrabold text-gray-900 leading-tight mb-2">{wf.when}</h3>
                 <div className="flex items-center gap-2 mb-4">
@@ -1037,7 +1097,7 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          7. TESTIMONIALS
+          7. TESTIMONIALS — auto-sliding carousel
       ══════════════════════════════════════════ */}
       <section className="bg-white py-28">
         <div className="container text-center">
@@ -1052,32 +1112,64 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
-            {testimonials.map((t, idx) => (
-              <motion.div key={t.name}
-                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.4, delay: idx * 0.1 }}
-                className="bg-white rounded-2xl p-7 flex flex-col justify-between border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div>
-                  <div className="flex gap-0.5 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <svg key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                </div>
-                <div className="mt-6 flex items-center gap-3">
-                  <PersonAvatar idx={t.avatarIdx} size={46} />
+          {/* Slider */}
+          <div className="mt-14 relative"
+            onMouseEnter={() => setSlidePaused(true)}
+            onMouseLeave={() => setSlidePaused(false)}>
+
+            {/* Cards — 3 visible on desktop, 1 on mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-5xl mx-auto text-left">
+              {visibleCards.map(({ data: t, key }) => (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-white rounded-2xl p-7 flex flex-col justify-between border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                   <div>
-                    <p className="text-sm font-extrabold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-500 font-medium">{t.role}</p>
+                    <div className="flex gap-0.5 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                    <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
                   </div>
-                  <span className="ml-auto text-xs font-bold text-gray-400 italic bg-gray-50 border border-gray-100 rounded-xl px-2.5 py-1.5">{t.company}</span>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="mt-6 flex items-center gap-3">
+                    <PersonAvatar idx={t.avatarIdx} size={46} />
+                    <div>
+                      <p className="text-sm font-extrabold text-gray-900">{t.name}</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.role}</p>
+                    </div>
+                    <span className="ml-auto text-xs font-bold text-gray-400 italic bg-gray-50 border border-gray-100 rounded-xl px-2.5 py-1.5">{t.company}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Navigation arrows */}
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <button onClick={prevSlide}
+                className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                <IcChevronLeft c="w-4 h-4" />
+              </button>
+
+              {/* Dot indicators */}
+              <div className="flex items-center gap-2">
+                {testimonials.map((_, i) => (
+                  <button key={i} onClick={() => setSlideIdx(i)}
+                    className={`rounded-full transition-all duration-300 ${
+                      i === slideIdx ? 'w-6 h-2.5 bg-blue-600' : 'w-2.5 h-2.5 bg-gray-200 hover:bg-gray-300'
+                    }`} />
+                ))}
+              </div>
+
+              <button onClick={nextSlide}
+                className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                <IcChevronRight c="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -1090,15 +1182,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
-              Start Booking Meetings
-              <br />
-              <span className="inline-flex items-center gap-2 justify-center mt-1">
-                This Week —{' '}
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20 border-2 border-white/30 text-white shadow-lg">
-                  <IcLightning c="w-5 h-5" />
-                </span>
-                {' '}Free
-              </span>
+              Start Booking Meetings This Week — Free
             </h2>
             <p className="mt-5 text-blue-200 text-base max-w-sm mx-auto leading-relaxed font-medium">
               No credit card required. Get set up in minutes and launch your first
