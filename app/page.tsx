@@ -7,7 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
 /* ════════════════════════════════════════════════════════════
-   SVG ICON COMPONENTS  (all emojis replaced)
+   SVG ICON COMPONENTS
 ════════════════════════════════════════════════════════════ */
 function IcLightning({ c = 'w-4 h-4' }: { c?: string }) {
   return (
@@ -33,7 +33,7 @@ function IcUsers({ c = 'w-4 h-4' }: { c?: string }) {
 function IcRocket({ c = 'w-4 h-4' }: { c?: string }) {
   return (
     <svg className={c} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
     </svg>
   );
 }
@@ -144,34 +144,121 @@ function IcServer({ c = 'w-4 h-4' }: { c?: string }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   PERSON AVATAR — human silhouette SVG
+   PERSON AVATAR — CSS gradient background + SVG silhouette
+   Uses a DIV wrapper so overflow:hidden + border-radius work
 ════════════════════════════════════════════════════════════ */
 const AVATAR_GRADS: [string, string][] = [
-  ['#3b82f6', '#6366f1'],
-  ['#8b5cf6', '#ec4899'],
-  ['#10b981', '#0ea5e9'],
-  ['#f59e0b', '#ef4444'],
-  ['#06b6d4', '#8b5cf6'],
-  ['#f97316', '#ec4899'],
+  ['#3b82f6', '#6366f1'],  // blue-indigo
+  ['#8b5cf6', '#ec4899'],  // purple-pink
+  ['#10b981', '#0ea5e9'],  // emerald-sky
+  ['#f59e0b', '#ef4444'],  // amber-red
+  ['#06b6d4', '#7c3aed'],  // cyan-violet
+  ['#f97316', '#db2777'],  // orange-pink
+  ['#14b8a6', '#3b82f6'],  // teal-blue
+  ['#a855f7', '#6366f1'],  // violet-indigo
 ];
 
-function PersonAvatar({ idx, size = 36 }: { idx: number; size?: number }) {
+function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
   const [from, to] = AVATAR_GRADS[idx % AVATAR_GRADS.length];
-  const id = `pav${idx}`;
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" className="shrink-0 rounded-full">
-      <defs>
-        <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={from} />
-          <stop offset="100%" stopColor={to} />
-        </linearGradient>
-      </defs>
-      <circle cx="20" cy="20" r="20" fill={`url(#${id})`} />
-      <circle cx="20" cy="14" r="7" fill="rgba(255,255,255,0.88)" />
-      <path d="M2 44 Q2 24 20 24 Q38 24 38 44Z" fill="rgba(255,255,255,0.88)" />
-    </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
+        overflow: 'hidden',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}>
+      <svg
+        width={size * 0.9}
+        height={size * 0.88}
+        viewBox="0 0 90 88"
+        fill="none"
+        style={{ display: 'block' }}>
+        {/* Head */}
+        <circle cx="45" cy="30" r="22" fill="rgba(255,255,255,0.93)" />
+        {/* Shoulders / body */}
+        <ellipse cx="45" cy="88" rx="45" ry="30" fill="rgba(255,255,255,0.93)" />
+      </svg>
+    </div>
   );
 }
+
+/* ════════════════════════════════════════════════════════════
+   BRAND LOGO DATA  (two rows for double marquee)
+════════════════════════════════════════════════════════════ */
+type Brand = { name: string; from: string; to: string; icon: React.ReactNode };
+
+const BRANDS_ROW1: Brand[] = [
+  {
+    name: 'Stripe', from: '#6366f1', to: '#8b5cf6',
+    icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" />
+    </svg>,
+  },
+  {
+    name: 'Notion', from: '#374151', to: '#111827',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>,
+  },
+  {
+    name: 'Linear', from: '#5e6ad2', to: '#7c3aed',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22" />
+      <circle cx="21.75" cy="6.75" r="2" fill="currentColor" stroke="none" />
+    </svg>,
+  },
+  {
+    name: 'Vercel', from: '#1f2937', to: '#000000',
+    icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M12 2L22 20H2L12 2z" />
+    </svg>,
+  },
+  {
+    name: 'Figma', from: '#f24e1e', to: '#ff7262',
+    icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4zm0-12H4c-2.208 0-4 1.792-4 4s1.792 4 4 4h4V12zm0-8H4C1.792 4 0 5.792 0 8s1.792 4 4 4h4V4zm4 0v8h4c2.208 0 4-1.792 4-4s-1.792-4-4-4h-4zm4 16c2.208 0 4-1.792 4-4s-1.792-4-4-4h-4v4c0 2.208 1.792 4 4 4z" />
+    </svg>,
+  },
+];
+
+const BRANDS_ROW2: Brand[] = [
+  {
+    name: 'HubSpot', from: '#ff7a59', to: '#ff4500',
+    icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M22.175 12.55c0-1.155-.28-2.24-.77-3.185l2.19-2.405-1.3-1.18-2.1 2.31a5.67 5.67 0 00-3.15-.96c-3.145 0-5.695 2.55-5.695 5.695 0 3.145 2.55 5.695 5.695 5.695S22.175 15.695 22.175 12.55zm-5.695-3.815c2.11 0 3.815 1.705 3.815 3.815s-1.705 3.815-3.815 3.815-3.815-1.705-3.815-3.815 1.705-3.815 3.815-3.815zm-10.51 4.72c0 1.04-.84 1.88-1.88 1.88S2.21 14.495 2.21 13.455s.84-1.88 1.88-1.88 1.88.84 1.88 1.88z" />
+    </svg>,
+  },
+  {
+    name: 'Zapier', from: '#ff4a00', to: '#ff6d3b',
+    icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>,
+  },
+  {
+    name: 'Salesforce', from: '#00a1e0', to: '#1ab9ff',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+    </svg>,
+  },
+  {
+    name: 'Intercom', from: '#1f8eff', to: '#60b4ff',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+    </svg>,
+  },
+  {
+    name: 'Outreach', from: '#7c3aed', to: '#a855f7',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>,
+  },
+];
 
 /* ════════════════════════════════════════════════════════════
    DATA
@@ -179,21 +266,16 @@ function PersonAvatar({ idx, size = 36 }: { idx: number; size?: number }) {
 const testimonials = [
   {
     quote: "LeadGenie completely transformed our agency. We went from sending 2,000 emails a week to over 200,000 — across 40+ client domains — without a single deliverability issue. The warmup alone is worth 10x the price.",
-    name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', initials: 'ME', color: 'bg-green-600',
+    name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 6,
   },
   {
     quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — I had our first 5-step sequence running in under 20 minutes. The Unibox makes managing replies from 12 accounts feel effortless.",
-    name: 'Briken Bufi', role: 'CEO & Co-Founder, Aella Creative Force', company: 'Aella', initials: 'BB', color: 'bg-blue-600',
+    name: 'Briken Bufi', role: 'CEO & Co-Founder, Aella Creative Force', company: 'Aella', avatarIdx: 7,
   },
   {
     quote: "I've tried Instantly, Lemlist, and Mailshake. LeadGenie beats them all on deliverability and ease of use. Our open rates jumped from 28% to 61% after switching. The AI personalisation is genuinely impressive.",
-    name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', initials: 'AB', color: 'bg-purple-600',
+    name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 5,
   },
-];
-
-const BRANDS = [
-  'Stripe', 'Notion', 'Linear', 'Vercel', 'Figma',
-  'HubSpot', 'Zapier', 'Segment', 'Intercom', 'Outreach',
 ];
 
 type AIResult =
@@ -205,13 +287,29 @@ type AIResult =
 ════════════════════════════════════════════════════════════ */
 function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; label: string; dark?: boolean }) {
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${
+    <div className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold mb-5 ${
       dark
-        ? 'bg-white/15 border border-white/25 text-white/80'
+        ? 'bg-white/15 border border-white/30 text-white/85'
         : 'bg-blue-50 border border-blue-100 text-blue-600'
     }`}>
-      <span className={`flex items-center justify-center w-3.5 h-3.5 ${dark ? 'text-white/70' : 'text-blue-500'}`}>{icon}</span>
+      <span className={`flex items-center justify-center w-4 h-4 ${dark ? 'text-white/70' : 'text-blue-500'}`}>{icon}</span>
       {label}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   BRAND PILL  (used in marquee rows)
+════════════════════════════════════════════════════════════ */
+function BrandPill({ brand }: { brand: Brand }) {
+  return (
+    <div className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default select-none">
+      <span
+        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm"
+        style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}>
+        {brand.icon}
+      </span>
+      <span className="text-sm font-bold text-gray-700 whitespace-nowrap tracking-tight">{brand.name}</span>
     </div>
   );
 }
@@ -253,14 +351,14 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           HERO
       ══════════════════════════════════════════ */}
-      <section className="hero-gradient pb-20 pt-20">
+      <section className="hero-gradient pb-24 pt-20">
         <div className="container text-center">
 
           {/* Announcement pill */}
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
-            className="mb-6 flex justify-center">
+            className="mb-7 flex justify-center">
             <Link href="/signup"
-              className="inline-flex items-center gap-2 border border-white/20 bg-white/10 rounded-full px-4 py-1.5 text-xs font-semibold text-white/90 hover:bg-white/20 transition-colors">
+              className="inline-flex items-center gap-2 border border-white/25 bg-white/12 rounded-full px-4 py-1.5 text-xs font-semibold text-white/90 hover:bg-white/20 transition-colors backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
               New: AI-powered email warmup is live — try it free
               <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,31 +367,31 @@ export default function HomePage() {
             </Link>
           </motion.div>
 
-          {/* Headline */}
+          {/* H1 */}
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="text-4xl sm:text-5xl lg:text-[58px] font-extrabold text-white leading-[1.1] tracking-tight">
+            className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
             Cold Email Outreach That{' '}
-            <span className="inline-flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-blue-500/60 border-2 border-white/30 align-middle mx-1 text-white">
-              <IcLightning c="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="inline-flex items-center justify-center h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-white/20 border-2 border-white/30 align-middle mx-1 text-white shadow-lg">
+              <IcLightning c="w-5 h-5 sm:w-7 sm:h-7" />
             </span>{' '}
             Books Meetings
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08 }}
-            className="mt-3 text-sm font-semibold text-blue-200 tracking-wide uppercase">
-            Built for sales teams, agencies &amp; SaaS founders
+            className="mt-4 text-sm font-semibold text-blue-200 tracking-widest uppercase">
+            Built for sales teams · agencies · SaaS founders
           </motion.p>
 
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.12 }}
-            className="mt-3 text-base sm:text-lg text-blue-100 max-w-xl mx-auto leading-relaxed">
+            className="mt-4 text-base sm:text-lg text-blue-100/90 max-w-xl mx-auto leading-relaxed font-medium">
             Connect unlimited sending accounts, warm up your domains automatically, and run
             AI-personalised cold email campaigns that land in the inbox — not spam.
           </motion.p>
 
           {/* AI search bar */}
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-8 mx-auto max-w-[580px]">
-            <div className="flex items-center bg-white rounded-full shadow-2xl px-5 py-3 gap-3 ring-1 ring-white/20">
+            className="mt-9 mx-auto max-w-[600px]">
+            <div className="flex items-center bg-white rounded-2xl shadow-2xl px-5 py-3.5 gap-3 ring-1 ring-white/10">
               <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -302,9 +400,9 @@ export default function HomePage() {
                 placeholder="Ask AI to write your first cold email campaign..."
                 className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder:text-gray-400 font-medium" />
               <button onClick={handleSearch} disabled={loading}
-                className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-sm">
+                className="shrink-0 h-9 w-9 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 shadow-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
             </div>
@@ -313,27 +411,24 @@ export default function HomePage() {
           {/* AI response card */}
           {(loading || result || error) && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-              className="mt-4 mx-auto max-w-[580px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
-
+              className="mt-4 mx-auto max-w-[600px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
               {error && (
                 <div className="flex items-center gap-3 px-5 py-4">
                   <span className="text-red-500 shrink-0"><IcWarning c="w-5 h-5" /></span>
                   <p className="text-sm text-red-600 font-medium">{error}</p>
                 </div>
               )}
-
               {loading && (
                 <div className="flex items-center gap-3 px-5 py-4">
                   <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" />
                   <p className="text-sm text-gray-500 font-medium">LeadGenie AI is thinking...</p>
                 </div>
               )}
-
               {result?.type === 'answer' && (
                 <>
                   <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2">
                     <span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span>
-                    <p className="text-xs font-semibold text-indigo-700">LeadGenie AI</p>
+                    <p className="text-xs font-bold text-indigo-700">LeadGenie AI</p>
                   </div>
                   <div className="px-5 py-4">
                     <p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p>
@@ -341,21 +436,18 @@ export default function HomePage() {
                   <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                     <p className="text-xs text-gray-400">Want to see it in action?</p>
                     <Link href="/signup"
-                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
+                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
                       Try LeadGenie Free
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </Link>
                   </div>
                 </>
               )}
-
               {result?.type === 'email' && (
                 <>
                   <div className="px-5 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                     <span className="text-blue-600"><IcSparkles c="w-4 h-4" /></span>
-                    <p className="text-xs font-semibold text-blue-700">Your email is ready</p>
+                    <p className="text-xs font-bold text-blue-700">Your email is ready</p>
                   </div>
                   <div className="px-5 py-4 space-y-2.5">
                     <div className="flex items-start gap-2">
@@ -366,18 +458,14 @@ export default function HomePage() {
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">Subject</span>
                       <span className="text-xs text-gray-900 font-semibold">{result.subject}</span>
                     </div>
-                    <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 leading-relaxed whitespace-pre-line">
-                      {result.body}
-                    </div>
+                    <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 leading-relaxed whitespace-pre-line">{result.body}</div>
                   </div>
                   <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                     <p className="text-xs text-gray-400">No credit card required</p>
                     <Link href="/signup"
-                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
+                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">
                       Use this template — Start Free
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </Link>
                   </div>
                 </>
@@ -387,20 +475,20 @@ export default function HomePage() {
 
           {/* Step-by-step flow */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
+            className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
             {[
-              { n: '1', label: 'Add Email Account', icon: <IcServer c="w-3.5 h-3.5" /> },
-              { n: '2', label: 'Upload Prospects',   icon: <IcUsers c="w-3.5 h-3.5" /> },
-              { n: '3', label: 'Launch Campaign',    icon: <IcRocket c="w-3.5 h-3.5" /> },
-              { n: '4', label: 'Book Meetings',      icon: <IcCalendar c="w-3.5 h-3.5" /> },
+              { n: '1', label: 'Add Email Account', icon: <IcServer c="w-4 h-4" /> },
+              { n: '2', label: 'Upload Prospects',   icon: <IcUsers c="w-4 h-4" /> },
+              { n: '3', label: 'Launch Campaign',    icon: <IcRocket c="w-4 h-4" /> },
+              { n: '4', label: 'Book Meetings',      icon: <IcCalendar c="w-4 h-4" /> },
             ].map((step, i) => (
               <div key={step.n} className="flex items-center">
-                <div className="flex items-center gap-2 bg-white/12 border border-white/20 rounded-2xl px-4 py-2.5 backdrop-blur-sm hover:bg-white/18 transition-colors cursor-default">
-                  <span className="h-5 w-5 rounded-full bg-blue-500/80 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm">
+                <div className="flex items-center gap-2.5 bg-white/14 border border-white/22 rounded-2xl px-4 py-2.5 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-default group">
+                  <span className="h-6 w-6 rounded-full bg-blue-600/80 text-white text-[11px] font-black flex items-center justify-center shrink-0 shadow-md group-hover:bg-blue-500 transition-colors">
                     {step.n}
                   </span>
-                  <span className="text-white/70 shrink-0">{step.icon}</span>
-                  <span className="text-xs sm:text-sm font-semibold text-white/90">{step.label}</span>
+                  <span className="text-white/65 shrink-0">{step.icon}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-white/92 whitespace-nowrap">{step.label}</span>
                 </div>
                 {i < 3 && (
                   <svg className="w-4 h-4 text-white/25 mx-1.5 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,28 +498,38 @@ export default function HomePage() {
               </div>
             ))}
           </motion.div>
+        </div>
+      </section>
 
-          {/* Trusted brands — animated marquee */}
-          <div className="mt-16">
-            <p className="text-xs font-semibold text-blue-200/70 uppercase tracking-widest mb-5">
-              Trusted by teams at world-class companies
-            </p>
-            <div
-              className="overflow-hidden"
-              style={{
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
-                maskImage: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
-              }}>
-              <div className="flex w-max gap-4 animate-marquee">
-                {[...BRANDS, ...BRANDS].map((name, i) => (
-                  <div key={i}
-                    className="flex-shrink-0 flex items-center gap-2 bg-white/10 border border-white/15 rounded-xl px-5 py-2.5 hover:bg-white/18 transition-colors cursor-default">
-                    <span className="w-2 h-2 rounded-full bg-white/50 shrink-0" />
-                    <span className="text-sm font-bold text-white/80 whitespace-nowrap tracking-tight">{name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* ══════════════════════════════════════════
+          TRUSTED BY — white section, 2-row marquee
+      ══════════════════════════════════════════ */}
+      <section className="bg-white border-b border-gray-100 py-14 overflow-hidden">
+        <div className="container mb-8 text-center">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
+            Trusted by sales teams at world-class companies
+          </p>
+        </div>
+        {/* Row 1 — scrolls left */}
+        <div
+          className="relative mb-4"
+          style={{
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+          }}>
+          <div className="flex w-max gap-4 animate-marquee px-4">
+            {[...BRANDS_ROW1, ...BRANDS_ROW1].map((b, i) => <BrandPill key={i} brand={b} />)}
+          </div>
+        </div>
+        {/* Row 2 — scrolls right */}
+        <div
+          className="relative"
+          style={{
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+          }}>
+          <div className="flex w-max gap-4 animate-marquee-r px-4">
+            {[...BRANDS_ROW2, ...BRANDS_ROW2].map((b, i) => <BrandPill key={i} brand={b} />)}
           </div>
         </div>
       </section>
@@ -439,22 +537,22 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           STATS BAR
       ══════════════════════════════════════════ */}
-      <section className="bg-white border-b border-gray-100 py-14">
+      <section className="bg-gray-50 border-b border-gray-100 py-14">
         <div className="container">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
             {[
-              { v: '8,500+', l: 'Active Users',     icon: <IcUsers c="w-5 h-5" />,    color: 'text-blue-600',   bg: 'bg-blue-50' },
-              { v: '42M+',   l: 'Emails Delivered', icon: <IcMail c="w-5 h-5" />,     color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { v: '58%',    l: 'Avg Open Rate',    icon: <IcTrend c="w-5 h-5" />,    color: 'text-green-600',  bg: 'bg-green-50' },
-              { v: '4.9/5',  l: 'G2 Rating',        icon: <IcStar c="w-5 h-5" />,     color: 'text-yellow-600', bg: 'bg-yellow-50' },
-            ].map(s => (
+              { v: '8,500+', l: 'Active Users',     icon: <IcUsers c="w-5 h-5" />,  color: 'text-blue-600',   bg: 'bg-blue-100'   },
+              { v: '42M+',   l: 'Emails Delivered', icon: <IcMail c="w-5 h-5" />,   color: 'text-indigo-600', bg: 'bg-indigo-100' },
+              { v: '58%',    l: 'Avg Open Rate',    icon: <IcTrend c="w-5 h-5" />,  color: 'text-green-600',  bg: 'bg-green-100'  },
+              { v: '4.9/5',  l: 'G2 Rating',        icon: <IcStar c="w-5 h-5" />,   color: 'text-yellow-600', bg: 'bg-yellow-100' },
+            ].map((s, i) => (
               <motion.div key={s.l}
                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.5 }}
-                className="flex flex-col items-center text-center bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <span className={`w-10 h-10 flex items-center justify-center rounded-xl ${s.bg} ${s.color} mb-3`}>{s.icon}</span>
+                viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.08 }}
+                className="flex flex-col items-center text-center bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                <span className={`w-11 h-11 flex items-center justify-center rounded-2xl ${s.bg} ${s.color} mb-3 shadow-sm`}>{s.icon}</span>
                 <p className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">{s.v}</p>
-                <p className="mt-1.5 text-sm text-gray-500 font-medium">{s.l}</p>
+                <p className="mt-1.5 text-sm text-gray-500 font-semibold">{s.l}</p>
               </motion.div>
             ))}
           </div>
@@ -464,12 +562,12 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           1. UNLIMITED SENDING ACCOUNTS
       ══════════════════════════════════════════ */}
-      <section id="sending-accounts" className="bg-white py-24">
+      <section id="sending-accounts" className="bg-white py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcMail />} label="Email Accounts" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
               Add Unlimited Sending Accounts
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
@@ -478,26 +576,25 @@ export default function HomePage() {
               protect your domain reputation.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
+              className="mt-7 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors shadow-sm">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
-            style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 45%,#3b82f6 100%)' }}>
+            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/6 hover:shadow-3xl transition-shadow duration-300"
+            style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 50%,#3b82f6 100%)' }}>
             <div className="p-8 sm:p-10">
               <div className="bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <IcServer c="w-4 h-4 text-gray-400" />
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                  <div className="flex items-center gap-2.5">
+                    <IcServer c="w-4 h-4 text-blue-500" />
                     <p className="text-sm font-bold text-gray-900">Email Accounts</p>
+                    <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">5 active</span>
                   </div>
-                  <button className="flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition-colors">
+                  <button className="flex items-center gap-1.5 text-xs font-bold bg-blue-600 text-white rounded-xl px-3.5 py-2 hover:bg-blue-700 transition-colors shadow-sm">
                     + Add Account
                   </button>
                 </div>
@@ -509,25 +606,25 @@ export default function HomePage() {
                     { email: 'leads@salesteam.io', provider: 'SMTP',    health: 99, status: 'Active',  sends: '198/300' },
                     { email: 'outreach@scale.ai',  provider: 'Gmail',   health: 43, status: 'Warming', sends: '12/30'   },
                   ].map((acc, i) => (
-                    <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50">
-                      <PersonAvatar idx={i} size={32} />
+                    <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 transition-colors">
+                      <PersonAvatar idx={i} size={36} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{acc.email}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
                         <p className="text-xs text-gray-400">{acc.provider}</p>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <div className="w-16 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{
+                          <div className="h-full rounded-full" style={{
                             width: `${acc.health}%`,
                             background: acc.health > 80 ? '#22c55e' : acc.health > 50 ? '#f59e0b' : '#ef4444'
                           }} />
                         </div>
-                        <span className="text-xs text-gray-500 w-6 text-right">{acc.health}</span>
+                        <span className="text-xs text-gray-500 w-7 text-right font-medium">{acc.health}</span>
                       </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
                         acc.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                       }`}>{acc.status}</span>
-                      <span className="text-xs text-gray-400 shrink-0 hidden sm:block">{acc.sends}</span>
+                      <span className="text-xs text-gray-400 shrink-0 hidden sm:block font-medium">{acc.sends}</span>
                     </div>
                   ))}
                 </div>
@@ -540,12 +637,12 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           2. EMAIL WARMUP
       ══════════════════════════════════════════ */}
-      <section id="warmup" className="teal-gradient py-24">
+      <section id="warmup" className="teal-gradient py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcFire />} label="Email Warmup" dark />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.1]">
               Land in the Inbox. Every Time.
             </h2>
             <p className="mt-4 text-blue-100 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
@@ -554,24 +651,22 @@ export default function HomePage() {
               a single cold email campaign.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-white text-gray-900 text-sm font-semibold rounded-full px-7 py-3 hover:bg-blue-50 transition-colors shadow-sm">
+              className="mt-7 inline-flex items-center gap-2 bg-white text-gray-900 text-sm font-bold rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 mx-auto max-w-3xl">
+            className="mt-14 mx-auto max-w-3xl">
             <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <div>
                   <p className="text-sm font-bold text-gray-900">Warmup Dashboard</p>
                   <p className="text-xs text-gray-400 mt-0.5">alex@company.io · Running 18 days</p>
                 </div>
-                <span className="flex items-center gap-1.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full px-3 py-1">
+                <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Warming Up
                 </span>
               </div>
@@ -582,24 +677,24 @@ export default function HomePage() {
                     { l: 'Spam Rate',    v: '0.4%',   color: 'text-red-500',   bg: 'bg-red-50 border-red-100'     },
                     { l: 'Health Score', v: '98/100', color: 'text-blue-600',  bg: 'bg-blue-50 border-blue-100'   },
                   ].map(s => (
-                    <div key={s.l} className={`rounded-xl p-3.5 border text-center ${s.bg}`}>
+                    <div key={s.l} className={`rounded-2xl p-4 border text-center ${s.bg}`}>
                       <p className={`text-2xl font-extrabold ${s.color}`}>{s.v}</p>
-                      <p className="text-xs text-gray-500 mt-1 font-medium">{s.l}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-semibold">{s.l}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Inbox Placement Score — Last 30 Days</p>
-                <div className="h-24 flex items-end gap-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inbox Placement Score — Last 30 Days</p>
+                <div className="h-24 flex items-end gap-0.5">
                   {[42,51,58,63,60,69,72,75,78,82,80,85,83,88,86,91,89,93,90,95,92,96,94,97,95,97,96,98,97,98].map((h, i) => (
                     <div key={i} className="flex-1 rounded-t-sm" style={{
                       height: `${h}%`,
-                      background: `rgba(59,130,246,${0.2 + i * 0.027})`
+                      background: `rgba(59,130,246,${0.18 + i * 0.028})`
                     }} />
                   ))}
                 </div>
                 <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
                   <span>Day 1 — Score: 42%</span>
-                  <span className="text-green-600 font-semibold">Today — Score: 98% ↑</span>
+                  <span className="text-green-600 font-bold">Today — Score: 98% ↑</span>
                 </div>
               </div>
             </div>
@@ -610,12 +705,12 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           3. CAMPAIGN BUILDER
       ══════════════════════════════════════════ */}
-      <section id="campaigns" className="bg-gray-50 py-24">
+      <section id="campaigns" className="bg-gray-50 py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcRocket />} label="Campaigns" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
               Launch Cold Email Campaigns That Get Replies
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
@@ -623,18 +718,16 @@ export default function HomePage() {
               and inbox rotation. Schedule, A/B test, pause, or scale — all from one dashboard.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
+              className="mt-7 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors shadow-sm">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
-            style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 45%,#3b82f6 100%)' }}>
+            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
+            style={{ background: 'linear-gradient(135deg,#1a3480 0%,#1d4ed8 50%,#3b82f6 100%)' }}>
             <div className="p-8 sm:p-10">
               <div className="grid sm:grid-cols-2 gap-5 text-left">
                 {/* Sequence steps */}
@@ -643,59 +736,59 @@ export default function HomePage() {
                     <IcLightning c="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-bold text-gray-900">Campaign: SaaS Founders Q3</p>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {[
                       { step: 1, day: 'Day 1',  label: 'Initial Email',   open: '64%', reply: '—'   },
                       { step: 2, day: 'Day 3',  label: 'Follow-up #1',    open: '41%', reply: '—'   },
                       { step: 3, day: 'Day 7',  label: 'Follow-up #2',    open: '29%', reply: '—'   },
                       { step: 4, day: 'Day 14', label: 'Break-up Email',  open: '52%', reply: '18%' },
                     ].map(s => (
-                      <div key={s.step} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50/40 transition-colors">
-                        <span className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">{s.step}</span>
+                      <div key={s.step} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50/50 transition-colors">
+                        <span className="h-7 w-7 rounded-full bg-blue-100 text-blue-700 text-xs font-black flex items-center justify-center shrink-0">{s.step}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-800">{s.label}</p>
-                          <p className="text-[10px] text-gray-400">{s.day}</p>
+                          <p className="text-xs font-bold text-gray-800">{s.label}</p>
+                          <p className="text-[10px] text-gray-400 font-medium">{s.day}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-[10px] text-gray-400">Open: <span className="font-semibold text-green-600">{s.open}</span></p>
-                          {s.reply !== '—' && <p className="text-[10px] text-gray-400">Reply: <span className="font-semibold text-blue-600">{s.reply}</span></p>}
+                          <p className="text-[10px] text-gray-400">Open: <span className="font-bold text-green-600">{s.open}</span></p>
+                          {s.reply !== '—' && <p className="text-[10px] text-gray-400">Reply: <span className="font-bold text-blue-600">{s.reply}</span></p>}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <button className="mt-4 w-full border-2 border-dashed border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
+                  <button className="mt-4 w-full border-2 border-dashed border-gray-200 rounded-xl py-2.5 text-xs font-bold text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
                     + Add Follow-up Step
                   </button>
                 </div>
 
                 {/* Email preview */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-3">AI-Personalised Email Preview</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-3">AI-Personalised Preview</p>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-[10px] text-gray-400 mb-1">To</p>
-                      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                        <PersonAvatar idx={0} size={20} />
-                        <span className="text-xs text-gray-700 font-medium">John Doe · VP Sales, Acme Corp</span>
+                      <p className="text-[10px] text-gray-400 mb-1.5 font-semibold">To</p>
+                      <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                        <PersonAvatar idx={0} size={26} />
+                        <span className="text-xs text-gray-700 font-semibold">John Doe · VP Sales, Acme Corp</span>
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-400 mb-1">Subject</p>
-                      <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-gray-800 font-medium">
+                      <p className="text-[10px] text-gray-400 mb-1.5 font-semibold">Subject</p>
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 text-xs text-gray-800 font-semibold">
                         Quick question about Acme&apos;s outbound stack
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-400 mb-1">Body</p>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-xs text-gray-700 leading-relaxed">
+                      <p className="text-[10px] text-gray-400 mb-1.5 font-semibold">Body</p>
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-700 leading-relaxed">
                         Hi John,<br /><br />
                         I noticed Acme Corp just expanded into enterprise — congrats on the Series B!<br /><br />
-                        We help VP Sales teams like yours book 30–50 meetings/month through cold email without hiring more SDRs...
+                        We help VP Sales teams book 30–50 meetings/month with cold email...
                       </div>
                     </div>
                     <div className="flex gap-2 pt-1">
-                      <button className="flex-1 bg-blue-600 text-white text-xs font-bold rounded-lg py-2 hover:bg-blue-700 transition-colors">Send Campaign</button>
-                      <button className="flex items-center gap-1 border border-gray-200 text-gray-600 text-xs font-semibold rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors">
+                      <button className="flex-1 bg-blue-600 text-white text-xs font-bold rounded-xl py-2.5 hover:bg-blue-700 transition-colors">Send Campaign</button>
+                      <button className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-xs font-bold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
                         <IcSparkles c="w-3.5 h-3.5 text-purple-500" /> Rewrite
                       </button>
                     </div>
@@ -710,12 +803,12 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           4. UNIBOX
       ══════════════════════════════════════════ */}
-      <section id="unibox" className="bg-white py-24">
+      <section id="unibox" className="bg-white py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcInbox />} label="Unibox" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
               Every Reply. One Smart Inbox.
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
@@ -724,55 +817,54 @@ export default function HomePage() {
               and close deals faster.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
+              className="mt-7 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors shadow-sm">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
-            style={{ background: 'linear-gradient(135deg,#5b21b6 0%,#4338ca 48%,#1d4ed8 100%)' }}>
+            className="mt-14 mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
+            style={{ background: 'linear-gradient(135deg,#5b21b6 0%,#4338ca 50%,#1d4ed8 100%)' }}>
             <div className="p-8 sm:p-10">
               <div className="bg-white rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
-                {/* Inbox header */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/70">
                   <div className="flex items-center gap-3">
                     <p className="text-sm font-bold text-gray-900">Unibox</p>
-                    <span className="text-xs font-bold bg-blue-600 text-white rounded-full px-2 py-0.5">8 new</span>
+                    <span className="text-xs font-black bg-blue-600 text-white rounded-full px-2.5 py-0.5">8 new</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     {['All', 'Interested', 'Not Now', 'DNC'].map((f, i) => (
-                      <button key={f} className={`text-[11px] font-semibold rounded-full px-2.5 py-1 transition-colors ${
-                        i === 0 ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'
+                      <button key={f} className={`text-[11px] font-bold rounded-full px-2.5 py-1 transition-colors ${
+                        i === 0 ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
                       }`}>{f}</button>
                     ))}
                   </div>
                 </div>
-                {/* Email rows */}
+                {/* Rows */}
                 {[
-                  { from: 'Sarah Chen', co: 'Stripe',  time: '2m',  preview: "Hi, this looks interesting! Can we schedule a...", tag: 'Interested',  tagColor: 'bg-green-100 text-green-700',   read: false, idx: 0 },
-                  { from: 'James Park', co: 'Notion',  time: '14m', preview: "Sure, let's chat. What times work for you this...", tag: 'Meeting Set', tagColor: 'bg-blue-100 text-blue-700',    read: false, idx: 1 },
-                  { from: 'Lena Wolf',  co: 'Linear',  time: '1h',  preview: "We actually just signed with another vendor, but...", tag: 'Not Now',   tagColor: 'bg-yellow-100 text-yellow-700', read: true,  idx: 2 },
-                  { from: 'Tom Reid',   co: 'Vercel',  time: '3h',  preview: "Thanks for reaching out — we're open to exploring...", tag: 'Interested', tagColor: 'bg-green-100 text-green-700', read: true,  idx: 3 },
-                  { from: 'Amy Tran',   co: 'Figma',   time: '5h',  preview: "Could you send over more info about pricing and...", tag: 'Needs Info',  tagColor: 'bg-purple-100 text-purple-700', read: true, idx: 4 },
+                  { from: 'Sarah Chen', co: 'Stripe',  time: '2m',  preview: "Hi, this looks interesting! Can we schedule a...",    tag: 'Interested', tagColor: 'bg-green-100 text-green-700',   read: false, idx: 0 },
+                  { from: 'James Park', co: 'Notion',  time: '14m', preview: "Sure, let's chat. What times work for you this...",   tag: 'Meeting Set',tagColor: 'bg-blue-100 text-blue-700',    read: false, idx: 1 },
+                  { from: 'Lena Wolf',  co: 'Linear',  time: '1h',  preview: "We actually just signed with another vendor...",       tag: 'Not Now',    tagColor: 'bg-yellow-100 text-yellow-700', read: true,  idx: 2 },
+                  { from: 'Tom Reid',   co: 'Vercel',  time: '3h',  preview: "Thanks for reaching out — we're open to exploring...",tag: 'Interested', tagColor: 'bg-green-100 text-green-700',   read: true,  idx: 3 },
+                  { from: 'Amy Tran',   co: 'Figma',   time: '5h',  preview: "Could you send over more info about pricing...",       tag: 'Needs Info', tagColor: 'bg-purple-100 text-purple-700', read: true,  idx: 4 },
                 ].map(mail => (
                   <div key={mail.from}
-                    className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition-colors ${!mail.read ? 'bg-blue-50/25' : ''}`}>
-                    <PersonAvatar idx={mail.idx} size={36} />
+                    className={`flex items-center gap-3.5 px-5 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 cursor-pointer transition-colors ${!mail.read ? 'bg-blue-50/20' : ''}`}>
+                    <PersonAvatar idx={mail.idx} size={42} />
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-sm text-gray-900 ${!mail.read ? 'font-bold' : 'font-semibold'}`}>{mail.from}</span>
-                        <span className="text-xs text-gray-400">· {mail.co}</span>
+                        <span className={`text-sm text-gray-900 ${!mail.read ? 'font-extrabold' : 'font-semibold'}`}>{mail.from}</span>
+                        <span className="text-xs text-gray-400 font-medium">· {mail.co}</span>
+                        {!mail.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 ml-0.5" />}
                       </div>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{mail.preview}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="text-[10px] text-gray-400">{mail.time} ago</span>
-                      <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${mail.tagColor}`}>{mail.tag}</span>
+                      <span className="text-[10px] text-gray-400 font-medium">{mail.time} ago</span>
+                      <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${mail.tagColor}`}>{mail.tag}</span>
                     </div>
                   </div>
                 ))}
@@ -785,78 +877,76 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           5. ANALYTICS
       ══════════════════════════════════════════ */}
-      <section id="analytics" className="teal-gradient py-24">
+      <section id="analytics" className="teal-gradient py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcBarChart />} label="Analytics" dark />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.1]">
               Know Exactly What&apos;s Working
             </h2>
             <p className="mt-4 text-blue-100 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
               Track opens, clicks, replies, bounces, and unsubscribes in real-time. See which
-              subject lines, templates, and follow-up steps drive the most meetings — then
-              double down on what works.
+              subject lines, templates, and follow-up steps drive the most meetings —
+              then double down on what works.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-white text-gray-900 text-sm font-semibold rounded-full px-7 py-3 hover:bg-blue-50 transition-colors shadow-sm">
+              className="mt-7 inline-flex items-center gap-2 bg-white text-gray-900 text-sm font-bold rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 mx-auto max-w-3xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            className="mt-14 mx-auto max-w-3xl bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
               <div>
                 <p className="text-sm font-bold text-gray-900">Campaign Analytics</p>
-                <p className="text-xs text-gray-400 mt-0.5">SaaS Founders Q3 · Last 30 days</p>
+                <p className="text-xs text-gray-400 mt-0.5 font-medium">SaaS Founders Q3 · Last 30 days</p>
               </div>
-              <span className="flex items-center gap-1.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full px-3 py-1">
+              <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Live
               </span>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {[
-                  { l: 'Sent',    v: '8,240',  sub: '+1,200 this week',  color: 'text-gray-900'   },
-                  { l: 'Opened',  v: '58.3%',  sub: '+6.2% vs last run', color: 'text-blue-600'   },
-                  { l: 'Clicked', v: '14.7%',  sub: '+3.1% vs last run', color: 'text-indigo-600' },
-                  { l: 'Replied', v: '18.4%',  sub: '1,515 replies',     color: 'text-green-600'  },
+                  { l: 'Sent',    v: '8,240', sub: '+1,200 this week',  color: 'text-gray-900'   },
+                  { l: 'Opened',  v: '58.3%', sub: '+6.2% vs last run', color: 'text-blue-600'   },
+                  { l: 'Clicked', v: '14.7%', sub: '+3.1% vs last run', color: 'text-indigo-600' },
+                  { l: 'Replied', v: '18.4%', sub: '1,515 replies',     color: 'text-green-600'  },
                 ].map(m => (
-                  <div key={m.l} className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-center hover:bg-blue-50/30 transition-colors">
+                  <div key={m.l} className="bg-gray-50 border border-gray-100 rounded-2xl p-3.5 text-center hover:bg-blue-50/40 transition-colors">
                     <p className={`text-xl font-extrabold ${m.color}`}>{m.v}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 font-medium">{m.l}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{m.sub}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 font-bold">{m.l}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-medium">{m.sub}</p>
                   </div>
                 ))}
               </div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 text-left">Open Rate Trend</p>
-              <div className="h-32 flex items-end gap-1.5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-left">Open Rate Trend</p>
+              <div className="h-32 flex items-end gap-1">
                 {[38,42,45,48,44,52,55,51,58,60,56,63,61,65,62,67,64,69,66,71,68,72,70,74,72,75,73,77,75,78].map((h, i) => (
                   <div key={i} className="flex-1 rounded-t-sm"
-                    style={{ height: `${h}%`, background: `rgba(59,130,246,${0.2 + i * 0.027})` }} />
+                    style={{ height: `${h}%`, background: `rgba(59,130,246,${0.18 + i * 0.028})` }} />
                 ))}
               </div>
-              {/* Live activity */}
               <div className="mt-5 border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 text-left">Live Activity</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-left">Live Activity</p>
                 {[
-                  { icon: <IcMailOpen c="w-3.5 h-3.5" />, event: 'Email opened',   who: 'Sarah Chen · Stripe', time: '2s ago',  color: 'text-blue-500'  },
-                  { icon: <IcCursor c="w-3.5 h-3.5" />,   event: 'Link clicked',   who: 'James Park · Notion', time: '47s ago', color: 'text-indigo-500' },
-                  { icon: <IcChat c="w-3.5 h-3.5" />,     event: 'Reply received', who: 'Lena Wolf · Linear',  time: '3m ago',  color: 'text-green-500'  },
-                  { icon: <IcMailOpen c="w-3.5 h-3.5" />, event: 'Email opened',   who: 'Tom Reid · Vercel',   time: '5m ago',  color: 'text-blue-500'  },
+                  { icon: <IcMailOpen c="w-3.5 h-3.5" />, event: 'Email opened',   who: 'Sarah Chen',  co: 'Stripe', time: '2s ago',  color: 'text-blue-500',   idx: 0 },
+                  { icon: <IcCursor c="w-3.5 h-3.5" />,   event: 'Link clicked',   who: 'James Park',  co: 'Notion', time: '47s ago', color: 'text-indigo-500', idx: 1 },
+                  { icon: <IcChat c="w-3.5 h-3.5" />,     event: 'Reply received', who: 'Lena Wolf',   co: 'Linear', time: '3m ago',  color: 'text-green-500',  idx: 2 },
+                  { icon: <IcMailOpen c="w-3.5 h-3.5" />, event: 'Email opened',   who: 'Tom Reid',    co: 'Vercel', time: '5m ago',  color: 'text-blue-500',   idx: 3 },
                 ].map(a => (
-                  <div key={a.who} className="flex items-center justify-between py-2 text-left gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div key={a.who} className="flex items-center justify-between py-2.5 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <PersonAvatar idx={a.idx} size={28} />
                       <span className={`shrink-0 ${a.color}`}>{a.icon}</span>
-                      <span className="text-xs text-gray-600 font-semibold whitespace-nowrap">{a.event}</span>
-                      <span className="text-xs text-gray-400 truncate">— {a.who}</span>
+                      <span className="text-xs text-gray-600 font-bold whitespace-nowrap">{a.event}</span>
+                      <span className="text-xs text-gray-400 truncate font-medium">— {a.who} · {a.co}</span>
                     </div>
-                    <span className="text-[10px] text-gray-400 shrink-0">{a.time}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0 font-medium">{a.time}</span>
                   </div>
                 ))}
               </div>
@@ -866,32 +956,30 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          6. AI WORKFLOWS — automation flows
+          6. AI WORKFLOWS
       ══════════════════════════════════════════ */}
-      <section id="workflows" className="bg-gray-50 py-24">
+      <section id="workflows" className="bg-gray-50 py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcSparkles />} label="AI Workflows" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
               Automate Every Follow-Up
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
               Set your triggers once — LeadGenie automatically handles follow-ups, tags leads by
-              intent, and routes hot prospects to your team so no opportunity slips through the cracks.
+              intent, and routes hot prospects to your team. No missed opportunities, ever.
             </p>
             <Link href="/signup"
-              className="mt-6 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
+              className="mt-7 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors shadow-sm">
               Start For Free
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-12 max-w-2xl mx-auto space-y-3">
+            className="mt-14 max-w-2xl mx-auto space-y-3">
             {[
               {
                 trigger: 'Lead opens your email',
@@ -899,7 +987,7 @@ export default function HomePage() {
                 result: '+24% reply rate',
                 tBg: 'bg-blue-50 text-blue-700 border-blue-100',
                 aBg: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-                rColor: 'text-green-600 bg-green-50',
+                rBg: 'text-green-700 bg-green-50 border border-green-100',
                 tIcon: <IcMailOpen c="w-3.5 h-3.5" />,
                 aIcon: <IcClock c="w-3.5 h-3.5" />,
               },
@@ -909,7 +997,7 @@ export default function HomePage() {
                 result: 'Zero missed hot leads',
                 tBg: 'bg-green-50 text-green-700 border-green-100',
                 aBg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                rColor: 'text-emerald-700 bg-emerald-50',
+                rBg: 'text-emerald-700 bg-emerald-50 border border-emerald-100',
                 tIcon: <IcChat c="w-3.5 h-3.5" />,
                 aIcon: <IcInbox c="w-3.5 h-3.5" />,
               },
@@ -919,7 +1007,7 @@ export default function HomePage() {
                 result: 'No duplicate outreach',
                 tBg: 'bg-purple-50 text-purple-700 border-purple-100',
                 aBg: 'bg-violet-50 text-violet-700 border-violet-100',
-                rColor: 'text-violet-700 bg-violet-50',
+                rBg: 'text-violet-700 bg-violet-50 border border-violet-100',
                 tIcon: <IcCalendar c="w-3.5 h-3.5" />,
                 aIcon: <IcDatabase c="w-3.5 h-3.5" />,
               },
@@ -927,20 +1015,20 @@ export default function HomePage() {
               <motion.div key={i}
                 initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold shrink-0 ${wf.tBg}`}>
+                  <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold shrink-0 ${wf.tBg}`}>
                     {wf.tIcon}
                     <span>When: {wf.trigger}</span>
                   </div>
                   <svg className="w-4 h-4 text-gray-300 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold flex-1 ${wf.aBg}`}>
+                  <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold flex-1 ${wf.aBg}`}>
                     {wf.aIcon}
                     <span>Then: {wf.action}</span>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${wf.rColor}`}>
+                  <span className={`text-xs font-black px-3 py-1.5 rounded-full shrink-0 ${wf.rBg}`}>
                     → {wf.result}
                   </span>
                 </div>
@@ -953,25 +1041,25 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           7. TESTIMONIALS
       ══════════════════════════════════════════ */}
-      <section className="bg-white py-24">
+      <section className="bg-white py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcStar />} label="Testimonials" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
               Real Results. Real Customers.
             </h2>
-            <p className="mt-3 text-gray-400 text-base">
+            <p className="mt-3 text-gray-400 text-base font-medium">
               Trusted by 8,500+ sales teams, agencies, and SaaS founders worldwide.
             </p>
           </motion.div>
 
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
+          <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
             {testimonials.map((t, idx) => (
               <motion.div key={t.name}
-                initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.4, delay: idx * 0.1 }}
-                className="bg-white rounded-2xl p-7 flex flex-col justify-between border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+                className="bg-white rounded-2xl p-7 flex flex-col justify-between border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div>
                   <div className="flex gap-0.5 mb-4">
                     {[...Array(5)].map((_, i) => (
@@ -983,14 +1071,12 @@ export default function HomePage() {
                   <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
                 </div>
                 <div className="mt-6 flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-full ${t.color} text-white flex items-center justify-center text-sm font-bold shrink-0`}>
-                    {t.initials}
-                  </div>
+                  <PersonAvatar idx={t.avatarIdx} size={46} />
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-500">{t.role}</p>
+                    <p className="text-sm font-extrabold text-gray-900">{t.name}</p>
+                    <p className="text-xs text-gray-500 font-medium">{t.role}</p>
                   </div>
-                  <span className="ml-auto text-xs font-bold text-gray-400 italic bg-gray-50 border border-gray-100 rounded-lg px-2 py-1">{t.company}</span>
+                  <span className="ml-auto text-xs font-bold text-gray-400 italic bg-gray-50 border border-gray-100 rounded-xl px-2.5 py-1.5">{t.company}</span>
                 </div>
               </motion.div>
             ))}
@@ -1001,45 +1087,45 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           8. CTA
       ══════════════════════════════════════════ */}
-      <section className="cta-gradient py-24">
+      <section className="cta-gradient py-28">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
               Start Booking Meetings
               <br />
-              <span className="inline-flex items-center gap-2 justify-center">
+              <span className="inline-flex items-center gap-2 justify-center mt-1">
                 This Week —{' '}
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20 border border-white/30 text-white">
-                  <IcLightning c="w-4 h-4" />
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20 border-2 border-white/30 text-white shadow-lg">
+                  <IcLightning c="w-5 h-5" />
                 </span>
                 {' '}Free
               </span>
             </h2>
-            <p className="mt-4 text-blue-200 text-base max-w-sm mx-auto leading-relaxed">
-              No credit card required. Get set up in minutes and launch your first cold email
-              campaign today.
+            <p className="mt-5 text-blue-200 text-base max-w-sm mx-auto leading-relaxed font-medium">
+              No credit card required. Get set up in minutes and launch your first
+              cold email campaign today.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup"
-                className="bg-white text-gray-900 text-sm font-bold rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
+                className="bg-white text-gray-900 text-sm font-extrabold rounded-full px-9 py-4 hover:bg-blue-50 transition-colors shadow-xl">
                 Get Started Free
               </Link>
               <Link href="/pricing"
-                className="border border-white/30 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-white/10 transition-colors">
+                className="border-2 border-white/30 text-white text-sm font-bold rounded-full px-8 py-[14px] hover:bg-white/10 transition-colors">
                 See Pricing
               </Link>
             </div>
 
             {/* Social proof row */}
-            <div className="mt-10 flex items-center justify-center gap-6 flex-wrap">
+            <div className="mt-12 flex items-center justify-center gap-8 flex-wrap">
               {[
                 { icon: <IcUsers c="w-4 h-4" />, text: '8,500+ active teams' },
                 { icon: <IcStar c="w-4 h-4" />,  text: '4.9/5 on G2'        },
                 { icon: <IcMail c="w-4 h-4" />,  text: '42M+ emails sent'   },
               ].map(s => (
-                <div key={s.text} className="flex items-center gap-2 text-white/70 text-xs font-medium">
-                  <span className="text-white/50">{s.icon}</span>
+                <div key={s.text} className="flex items-center gap-2 text-white/70 text-sm font-semibold">
+                  <span className="text-white/45">{s.icon}</span>
                   {s.text}
                 </div>
               ))}

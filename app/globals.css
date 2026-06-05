@@ -52,9 +52,14 @@ button, input, textarea, select { font: inherit; }
   to   { transform: translateX(-50%); }
 }
 .animate-marquee {
-  animation: marquee-scroll 38s linear infinite;
+  animation: marquee-scroll 42s linear infinite;
   will-change: transform;
 }
-.animate-marquee:hover {
+.animate-marquee-r {
+  animation: marquee-scroll 48s linear infinite reverse;
+  will-change: transform;
+}
+.animate-marquee:hover,
+.animate-marquee-r:hover {
   animation-play-state: paused;
 }
