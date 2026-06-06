@@ -26,10 +26,43 @@ export default function SaaSPage() {
 
         <section className="py-12 border-b border-gray-100">
           <div className="container">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-              {[{v:'2,000+',l:'SaaS Companies'},{v:'61%',l:'Avg Open Rate'},{v:'10×',l:'ROI on Outbound'},{v:'14 days',l:'To First Meetings'}].map(s=>(
-                <div key={s.l}><p className="text-3xl font-extrabold text-gray-900">{s.v}</p><p className="mt-1.5 text-sm text-gray-500">{s.l}</p></div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#3b82f6' }}>2,000+</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">SaaS Companies</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f0fdf4', color: '#10b981' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#10b981' }}>61%</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Avg Open Rate</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>10×</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">ROI on Outbound</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#fffbeb', color: '#f59e0b' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#f59e0b' }}>14 days</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">To First Meetings</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

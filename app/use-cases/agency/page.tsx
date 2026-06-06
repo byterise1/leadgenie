@@ -28,10 +28,43 @@ export default function AgencyPage() {
         {/* Stats */}
         <section className="py-12 border-b border-gray-100">
           <div className="container">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-              {[{v:'500+',l:'Agencies Trust LeadGenie'},{v:'20%+',l:'Avg Client Reply Rate'},{v:'Unlimited',l:'Client Workspaces'},{v:'4.9/5',l:'Agency Rating on G2'}].map(s=>(
-                <div key={s.l}><p className="text-3xl font-extrabold text-gray-900">{s.v}</p><p className="mt-1.5 text-sm text-gray-500">{s.l}</p></div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#3b82f6' }}>500+</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Agencies Trust LeadGenie</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f0fdf4', color: '#10b981' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#10b981' }}>20%+</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Avg Client Reply Rate</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>Unlimited</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Client Workspaces</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#fffbeb', color: '#f59e0b' }}>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#f59e0b' }}>4.9/5</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Agency Rating on G2</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

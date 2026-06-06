@@ -71,6 +71,9 @@ button, input, textarea, select { font: inherit; }
 .animate-marquee-r:hover {
   animation-play-state: paused;
 }
+/* Hide scrollbar but keep scroll functionality */
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Force Montserrat everywhere ── */
 html, body, * {

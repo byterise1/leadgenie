@@ -222,22 +222,25 @@ function BrandPill({ brand }: { brand: Brand }) {
 
 function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   return (
-    <div className="flex-shrink-0 w-[340px] bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col gap-4">
+    <div className="flex-shrink-0 w-[420px] bg-white rounded-3xl p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5">
+      <svg className="w-8 h-8 text-blue-100" fill="currentColor" viewBox="0 0 32 32">
+        <path d="M10 8C6.13 8 3 11.13 3 15v9h9v-9H6c0-2.21 1.79-4 4-4V8zm14 0c-3.87 0-7 3.13-7 7v9h9v-9h-6c0-2.21 1.79-4 4-4V8z"/>
+      </svg>
       <div className="flex gap-0.5">
         {[...Array(5)].map((_, i) => (
-          <svg key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" viewBox="0 0 20 20">
+          <svg key={i} className="w-4 h-4 fill-yellow-400" viewBox="0 0 20 20">
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
         ))}
       </div>
-      <p className="text-gray-700 text-sm leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-        <PersonAvatar idx={t.avatarIdx} size={38} />
-        <div className="min-w-0">
-          <p className="text-sm font-extrabold text-gray-900 truncate">{t.name}</p>
-          <p className="text-xs text-gray-500 truncate">{t.role}</p>
+      <p className="text-gray-700 text-base leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+      <div className="flex items-center gap-3.5 pt-5 border-t border-gray-100">
+        <PersonAvatar idx={t.avatarIdx} size={50} />
+        <div className="flex-1 min-w-0">
+          <p className="font-extrabold text-gray-900 text-sm">{t.name}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t.role}</p>
         </div>
-        <span className="ml-auto text-xs font-bold text-gray-400 italic shrink-0 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1">{t.company}</span>
+        <div className="shrink-0 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5 whitespace-nowrap">{t.company}</div>
       </div>
     </div>
   );
@@ -879,7 +882,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           7. TESTIMONIALS — continuous slow marquee
       ══════════════════════════════════════════ */}
-      <section className="bg-white py-24 overflow-hidden">
+      <section className="bg-white py-24">
         <div className="container mb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
@@ -893,11 +896,19 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Single scrollable row — scroll with mouse wheel or drag */}
-        <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
-          <div className="flex gap-5 px-6" style={{ width: 'max-content' }}>
-            {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
+        {/* Full-width scroll strip with gradient fade edges */}
+        <div className="relative" style={maskFade}>
+          <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab' }}>
+            <div className="flex gap-6" style={{ width: 'max-content', padding: '1rem 8vw 2rem' }}>
+              {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
+            </div>
           </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-400 font-medium select-none">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
+          Scroll to see all reviews
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </div>
       </section>
 
