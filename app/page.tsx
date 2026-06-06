@@ -213,9 +213,8 @@ function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; la
 
 function BrandPill({ brand }: { brand: Brand }) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-2.5 px-6 py-3 cursor-default select-none">
-      <span className="text-gray-400 flex items-center">{brand.icon}</span>
-      <span className="text-sm font-semibold text-gray-400 whitespace-nowrap">{brand.name}</span>
+    <div className="flex-shrink-0 flex items-center justify-center px-10 py-3 cursor-default select-none">
+      <span className="text-gray-400 [&_svg]:!w-10 [&_svg]:!h-10">{brand.icon}</span>
     </div>
   );
 }
@@ -466,7 +465,7 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
-              <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200">
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
                   <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                     <div className="flex items-center gap-2.5">
                       <IcAtSign c="w-4 h-4 text-blue-500" />
@@ -611,7 +610,7 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-5 sm:p-6">
                 <div className="grid sm:grid-cols-2 gap-4 text-left">
                   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                     <div className="flex items-center gap-2 mb-3">
@@ -695,7 +694,7 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
                   <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
                     <div className="flex items-center gap-2.5">
                       <p className="text-sm font-bold text-gray-900">Unibox</p>
