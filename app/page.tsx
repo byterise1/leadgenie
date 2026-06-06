@@ -211,11 +211,11 @@ function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; la
 
 function BrandPill({ brand }: { brand: Brand }) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm cursor-default select-none">
-      <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border-2 border-gray-200 bg-white" style={{ color: brand.from }}>
+    <div className="flex-shrink-0 flex items-center gap-2 px-5 py-3 cursor-default select-none">
+      <span className="flex items-center justify-center shrink-0 opacity-75" style={{ color: brand.from }}>
         {brand.icon}
       </span>
-      <span className="text-sm font-bold text-gray-700 whitespace-nowrap">{brand.name}</span>
+      <span className="text-sm font-semibold text-gray-400 whitespace-nowrap tracking-wide">{brand.name}</span>
     </div>
   );
 }
@@ -852,16 +852,15 @@ export default function HomePage() {
           </motion.div>
           <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { icon: <IcMailOpen c="w-7 h-7" />, iconBg: 'bg-blue-100', iconColor: 'text-blue-600', accent: 'from-blue-500 to-indigo-500', when: 'Lead Opens Your Email', then: 'Auto-sends personalised follow-up in 2 days', desc: 'The moment a prospect opens your email, LeadGenie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate', resultBg: 'bg-blue-50 text-blue-700' },
-              { icon: <IcChat c="w-7 h-7" />, iconBg: 'bg-green-100', iconColor: 'text-green-600', accent: 'from-green-500 to-emerald-500', when: 'Lead Replies Positively', then: 'Tagged as Interested + routed to Unibox', desc: "When a prospect replies with interest, LeadGenie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
-              { icon: <IcCalendar c="w-7 h-7" />, iconBg: 'bg-purple-100', iconColor: 'text-purple-600', accent: 'from-purple-500 to-violet-500', when: 'Meeting Gets Booked', then: 'Removed from all sequences + CRM synced', desc: 'Once a meeting is booked, LeadGenie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
+              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, LeadGenie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
+              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, LeadGenie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
+              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, LeadGenie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
             ].map((wf, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.13 }}
-                className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden group text-left">
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${wf.accent} group-hover:h-1.5 transition-all duration-300`} />
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${wf.iconBg} ${wf.iconColor}`}>{wf.icon}</div>
+                className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group text-left">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${wf.iconRing} ${wf.iconColor}`}>{wf.icon}</div>
                 <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${wf.iconColor}`}>TRIGGER</p>
                 <h3 className="text-lg font-extrabold text-gray-900 leading-tight mb-2">{wf.when}</h3>
                 <div className="flex items-center gap-2 mb-4">
