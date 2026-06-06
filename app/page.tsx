@@ -155,19 +155,75 @@ function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
 type Brand = { name: string; icon?: React.ReactNode; label?: string };
 
 const BRANDS: Brand[] = [
-  { name: 'Google',     label: 'Google' },
-  { name: 'Microsoft',  icon: <svg viewBox="0 0 21 21" fill="currentColor" className="w-8 h-8"><rect x="1" y="1" width="9" height="9"/><rect x="11" y="1" width="9" height="9"/><rect x="1" y="11" width="9" height="9"/><rect x="11" y="11" width="9" height="9"/></svg> },
-  { name: 'Slack',      icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/></svg> },
-  { name: 'Instagram',  icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-8 h-8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg> },
-  { name: 'Facebook',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg> },
-  { name: 'AWS',        label: 'aws' },
-  { name: 'Cloudflare', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M16.5 14.3l.3-1c.1-.3 0-.5-.2-.7-.2-.1-.4-.1-.6.1l-.3.4c-.7-1.6-2.3-2.7-4.2-2.7-1.5 0-2.9.8-3.7 2-.3-.1-.6-.1-.9-.1-1.5 0-2.7 1.2-2.7 2.7 0 .1 0 .3.1.5H5c-1.1 0-2 .9-2 2s.9 2 2 2h11c1.4 0 2.5-1.1 2.5-2.5 0-1.1-.7-2.1-1.7-2.4l-.3-.3z"/></svg>, label: 'Cloudflare' },
-  { name: 'LinkedIn',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> },
-  { name: 'HubSpot',    label: 'HubSpot' },
-  { name: 'Notion',     icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M4.5 3h13.5L20 5v14l-2 2H4l-2-2V5zm0 0L4 5v14m1-16v16M7 3v16m4-16v4m0 4v8m4-16v16M4 9h5m0 0h3m0 0h4M4 13h5m0 0h3m0 0h4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg> },
-  { name: 'Stripe',     label: 'stripe' },
-  { name: 'Zapier',     label: 'Zapier' },
-  { name: 'Apollo',     label: 'apollo' },
+  // Slack — 4-part interlocked symbol
+  { name: 'Slack', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
+      <path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/>
+    </svg>
+  )},
+  // Instagram — rounded square + circle + dot
+  { name: 'Instagram', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-9 h-9">
+      <rect x="2" y="2" width="20" height="20" rx="6" ry="6"/>
+      <circle cx="12" cy="12" r="4.5"/>
+      <circle cx="17.6" cy="6.4" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  )},
+  // Facebook — f letter
+  { name: 'Facebook', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
+      <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+    </svg>
+  )},
+  // Microsoft — 4-square Windows logo
+  { name: 'Microsoft', icon: (
+    <svg viewBox="0 0 21 21" fill="currentColor" className="w-9 h-9">
+      <rect x="1" y="1" width="9" height="9"/>
+      <rect x="11" y="1" width="9" height="9"/>
+      <rect x="1" y="11" width="9" height="9"/>
+      <rect x="11" y="11" width="9" height="9"/>
+    </svg>
+  )},
+  // AWS — "aws" text + signature curved arrow
+  { name: 'AWS', icon: (
+    <svg viewBox="0 0 60 32" className="w-16 h-8" fill="currentColor">
+      <text x="1" y="22" fontSize="23" fontWeight="800" fontFamily="Arial,sans-serif" letterSpacing="-0.5">aws</text>
+      <path d="M4 27 Q30 34 56 27" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M52 24.5 L56 27 L52 29.5" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )},
+  // Cloudflare — cloud silhouette + text
+  { name: 'Cloudflare', icon: (
+    <svg viewBox="0 0 36 24" fill="currentColor" className="w-9 h-6">
+      <path d="M28.5 17H7.5C4.46 17 2 14.54 2 11.5S4.46 6 7.5 6c.28 0 .55.02.82.06A9 9 0 0126.1 10H28.5a5.5 5.5 0 010 11v-4z" opacity=".15"/>
+      <path d="M29 16H8a5 5 0 010-10c.31 0 .61.03.91.08A8 8 0 0125.07 10H27a5 5 0 012 9.58V16z"/>
+    </svg>
+  ), label: 'Cloudflare' },
+  // Google — wordmark text
+  { name: 'Google', label: 'Google' },
+  // LinkedIn — in box
+  { name: 'LinkedIn', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
+      <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+      <circle cx="4" cy="4" r="2"/>
+    </svg>
+  )},
+  // HubSpot — sprocket icon + label
+  { name: 'HubSpot', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
+      <path d="M22.162 5.656a8.383 8.383 0 00-3.402-3.12 8.556 8.556 0 00-4.33-.9c-2.174.156-4.22 1.04-5.78 2.526C7.09 5.647 6.175 7.56 6.033 9.62c-.13 1.905.414 3.79 1.535 5.33L5.5 19H9l.73-1.45a8.446 8.446 0 004.27 1.145c2.298 0 4.5-.878 6.13-2.44a8.307 8.307 0 002.32-5.932c.07-1.682-.4-3.34-1.288-4.667zM12 16a4 4 0 110-8 4 4 0 010 8z"/>
+    </svg>
+  ), label: 'HubSpot' },
+  // Notion — N block icon
+  { name: 'Notion', icon: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
+      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/>
+    </svg>
+  )},
+  // Stripe — S wordmark
+  { name: 'Stripe', label: 'stripe' },
+  // Zapier — Z text
+  { name: 'Zapier', label: 'Zapier' },
 ];
 
 /* ════════════════════════════════════════════════════════════
@@ -205,10 +261,10 @@ function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; la
 
 function BrandPill({ brand }: { brand: Brand }) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-2 px-9 py-2 cursor-default select-none text-gray-400">
+    <div className="flex-shrink-0 flex items-center gap-2.5 px-10 py-1 cursor-default select-none text-gray-400/80">
       {brand.icon && <span className="flex items-center">{brand.icon}</span>}
       {brand.label && (
-        <span className="text-[22px] font-semibold tracking-tight leading-none whitespace-nowrap">{brand.label}</span>
+        <span className="text-[21px] font-semibold tracking-tight leading-none whitespace-nowrap">{brand.label}</span>
       )}
     </div>
   );
@@ -381,8 +437,8 @@ export default function HomePage() {
           TRUSTED BY — continuous marquee, no pause
       ══════════════════════════════════════════ */}
       <section className="bg-white border-b border-gray-100 py-12 overflow-hidden">
-        <div className="container mb-8 text-center">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Trusted by sales teams at world-class companies</p>
+        <div className="container mb-9 text-center">
+          <p className="text-sm text-gray-400 tracking-wide">Trusted by companies worldwide</p>
         </div>
         <div className="relative" style={maskFade}>
           <div className="flex w-max animate-marquee">
