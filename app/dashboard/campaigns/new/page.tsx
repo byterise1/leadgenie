@@ -38,7 +38,8 @@ export default function NewCampaignPage() {
   const [goal, setGoal] = useState('Book a Meeting');
   const [selectedAccounts, setSelectedAccounts] = useState<number[]>([]);
   const [allAccounts, setAllAccounts] = useState(false);
-  const [dailyLimit, setDailyLimit] = useState(50);
+  const [dailyLimitStr, setDailyLimitStr] = useState('50');
+  const dailyLimit = Math.max(1, parseInt(dailyLimitStr) || 1);
 
   // Step 1
   const [emails, setEmails] = useState<EmailStep[]>([{ ...DEFAULT_EMAIL }]);
@@ -167,8 +168,9 @@ export default function NewCampaignPage() {
                 <span className="text-xs text-gray-400">Across all selected accounts</span>
               </div>
               <div className="flex items-center gap-3">
-                <input type="number" value={dailyLimit} min={1} max={2000}
-                  onChange={e => setDailyLimit(Math.max(1, Number(e.target.value)))}
+                <input type="number" value={dailyLimitStr}
+                  onChange={e => setDailyLimitStr(e.target.value)}
+                  onBlur={() => setDailyLimitStr(String(Math.max(1, parseInt(dailyLimitStr) || 1)))}
                   className="w-36 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
                 <span className="text-sm text-gray-400">emails / day</span>
               </div>

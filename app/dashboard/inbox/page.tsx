@@ -13,7 +13,14 @@ export default function InboxPage() {
       {/* Left panel */}
       <div className="w-80 shrink-0 border-r border-gray-100 flex flex-col bg-white">
         <div className="px-4 py-4 border-b border-gray-100">
-          <h1 className="text-base font-bold text-gray-900 mb-3">Unibox</h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-base font-bold text-gray-900">Unibox</h1>
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <span><span className="font-bold text-gray-700">0</span> received</span>
+              <span className="w-px h-3 bg-gray-200"/>
+              <span><span className="font-bold text-gray-700">0</span> replied</span>
+            </div>
+          </div>
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input placeholder="Search inbox..." className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
