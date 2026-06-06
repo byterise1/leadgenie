@@ -50,12 +50,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-gray-500">{s.label}</p>
-              <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${colorMap[s.color]}`}>{s.icon}</span>
-            </div>
+            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-400 mt-1">No data yet</p>
+            <p className="text-xs text-gray-400 mt-1.5">No data yet</p>
           </div>
         ))}
       </div>

@@ -78,7 +78,7 @@ export default function NewCampaignPage() {
   return (
     <main className="flex-1 p-6 flex flex-col items-center">
       {/* Header */}
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/dashboard/campaigns" className="text-gray-400 hover:text-gray-700 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
@@ -108,7 +108,7 @@ export default function NewCampaignPage() {
       </div>
 
       {/* Content — centered */}
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-4xl">
 
         {/* ── Step 0: Details ── */}
         {step === 0 && (

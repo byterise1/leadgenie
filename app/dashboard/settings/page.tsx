@@ -6,7 +6,6 @@ const tabs = [
   { id: 'profile', label: 'Profile', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> },
   { id: 'sending', label: 'Sending Defaults', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> },
   { id: 'notifications', label: 'Notifications', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg> },
-  { id: 'billing', label: 'Plan & Billing', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg> },
 ];
 
 function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
@@ -171,62 +170,6 @@ export default function SettingsPage() {
                   <Toggle defaultOn={n.on} />
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* ── Billing ── */}
-          {tab === 'billing' && (
-            <div className="space-y-4">
-              {/* Current plan */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Current Plan</h3>
-                    <p className="text-sm text-gray-400 mt-0.5">Free — limited to 1 account & 500 leads</p>
-                  </div>
-                  <span className="bg-gray-100 text-gray-500 text-xs font-bold rounded-full px-3 py-1.5">FREE</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-5">
-                  {[
-                    { label: 'Email Accounts', val: '1 / 1', pct: 100 },
-                    { label: 'Leads', val: '0 / 500', pct: 0 },
-                    { label: 'Campaigns', val: '0 / 3', pct: 0 },
-                    { label: 'Emails Sent', val: '0 / 1,000', pct: 0 },
-                  ].map(s => (
-                    <div key={s.label} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{s.label}</p>
-                      <p className="text-sm font-bold text-gray-900 mb-2">{s.val}</p>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${s.pct}%` }}/>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <a href="/pricing"
-                  className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm rounded-xl py-3 hover:opacity-90 transition-opacity">
-                  Upgrade to Pro — Unlimited Everything →
-                </a>
-              </div>
-
-              {/* Pro plan preview */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">What you get with Pro</h3>
-                <div className="space-y-2.5">
-                  {[
-                    'Unlimited email accounts',
-                    'Unlimited leads & campaigns',
-                    'Advanced analytics & reporting',
-                    'AI-powered email writer',
-                    'Unibox for all replies',
-                    'Priority support',
-                  ].map(f => (
-                    <div key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
-                      <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
-                      {f}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
