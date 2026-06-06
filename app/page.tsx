@@ -152,30 +152,22 @@ function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
 /* ════════════════════════════════════════════════════════════
    BRAND LOGO DATA
 ════════════════════════════════════════════════════════════ */
-type Brand = { name: string; from: string; icon: React.ReactNode };
+type Brand = { name: string; icon?: React.ReactNode; label?: string };
 
-const BRANDS_ROW1: Brand[] = [
-  { name: 'Google',     from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> },
-  { name: 'Microsoft',  from: '#9ca3af', icon: <svg viewBox="0 0 21 21" fill="currentColor" className="w-5 h-5"><rect x="1" y="1" width="9" height="9"/><rect x="11" y="1" width="9" height="9"/><rect x="1" y="11" width="9" height="9"/><rect x="11" y="11" width="9" height="9"/></svg> },
-  { name: 'Slack',      from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/></svg> },
-  { name: 'LinkedIn',   from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> },
-  { name: 'HubSpot',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.175 12.55c0-1.155-.28-2.24-.77-3.185l2.19-2.405-1.3-1.18-2.1 2.31a5.67 5.67 0 00-3.15-.96c-3.145 0-5.695 2.55-5.695 5.695 0 3.145 2.55 5.695 5.695 5.695S22.175 15.695 22.175 12.55zm-5.695-3.815c2.11 0 3.815 1.705 3.815 3.815s-1.705 3.815-3.815 3.815-3.815-1.705-3.815-3.815 1.705-3.815 3.815-3.815zm-10.51 4.72c0 1.04-.84 1.88-1.88 1.88S2.21 14.495 2.21 13.455s.84-1.88 1.88-1.88 1.88.84 1.88 1.88z"/></svg> },
-  { name: 'Salesforce', from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg> },
-  { name: 'Cloudflare', from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/><path strokeLinecap="round" strokeLinejoin="round" d="M8 19l-1.5 2.5m7.5-2.5l1.5 2.5m-9 0h9"/></svg> },
-  { name: 'Facebook',   from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg> },
-  { name: 'Instagram',  from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/></svg> },
-];
-
-const BRANDS_ROW2: Brand[] = [
-  { name: 'Zapier',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg> },
-  { name: 'Notion',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> },
-  { name: 'Stripe',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" /></svg> },
-  { name: 'Calendly',  from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
-  { name: 'Apollo',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><circle cx="12" cy="12" r="9"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v9l6 3"/></svg> },
-  { name: 'Intercom',  from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
-  { name: 'AWS',       from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L6 23m10.5-2L18 23M6 23h12"/></svg> },
-  { name: 'Monday',    from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><circle cx="5" cy="12" r="3"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="12" r="3"/></svg> },
-  { name: 'Pipedrive', from: '#9ca3af', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg> },
+const BRANDS: Brand[] = [
+  { name: 'Google',     label: 'Google' },
+  { name: 'Microsoft',  icon: <svg viewBox="0 0 21 21" fill="currentColor" className="w-8 h-8"><rect x="1" y="1" width="9" height="9"/><rect x="11" y="1" width="9" height="9"/><rect x="1" y="11" width="9" height="9"/><rect x="11" y="11" width="9" height="9"/></svg> },
+  { name: 'Slack',      icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/></svg> },
+  { name: 'Instagram',  icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-8 h-8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg> },
+  { name: 'Facebook',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg> },
+  { name: 'AWS',        icon: <svg viewBox="0 0 56 14" fill="currentColor" className="w-10 h-5"><path d="M16.7 5.3c0-.4.1-.8.2-1l2-2.2-1.2-1.1-1.9 2.1a5.2 5.2 0 00-2.9-.9C9.9 2.2 7.7 4.4 7.7 7s2.2 4.8 5.2 4.8 5.2-2.2 5.2-4.8c0-.3 0-.5-.1-.7zM12.9 10c-1.7 0-3-1.4-3-3s1.3-3 3-3 3 1.4 3 3-1.3 3-3 3zM3.1 9.3c0 .9-.7 1.6-1.6 1.6S0 10.2 0 9.3s.7-1.6 1.5-1.6h1.6v1.6zm1.1 0c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v4A1.6 1.6 0 015.8 15a1.6 1.6 0 01-1.6-1.6v-4zM5.8 3.6A1.6 1.6 0 014.2 2c0-.9.7-1.6 1.6-1.6S7.4 1.1 7.4 2v1.6H5.8zm0 1.1c.9 0 1.6.7 1.6 1.6s-.7 1.6-1.6 1.6H1.5A1.6 1.6 0 010 6.3c0-.9.7-1.6 1.5-1.6h4.3z"/><text x="20" y="11" fontSize="11" fontWeight="600" fontFamily="sans-serif" fill="currentColor">aws</text></svg>, label: 'aws' },
+  { name: 'Cloudflare', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M16.5 14.3l.3-1c.1-.3 0-.5-.2-.7-.2-.1-.4-.1-.6.1l-.3.4c-.7-1.6-2.3-2.7-4.2-2.7-1.5 0-2.9.8-3.7 2-.3-.1-.6-.1-.9-.1-1.5 0-2.7 1.2-2.7 2.7 0 .1 0 .3.1.5H5c-1.1 0-2 .9-2 2s.9 2 2 2h11c1.4 0 2.5-1.1 2.5-2.5 0-1.1-.7-2.1-1.7-2.4l-.3-.3z"/></svg>, label: 'Cloudflare' },
+  { name: 'LinkedIn',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> },
+  { name: 'HubSpot',    label: 'HubSpot' },
+  { name: 'Notion',     icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M4.5 3h13.5L20 5v14l-2 2H4l-2-2V5zm0 0L4 5v14m1-16v16M7 3v16m4-16v4m0 4v8m4-16v16M4 9h5m0 0h3m0 0h4M4 13h5m0 0h3m0 0h4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg> },
+  { name: 'Stripe',     label: 'stripe' },
+  { name: 'Zapier',     label: 'Zapier' },
+  { name: 'Apollo',     label: 'apollo' },
 ];
 
 /* ════════════════════════════════════════════════════════════
@@ -213,8 +205,11 @@ function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; la
 
 function BrandPill({ brand }: { brand: Brand }) {
   return (
-    <div className="flex-shrink-0 flex items-center justify-center px-10 py-3 cursor-default select-none">
-      <span className="text-gray-400 [&_svg]:!w-10 [&_svg]:!h-10">{brand.icon}</span>
+    <div className="flex-shrink-0 flex items-center gap-2 px-9 py-2 cursor-default select-none text-gray-400">
+      {brand.icon && <span className="flex items-center">{brand.icon}</span>}
+      {brand.label && (
+        <span className="text-[22px] font-semibold tracking-tight leading-none whitespace-nowrap">{brand.label}</span>
+      )}
     </div>
   );
 }
@@ -385,20 +380,13 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           TRUSTED BY — continuous marquee, no pause
       ══════════════════════════════════════════ */}
-      <section className="bg-white border-b border-gray-100 py-14 overflow-hidden">
+      <section className="bg-white border-b border-gray-100 py-12 overflow-hidden">
         <div className="container mb-8 text-center">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Trusted by sales teams at world-class companies</p>
         </div>
-        {/* Row 1 — left, 4x for full coverage */}
-        <div className="relative mb-4" style={maskFade}>
-          <div className="flex w-max gap-4 animate-marquee">
-            {[...BRANDS_ROW1, ...BRANDS_ROW1, ...BRANDS_ROW1, ...BRANDS_ROW1].map((b, i) => <BrandPill key={i} brand={b} />)}
-          </div>
-        </div>
-        {/* Row 2 — right */}
         <div className="relative" style={maskFade}>
-          <div className="flex w-max gap-4 animate-marquee-r">
-            {[...BRANDS_ROW2, ...BRANDS_ROW2, ...BRANDS_ROW2, ...BRANDS_ROW2].map((b, i) => <BrandPill key={i} brand={b} />)}
+          <div className="flex w-max animate-marquee">
+            {[...BRANDS, ...BRANDS, ...BRANDS, ...BRANDS].map((b, i) => <BrandPill key={i} brand={b} />)}
           </div>
         </div>
       </section>
