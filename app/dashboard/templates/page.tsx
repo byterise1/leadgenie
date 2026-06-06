@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CATEGORIES = ['Cold Outreach', 'Follow-up', 'Meeting Request', 'Break-up', 'Re-engagement'];
-const VARIABLES = ['{{first_name}}', '{{company}}', '{{industry}}', '{{pain_point}}', '{{topic}}', '{{mutual_name}}'];
+const VARIABLES = ['{{first_name}}', '{{last_name}}', '{{company}}', '{{industry}}', '{{pain_point}}', '{{topic}}', '{{mutual_name}}'];
+
+const DEFAULT_UNSUB = 'To unsubscribe, click here: {{unsubscribe_link}}\n{{company_address}}';
 
 type Template = {
   id: number;
@@ -12,6 +14,7 @@ type Template = {
   name: string;
   subject: string;
   body: string;
+  unsubText: string;
   builtIn: boolean;
   openRate: string;
   replyRate: string;
@@ -32,6 +35,7 @@ We helped similar companies solve this — they went from stuck to scaling in ju
 Worth a 15-min call to see if we can do the same for you?
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '67%', replyRate: '18%', uses: 2841,
   },
   {
@@ -42,12 +46,13 @@ Worth a 15-min call to see if we can do the same for you?
 
 Saw your LinkedIn post about {{topic}} — really resonated with our team.
 
-That made me think you'd appreciate what we're building at [Company] — we [One-line value prop].
+That made me think you'd appreciate what we're building — we [One-line value prop].
 
 Would you be open to a quick chat?
 
 Best,
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '72%', replyRate: '21%', uses: 1920,
   },
   {
@@ -63,6 +68,7 @@ Did you get a chance to look at my previous email? I know inboxes get hectic.
 Happy to keep it to 10 minutes if that's easier.
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '61%', replyRate: '14%', uses: 4210,
   },
   {
@@ -75,9 +81,10 @@ I put together a quick breakdown of how companies like {{company}} are solving {
 
 [Link to resource / case study]
 
-No strings attached — thought it might be useful. Let me know if any of this is relevant.
+No strings attached — thought it might be useful.
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '58%', replyRate: '12%', uses: 1540,
   },
   {
@@ -90,9 +97,10 @@ I'll keep this short — I think we can help {{company}} with {{pain_point}}.
 
 We've done it for [Company A] and [Company B].
 
-15 mins this week to show you how? Here's my calendar: [Calendly Link]
+15 mins this week to show you how? [Calendly Link]
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '64%', replyRate: '19%', uses: 3305,
   },
   {
@@ -106,9 +114,10 @@ I've reached out a few times but haven't heard back — which usually means one 
 1. The timing is off
 2. This isn't a priority right now
 
-Either way, totally fine. Should I close your file and reach back in a few months?
+Either way, totally fine. Should I close your file?
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '71%', replyRate: '28%', uses: 2190,
   },
   {
@@ -117,39 +126,36 @@ Either way, totally fine. Should I close your file and reach back in a few month
     subject: 'Still relevant for {{company}}?',
     body: `Hi {{first_name}},
 
-We spoke a while back about {{topic}}. I wanted to check in — a lot has changed on our end since then.
+We spoke a while back about {{topic}}. I wanted to check in — a lot has changed on our end.
 
 We've improved [area] that specifically addresses what we discussed.
 
-Would it make sense to reconnect for a quick update?
+Would it make sense to reconnect?
 
 [Your Name]`,
+    unsubText: DEFAULT_UNSUB,
     openRate: '55%', replyRate: '16%', uses: 980,
   },
 ];
 
-const EMPTY_FORM = { name: '', category: CATEGORIES[0], subject: '', body: '' };
-
-function insertVar(
-  text: string,
-  variable: string,
-  field: 'subject' | 'body',
-  setSubject: (v: string) => void,
-  setBody: (v: string) => void,
-  subjectRef: React.RefObject<HTMLInputElement | null>,
-  bodyRef: React.RefObject<HTMLTextAreaElement | null>
-) {
-  const ref = field === 'subject' ? subjectRef.current : bodyRef.current;
-  const setter = field === 'subject' ? setSubject : setBody;
-  if (!ref) { setter(text + variable); return; }
-  const start = ref.selectionStart ?? text.length;
-  const end = ref.selectionEnd ?? text.length;
-  const next = text.slice(0, start) + variable + text.slice(end);
-  setter(next);
-  setTimeout(() => {
-    ref.focus();
-    ref.setSelectionRange(start + variable.length, start + variable.length);
-  }, 0);
+// Converts plain text body → simple HTML
+function bodyToHtml(body: string, unsubText: string): string {
+  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const bodyHtml = escape(body).split('\n').map(l => l.trim() ? `<p style="margin:0 0 12px 0">${l}</p>` : '').join('\n');
+  const unsubHtml = escape(unsubText)
+    .replace(escape('{{unsubscribe_link}}'), '<a href="{{unsubscribe_link}}" style="color:#6b7280">unsubscribe</a>')
+    .split('\n').map(l => `<p style="margin:0;font-size:11px;color:#9ca3af">${l}</p>`).join('\n');
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>
+  body { font-family: Arial, sans-serif; font-size: 14px; color: #111; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 24px; }
+  p { margin: 0 0 12px 0; }
+  .unsub { border-top: 1px solid #e5e7eb; margin-top: 32px; padding-top: 16px; }
+</style></head>
+<body>
+${bodyHtml}
+<div class="unsub">${unsubHtml}</div>
+</body></html>`;
 }
 
 function TemplateModal({
@@ -157,28 +163,55 @@ function TemplateModal({
   onSave,
   onClose,
 }: {
-  template: Partial<Template> | null;
-  onSave: (t: Omit<Template, 'id' | 'builtIn' | 'openRate' | 'replyRate' | 'uses'>) => void;
+  template: Partial<Template>;
+  onSave: (t: Pick<Template, 'name' | 'category' | 'subject' | 'body' | 'unsubText'>) => void;
   onClose: () => void;
 }) {
-  const isEdit = !!template?.id;
-  const [name, setName] = useState(template?.name ?? '');
-  const [category, setCategory] = useState(template?.category ?? CATEGORIES[0]);
-  const [subject, setSubject] = useState(template?.subject ?? '');
-  const [body, setBody] = useState(template?.body ?? '');
-  const [activeField, setActiveField] = useState<'subject' | 'body'>('subject');
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
-  // refs typed correctly
-  const subjectRef = { current: null } as React.RefObject<HTMLInputElement | null>;
-  const bodyRef = { current: null } as React.RefObject<HTMLTextAreaElement | null>;
+  const isEdit = !!template.id;
+  const [name, setName] = useState(template.name ?? '');
+  const [category, setCategory] = useState(template.category ?? CATEGORIES[0]);
+  const [subject, setSubject] = useState(template.subject ?? '');
+  const [body, setBody] = useState(template.body ?? '');
+  const [unsubText, setUnsubText] = useState(template.unsubText ?? DEFAULT_UNSUB);
+  const [activeField, setActiveField] = useState<'subject' | 'body'>('body');
+  const [tab, setTab] = useState<'edit' | 'preview' | 'html'>('edit');
 
-  const handleInsert = (v: string) =>
-    insertVar(activeField === 'subject' ? subject : body, v, activeField, setSubject, setBody, subjectRef, bodyRef);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertVar = (v: string) => {
+    const isSubject = activeField === 'subject';
+    const ref = isSubject ? subjectRef.current : bodyRef.current;
+    const text = isSubject ? subject : body;
+    const setter = isSubject ? setSubject : setBody;
+    if (!ref) { setter(text + v); return; }
+    const s = ref.selectionStart ?? text.length;
+    const e = ref.selectionEnd ?? text.length;
+    setter(text.slice(0, s) + v + text.slice(e));
+    setTimeout(() => { ref.focus(); ref.setSelectionRange(s + v.length, s + v.length); }, 0);
+  };
+
+  const applyFormat = (open: string, close: string) => {
+    const ref = bodyRef.current;
+    if (!ref) return;
+    const s = ref.selectionStart ?? 0;
+    const e = ref.selectionEnd ?? 0;
+    const selected = body.slice(s, e) || 'text';
+    const next = body.slice(0, s) + open + selected + close + body.slice(e);
+    setBody(next);
+    setTimeout(() => { ref.focus(); ref.setSelectionRange(s + open.length, s + open.length + selected.length); }, 0);
+  };
 
   const valid = name.trim() && subject.trim() && body.trim();
 
+  const tabs: { id: 'edit' | 'preview' | 'html'; label: string }[] = [
+    { id: 'edit', label: 'Edit' },
+    { id: 'preview', label: 'Preview' },
+    { id: 'html', label: 'HTML' },
+  ];
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
@@ -193,7 +226,7 @@ function TemplateModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1.5">Template Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Outreach Email"
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Cold Email"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
             </div>
             <div>
@@ -207,12 +240,12 @@ function TemplateModal({
 
           {/* Variable helper */}
           <div>
-            <p className="text-xs font-bold text-gray-500 mb-2">
-              Insert variable <span className="font-normal text-gray-400">(click field first, then tap a variable)</span>
+            <p className="text-xs font-bold text-gray-500 mb-1.5">
+              Variables <span className="font-normal text-gray-400">— click in subject or body first, then insert</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
               {VARIABLES.map(v => (
-                <button key={v} onClick={() => handleInsert(v)}
+                <button key={v} type="button" onClick={() => insertVar(v)}
                   className="text-xs font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100 rounded-lg px-2.5 py-1 hover:bg-blue-100 transition-colors">
                   {v}
                 </button>
@@ -220,56 +253,111 @@ function TemplateModal({
             </div>
           </div>
 
-          {/* Edit / Preview toggle */}
+          {/* Tabs */}
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-            {(['edit', 'preview'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {t}
+            {tabs.map(t => (
+              <button key={t.id} type="button" onClick={() => setTab(t.id)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t.label}
               </button>
             ))}
           </div>
 
-          {tab === 'edit' ? (
+          {tab === 'edit' && (
             <>
               {/* Subject */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">Subject Line</label>
-                <input
-                  ref={subjectRef as React.RefObject<HTMLInputElement>}
-                  value={subject}
-                  onChange={e => setSubject(e.target.value)}
+                <input ref={subjectRef} value={subject} onChange={e => setSubject(e.target.value)}
                   onFocus={() => setActiveField('subject')}
                   placeholder="e.g. Quick question about {{company}}"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
               </div>
-              {/* Body */}
+
+              {/* Formatting toolbar */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">Email Body</label>
-                <textarea
-                  ref={bodyRef as React.RefObject<HTMLTextAreaElement>}
-                  value={body}
-                  onChange={e => setBody(e.target.value)}
+                <div className="flex items-center gap-1 mb-1.5">
+                  <label className="text-xs font-bold text-gray-500 flex-1">Email Body</label>
+                  <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                    {[
+                      { label: 'B', title: 'Bold', o: '<strong>', c: '</strong>' },
+                      { label: 'I', title: 'Italic', o: '<em>', c: '</em>' },
+                      { label: 'U', title: 'Underline', o: '<u>', c: '</u>' },
+                    ].map(f => (
+                      <button key={f.label} type="button" title={f.title} onClick={() => { setActiveField('body'); applyFormat(f.o, f.c); }}
+                        className="w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold text-gray-500 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all">
+                        <span style={f.label === 'B' ? { fontWeight: 900 } : f.label === 'I' ? { fontStyle: 'italic' } : { textDecoration: 'underline' }}>{f.label}</span>
+                      </button>
+                    ))}
+                    <button type="button" title="Link" onClick={() => { setActiveField('body'); applyFormat('<a href="URL">', '</a>'); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all">
+                      <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    </button>
+                    <button type="button" title="Unordered list" onClick={() => { setActiveField('body'); applyFormat('<ul>\n  <li>', '</li>\n</ul>'); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all">
+                      <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                    <button type="button" title="Button" onClick={() => { setActiveField('body'); applyFormat('<a href="URL" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">', '</a>'); }}
+                      className="px-2 h-7 flex items-center justify-center rounded-md text-[10px] font-bold text-gray-500 hover:bg-white hover:shadow-sm transition-all">
+                      BTN
+                    </button>
+                  </div>
+                </div>
+                <textarea ref={bodyRef} value={body} onChange={e => setBody(e.target.value)}
                   onFocus={() => setActiveField('body')}
                   placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
-                  rows={10}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none leading-relaxed"
-                />
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Tip: Use <span className="font-mono">{'{{first_name}}'}</span> etc. for personalisation. Click a variable above to insert at cursor.
-                </p>
+                  rows={9}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none leading-relaxed font-mono"/>
+              </div>
+
+              {/* Unsubscribe block */}
+              <div className="border-t border-dashed border-gray-200 pt-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="text-xs font-bold text-gray-500 flex-1">Unsubscribe Block</label>
+                  <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 font-semibold">Required for compliance</span>
+                </div>
+                <textarea value={unsubText} onChange={e => setUnsubText(e.target.value)} rows={2}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
+                <p className="text-[10px] text-gray-400 mt-1">Appended at the bottom of every sent email. Edit text but keep <span className="font-mono">{'{{unsubscribe_link}}'}</span>.</p>
               </div>
             </>
-          ) : (
+          )}
+
+          {tab === 'preview' && (
             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-3">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Subject</p>
-                <p className="text-sm font-medium text-gray-900">{subject || <span className="text-gray-300">No subject yet</span>}</p>
+                <p className="text-sm font-medium text-gray-900">{subject || <span className="text-gray-300 font-normal">No subject yet</span>}</p>
               </div>
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Body</p>
                 <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{body || <span className="text-gray-300">No body yet</span>}</p>
+              </div>
+              <div className="border-t border-dashed border-gray-200 pt-3">
+                <p className="text-xs text-gray-400 whitespace-pre-line">{unsubText.replace('{{unsubscribe_link}}', 'https://unsubscribe.example.com/?id=abc123')}</p>
+              </div>
+            </div>
+          )}
+
+          {tab === 'html' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-gray-500">Generated HTML <span className="font-normal text-gray-400">— copy into your ESP or edit manually</span></p>
+                <button type="button" onClick={() => navigator.clipboard.writeText(bodyToHtml(body, unsubText))}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors border border-blue-100 bg-blue-50 rounded-lg px-3 py-1">
+                  Copy HTML
+                </button>
+              </div>
+              <textarea readOnly value={bodyToHtml(body, unsubText)} rows={16}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-600 font-mono outline-none bg-gray-50 resize-none"/>
+              <div className="border border-gray-100 rounded-xl overflow-hidden">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2 bg-gray-50 border-b border-gray-100">Rendered Preview</p>
+                <iframe
+                  srcDoc={bodyToHtml(body, unsubText)}
+                  className="w-full h-64 border-0"
+                  title="Email preview"
+                  sandbox="allow-same-origin"
+                />
               </div>
             </div>
           )}
@@ -277,10 +365,10 @@ function TemplateModal({
 
         {/* Footer */}
         <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
             Cancel
           </button>
-          <button onClick={() => valid && onSave({ name, category, subject, body })}
+          <button type="button" onClick={() => valid && onSave({ name, category, subject, body, unsubText })}
             disabled={!valid}
             className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             {isEdit ? 'Save Changes' : 'Create Template'}
@@ -294,10 +382,10 @@ function TemplateModal({
 function UseModal({ template, onClose }: { template: Template; onClose: () => void }) {
   const router = useRouter();
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
         <h2 className="text-base font-bold text-gray-900 mb-1">Use this template</h2>
-        <p className="text-sm text-gray-400 mb-5">Choose where you want to use <span className="font-semibold text-gray-700">"{template.name}"</span>.</p>
+        <p className="text-sm text-gray-400 mb-5">Where do you want to use <span className="font-semibold text-gray-700">"{template.name}"</span>?</p>
         <div className="space-y-2 mb-5">
           <button onClick={() => router.push('/dashboard/campaigns/new')}
             className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
@@ -305,8 +393,8 @@ function UseModal({ template, onClose }: { template: Template; onClose: () => vo
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">New Campaign</p>
-              <p className="text-xs text-gray-400">Start a fresh campaign with this template</p>
+              <p className="text-sm font-semibold text-gray-900">Start New Campaign</p>
+              <p className="text-xs text-gray-400">Use this template in a new campaign</p>
             </div>
             <svg className="w-4 h-4 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </button>
@@ -316,8 +404,8 @@ function UseModal({ template, onClose }: { template: Template; onClose: () => vo
               <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">Copy to My Templates</p>
-              <p className="text-xs text-gray-400">Duplicate and customise before using</p>
+              <p className="text-sm font-semibold text-gray-900">Duplicate & Customise</p>
+              <p className="text-xs text-gray-400">Copy to My Templates and edit freely</p>
             </div>
             <svg className="w-4 h-4 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </button>
@@ -344,7 +432,7 @@ export default function TemplatesPage() {
     (t.name.toLowerCase().includes(search.toLowerCase()) || t.subject.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleSave = (data: Omit<Template, 'id' | 'builtIn' | 'openRate' | 'replyRate' | 'uses'>) => {
+  const handleSave = (data: Pick<Template, 'name' | 'category' | 'subject' | 'body' | 'unsubText'>) => {
     if (editTarget) {
       setTemplates(prev => prev.map(t => t.id === editTarget.id ? { ...t, ...data } : t));
     } else {
@@ -355,17 +443,12 @@ export default function TemplatesPage() {
     setEditTarget(null);
   };
 
-  const handleDelete = (id: number) => {
-    setTemplates(prev => prev.filter(t => t.id !== id));
-    setDeleteId(null);
-  };
-
   return (
     <main className="flex-1 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Templates</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Ready-to-use templates — edit, create, or use in campaigns.</p>
+          <p className="text-sm text-gray-400 mt-0.5">Ready-to-use templates — edit, create, or launch in campaigns.</p>
         </div>
         <button onClick={() => setCreateOpen(true)}
           className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
@@ -374,14 +457,12 @@ export default function TemplatesPage() {
         </button>
       </div>
 
-      {/* Search */}
       <div className="relative mb-4 max-w-sm">
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..."
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
       </div>
 
-      {/* Category tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {allCats.map(c => (
           <button key={c} onClick={() => setFilterCat(c)}
@@ -391,55 +472,30 @@ export default function TemplatesPage() {
         ))}
       </div>
 
-      {/* Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map(t => (
           <div key={t.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-blue-100 transition-all flex flex-col">
-            {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1">{t.category}</span>
-              {t.builtIn && (
-                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">Built-in</span>
-              )}
+              {t.builtIn && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">Built-in</span>}
             </div>
-
             <h3 className="text-sm font-bold text-gray-900 mb-1">{t.name}</h3>
             <p className="text-xs text-gray-500 font-medium mb-1 truncate">Subject: {t.subject}</p>
             <p className="text-xs text-gray-400 leading-relaxed flex-1 line-clamp-2 mb-4">
               {t.body.split('\n').filter(l => l.trim())[0]}
             </p>
-
-            {/* Stats */}
             <div className="flex items-center gap-3 mb-4 pt-3 border-t border-gray-100">
-              <div className="text-center">
-                <p className="text-sm font-bold text-gray-900">{t.openRate}</p>
-                <p className="text-[10px] text-gray-400">Open</p>
-              </div>
+              <div className="text-center"><p className="text-sm font-bold text-gray-900">{t.openRate}</p><p className="text-[10px] text-gray-400">Open</p></div>
               <div className="w-px h-6 bg-gray-100"/>
-              <div className="text-center">
-                <p className="text-sm font-bold text-gray-900">{t.replyRate}</p>
-                <p className="text-[10px] text-gray-400">Reply</p>
-              </div>
+              <div className="text-center"><p className="text-sm font-bold text-gray-900">{t.replyRate}</p><p className="text-[10px] text-gray-400">Reply</p></div>
               <div className="w-px h-6 bg-gray-100"/>
-              <div className="text-center">
-                <p className="text-sm font-bold text-gray-900">{t.uses > 999 ? `${(t.uses / 1000).toFixed(1)}k` : t.uses || '—'}</p>
-                <p className="text-[10px] text-gray-400">Uses</p>
-              </div>
+              <div className="text-center"><p className="text-sm font-bold text-gray-900">{t.uses > 999 ? `${(t.uses / 1000).toFixed(1)}k` : t.uses || '—'}</p><p className="text-[10px] text-gray-400">Uses</p></div>
             </div>
-
-            {/* Actions */}
             <div className="flex gap-2">
-              <button onClick={() => setEditTarget(t)}
-                className="flex-1 text-xs font-bold text-gray-700 border border-gray-200 rounded-xl py-2 hover:bg-gray-50 transition-colors">
-                Edit
-              </button>
-              <button onClick={() => setUseTarget(t)}
-                className="flex-1 text-xs font-bold text-white bg-blue-600 rounded-xl py-2 hover:bg-blue-700 transition-colors">
-                Use →
-              </button>
+              <button onClick={() => setEditTarget(t)} className="flex-1 text-xs font-bold text-gray-700 border border-gray-200 rounded-xl py-2 hover:bg-gray-50 transition-colors">Edit</button>
+              <button onClick={() => setUseTarget(t)} className="flex-1 text-xs font-bold text-white bg-blue-600 rounded-xl py-2 hover:bg-blue-700 transition-colors">Use →</button>
               {!t.builtIn && (
-                <button onClick={() => setDeleteId(t.id)}
-                  className="px-2.5 text-gray-300 hover:text-red-400 border border-gray-100 rounded-xl transition-colors">
+                <button onClick={() => setDeleteId(t.id)} className="px-2.5 text-gray-300 hover:text-red-400 border border-gray-100 rounded-xl transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
               )}
@@ -451,28 +507,17 @@ export default function TemplatesPage() {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center py-20 text-center">
           <p className="text-sm font-semibold text-gray-600 mb-1">No templates found</p>
-          <p className="text-xs text-gray-400 mb-4">Try a different search or category.</p>
-          <button onClick={() => setCreateOpen(true)} className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-            + Create one
-          </button>
+          <button onClick={() => setCreateOpen(true)} className="text-sm font-semibold text-blue-600 hover:text-blue-700 mt-2 transition-colors">+ Create one</button>
         </div>
       )}
 
-      {/* Create / Edit modal */}
       {(createOpen || editTarget) && (
-        <TemplateModal
-          template={editTarget ?? {}}
-          onSave={handleSave}
-          onClose={() => { setCreateOpen(false); setEditTarget(null); }}
-        />
+        <TemplateModal template={editTarget ?? {}} onSave={handleSave} onClose={() => { setCreateOpen(false); setEditTarget(null); }} />
       )}
-
-      {/* Use modal */}
       {useTarget && <UseModal template={useTarget} onClose={() => setUseTarget(null)} />}
 
-      {/* Delete confirm */}
       {deleteId !== null && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setDeleteId(null)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
             <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
               <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -481,7 +526,7 @@ export default function TemplatesPage() {
             <p className="text-xs text-gray-400 mb-5">This can't be undone.</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 transition-colors">Delete</button>
+              <button onClick={() => { setTemplates(p => p.filter(t => t.id !== deleteId)); setDeleteId(null); }} className="flex-1 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 transition-colors">Delete</button>
             </div>
           </div>
         </div>
