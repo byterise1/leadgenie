@@ -16,6 +16,10 @@ const navItems = [
     icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>,
   },
   {
+    label: 'Templates', href: '/dashboard/templates',
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+  },
+  {
     label: 'Leads', href: '/dashboard/leads',
     icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>,
   },
@@ -83,7 +87,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Main</p>
-          {navItems.slice(0, 4).map(item => (
+          {navItems.slice(0, 5).map(item => (
             <Link key={item.href} href={item.href} onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive(item.href)
@@ -99,7 +103,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
           ))}
 
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2 mt-5">Reports</p>
-          {navItems.slice(4).map(item => (
+          {navItems.slice(5).map(item => (
             <Link key={item.href} href={item.href} onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive(item.href)
