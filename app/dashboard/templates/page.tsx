@@ -139,12 +139,14 @@ Would it make sense to reconnect?
 ];
 
 // Converts plain text body → simple HTML
-function bodyToHtml(body: string, unsubText: string): string {
+function bodyToHtml(body: string, unsubText: string, includeUnsub: boolean): string {
   const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const bodyHtml = escape(body).split('\n').map(l => l.trim() ? `<p style="margin:0 0 12px 0">${l}</p>` : '').join('\n');
-  const unsubHtml = escape(unsubText)
-    .replace(escape('{{unsubscribe_link}}'), '<a href="{{unsubscribe_link}}" style="color:#6b7280">unsubscribe</a>')
-    .split('\n').map(l => `<p style="margin:0;font-size:11px;color:#9ca3af">${l}</p>`).join('\n');
+  const unsubHtml = includeUnsub
+    ? escape(unsubText)
+        .replace(escape('{{unsubscribe_link}}'), '<a href="{{unsubscribe_link}}" style="color:#6b7280">unsubscribe</a>')
+        .split('\n').map(l => `<p style="margin:0;font-size:11px;color:#9ca3af">${l}</p>`).join('\n')
+    : '';
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><style>
@@ -154,8 +156,17 @@ function bodyToHtml(body: string, unsubText: string): string {
 </style></head>
 <body>
 ${bodyHtml}
-<div class="unsub">${unsubHtml}</div>
+${includeUnsub ? `<div class="unsub">${unsubHtml}</div>` : ''}
 </body></html>`;
+}
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${on ? 'bg-blue-600' : 'bg-gray-200'}`}>
+      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`}/>
+    </button>
+  );
 }
 
 function TemplateModal({
@@ -173,6 +184,7 @@ function TemplateModal({
   const [subject, setSubject] = useState(template.subject ?? '');
   const [body, setBody] = useState(template.body ?? '');
   const [unsubText, setUnsubText] = useState(template.unsubText ?? DEFAULT_UNSUB);
+  const [includeUnsub, setIncludeUnsub] = useState(false);
   const [activeField, setActiveField] = useState<'subject' | 'body'>('body');
   const [tab, setTab] = useState<'edit' | 'preview' | 'html'>('edit');
 
@@ -310,15 +322,22 @@ function TemplateModal({
                   className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none leading-relaxed font-mono"/>
               </div>
 
-              {/* Unsubscribe block */}
-              <div className="border-t border-dashed border-gray-200 pt-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <label className="text-xs font-bold text-gray-500 flex-1">Unsubscribe Block</label>
-                  <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 font-semibold">Required for compliance</span>
+              {/* Unsubscribe toggle */}
+              <div className="border-t border-dashed border-gray-200 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-gray-700">Include unsubscribe footer</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Adds an opt-out link at the bottom of the email</p>
+                  </div>
+                  <Toggle on={includeUnsub} onToggle={() => setIncludeUnsub(v => !v)}/>
                 </div>
-                <textarea value={unsubText} onChange={e => setUnsubText(e.target.value)} rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
-                <p className="text-[10px] text-gray-400 mt-1">Appended at the bottom of every sent email. Edit text but keep <span className="font-mono">{'{{unsubscribe_link}}'}</span>.</p>
+                {includeUnsub && (
+                  <>
+                    <textarea value={unsubText} onChange={e => setUnsubText(e.target.value)} rows={2}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
+                    <p className="text-[10px] text-gray-400">Keep <span className="font-mono">{'{{unsubscribe_link}}'}</span> in the text — it gets replaced with a real opt-out URL on send.</p>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -333,9 +352,11 @@ function TemplateModal({
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Body</p>
                 <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{body || <span className="text-gray-300">No body yet</span>}</p>
               </div>
-              <div className="border-t border-dashed border-gray-200 pt-3">
-                <p className="text-xs text-gray-400 whitespace-pre-line">{unsubText.replace('{{unsubscribe_link}}', 'https://unsubscribe.example.com/?id=abc123')}</p>
-              </div>
+              {includeUnsub && (
+                <div className="border-t border-dashed border-gray-200 pt-3">
+                  <p className="text-xs text-gray-400 whitespace-pre-line">{unsubText.replace('{{unsubscribe_link}}', 'https://unsubscribe.example.com/?id=abc123')}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -343,17 +364,17 @@ function TemplateModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-gray-500">Generated HTML <span className="font-normal text-gray-400">— copy into your ESP or edit manually</span></p>
-                <button type="button" onClick={() => navigator.clipboard.writeText(bodyToHtml(body, unsubText))}
+                <button type="button" onClick={() => navigator.clipboard.writeText(bodyToHtml(body, unsubText, includeUnsub))}
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors border border-blue-100 bg-blue-50 rounded-lg px-3 py-1">
                   Copy HTML
                 </button>
               </div>
-              <textarea readOnly value={bodyToHtml(body, unsubText)} rows={16}
+              <textarea readOnly value={bodyToHtml(body, unsubText, includeUnsub)} rows={16}
                 className="w-full border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-600 font-mono outline-none bg-gray-50 resize-none"/>
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2 bg-gray-50 border-b border-gray-100">Rendered Preview</p>
                 <iframe
-                  srcDoc={bodyToHtml(body, unsubText)}
+                  srcDoc={bodyToHtml(body, unsubText, includeUnsub)}
                   className="w-full h-64 border-0"
                   title="Email preview"
                   sandbox="allow-same-origin"

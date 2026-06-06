@@ -16,6 +16,20 @@ const colorMap: Record<string, string> = {
   violet: 'bg-violet-50 text-violet-600',
 };
 
+const quickActions = [
+  { step: 1, label: 'New Campaign', desc: 'Launch a cold email sequence', href: '/dashboard/campaigns/new', color: 'blue' },
+  { step: 2, label: 'Import Leads', desc: 'Upload CSV or add manually', href: '/dashboard/leads', color: 'indigo' },
+  { step: 3, label: 'Connect Email', desc: 'Add Gmail, SMTP or IMAP', href: '/dashboard/email-accounts', color: 'emerald' },
+  { step: 4, label: 'Check Inbox', desc: 'Read and reply to prospects', href: '/dashboard/inbox', color: 'violet' },
+];
+
+const stepColor: Record<string, { num: string; bar: string; text: string }> = {
+  blue:    { num: 'bg-blue-600 text-white',    bar: 'bg-blue-100',    text: 'text-blue-600' },
+  indigo:  { num: 'bg-indigo-600 text-white',  bar: 'bg-indigo-100',  text: 'text-indigo-600' },
+  emerald: { num: 'bg-emerald-600 text-white', bar: 'bg-emerald-100', text: 'text-emerald-600' },
+  violet:  { num: 'bg-violet-600 text-white',  bar: 'bg-violet-100',  text: 'text-violet-600' },
+};
+
 export default function DashboardPage() {
   return (
     <main className="flex-1 p-6 space-y-6">
@@ -65,8 +79,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Side cards */}
+        {/* Side panel */}
         <div className="space-y-4">
+          {/* AI Co-pilot */}
           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white">
             <div className="flex items-center gap-2 mb-3">
               <svg className="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -79,23 +94,27 @@ export default function DashboardPage() {
             </Link>
           </div>
 
+          {/* Quick Actions — numbered step cards */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</p>
-            <div className="space-y-1">
-              {[
-                { icon: '📧', label: 'New Campaign', href: '/dashboard/campaigns/new' },
-                { icon: '👥', label: 'Import Leads', href: '/dashboard/leads' },
-                { icon: '⚙️', label: 'Connect Email', href: '/dashboard/email-accounts' },
-                { icon: '📥', label: 'Check Inbox', href: '/dashboard/inbox' },
-              ].map(a => (
+            <div className="space-y-2">
+              {quickActions.map(a => (
                 <Link key={a.label} href={a.href}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                  <span className="text-base">{a.icon}</span>{a.label}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all group">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 ${stepColor[a.color].num}`}>
+                    {a.step}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-gray-900 leading-none mb-0.5">{a.label}</p>
+                    <p className="text-[10px] text-gray-400 truncate">{a.desc}</p>
+                  </div>
+                  <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                 </Link>
               ))}
             </div>
           </div>
 
+          {/* Setup Checklist */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Setup Checklist</p>
             <div className="space-y-2.5">
@@ -106,7 +125,7 @@ export default function DashboardPage() {
                 { label: 'Launch first campaign', done: false },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2.5">
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${item.done ? 'bg-green-500' : 'border-2 border-gray-200'}`}>
+                  <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${item.done ? 'bg-emerald-500' : 'border-2 border-gray-200'}`}>
                     {item.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
                   </span>
                   <span className={`text-xs ${item.done ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>{item.label}</span>
@@ -114,6 +133,82 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Plan & Billing row */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Current plan card */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Current Plan</p>
+              <p className="text-lg font-extrabold text-gray-900">Free</p>
+            </div>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 rounded-full px-3 py-1.5">FREE</span>
+          </div>
+          <div className="space-y-2.5 mb-5">
+            {[
+              { label: 'Campaigns', used: 0, max: 3 },
+              { label: 'Leads', used: 0, max: 500 },
+              { label: 'Emails/mo', used: 0, max: 1000 },
+            ].map(m => (
+              <div key={m.label}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-500">{m.label}</span>
+                  <span className="font-semibold text-gray-700">{m.used} / {m.max}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(m.used / m.max) * 100}%` }}/>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Link href="/pricing" className="block text-center text-sm font-bold bg-blue-600 text-white rounded-xl py-2.5 hover:bg-blue-700 transition-colors">
+            Upgrade to Pro →
+          </Link>
+        </div>
+
+        {/* Pro plan preview */}
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-1">Pro Plan</p>
+              <p className="text-2xl font-extrabold">$49<span className="text-sm font-normal text-blue-300">/mo</span></p>
+            </div>
+            <span className="text-[10px] font-bold bg-yellow-400 text-yellow-900 rounded-full px-2.5 py-1">POPULAR</span>
+          </div>
+          <ul className="space-y-2 mb-5">
+            {['Unlimited campaigns', 'Unlimited leads', '50,000 emails/mo', 'Unlimited email accounts', 'AI writing assistant', 'Priority support'].map(f => (
+              <li key={f} className="flex items-center gap-2 text-xs text-blue-100">
+                <svg className="w-3.5 h-3.5 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                {f}
+              </li>
+            ))}
+          </ul>
+          <Link href="/pricing" className="block text-center text-xs font-bold bg-white text-blue-700 rounded-xl py-2.5 hover:bg-blue-50 transition-colors">
+            Start Pro Trial →
+          </Link>
+        </div>
+
+        {/* Billing summary */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Billing</p>
+          <div className="flex flex-col gap-3 mb-5">
+            {[
+              { label: 'Next billing date', value: '—' },
+              { label: 'Payment method', value: 'Not added' },
+              { label: 'Invoices', value: '0 invoices' },
+            ].map(r => (
+              <div key={r.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <span className="text-xs text-gray-500">{r.label}</span>
+                <span className="text-xs font-semibold text-gray-700">{r.value}</span>
+              </div>
+            ))}
+          </div>
+          <Link href="/dashboard/settings?tab=billing" className="block text-center text-xs font-semibold border border-gray-200 text-gray-700 rounded-xl py-2.5 hover:bg-gray-50 transition-colors">
+            Manage Billing →
+          </Link>
         </div>
       </div>
     </main>

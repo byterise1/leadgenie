@@ -26,18 +26,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex-1"/>
 
-          {/* Credits pill */}
-          <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"/>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-gray-900">{credits - usedCredits}</span>
-              <span className="text-xs text-gray-400">/ {credits} credits</span>
+          {/* Credits pill — logo2.svg icon */}
+          <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-3.5 py-2">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-blue-500 shrink-0" fill="currentColor">
+              <path d="M7 15.5c0 .049.006.096.007.145a7.3 7.3 0 1 1 8.638-8.638c-.049 0-.096-.007-.145-.007a8.557 8.557 0 0 0-.877.045 6.296 6.296 0 1 0-7.578 7.578A8.557 8.557 0 0 0 7 15.5zm.983-11.27l-.119-.992A5.3 5.3 0 0 0 3.2 8.558c.002.153.01.303.024.45l.995-.093a4.508 4.508 0 0 1-.019-.367A4.3 4.3 0 0 1 7.983 4.23zM22.8 15.5a7.3 7.3 0 1 1-7.3-7.3 7.308 7.308 0 0 1 7.3 7.3zm-1 0a6.3 6.3 0 1 0-6.3 6.3 6.307 6.307 0 0 0 6.3-6.3zm-10.58.415a4.508 4.508 0 0 1-.02-.367 4.3 4.3 0 0 1 3.783-4.318l-.119-.992a5.3 5.3 0 0 0-4.664 5.32c.002.153.01.303.024.45zm8.028-4.163l-.707.707a4.3 4.3 0 1 1-6.082 6.082l-.707.707a5.3 5.3 0 0 0 7.496-7.496z"/>
+            </svg>
+            <span className="text-xs font-bold text-blue-700">{credits - usedCredits}</span>
+            <span className="text-xs text-blue-400">credits</span>
+            <div className="w-14 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${((credits - usedCredits) / credits) * 100}%` }}/>
             </div>
-            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${((credits - usedCredits) / credits) * 100}%` }}/>
-            </div>
-            <Link href="/pricing" className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap">
-              Get more →
+            <Link href="/pricing" className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap ml-1">
+              Upgrade →
             </Link>
           </div>
 

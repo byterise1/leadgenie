@@ -20,14 +20,17 @@ export default function InboxPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="px-4 py-2 border-b border-gray-100 flex gap-1.5 overflow-x-auto">
-          {filters.map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${filter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-              {f}
-            </button>
-          ))}
+        {/* Filters — styled dropdown */}
+        <div className="px-4 py-2.5 border-b border-gray-100">
+          <div className="relative">
+            <select value={filter} onChange={e => setFilter(e.target.value)}
+              className="w-full appearance-none border border-gray-200 rounded-xl bg-white px-3 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition">
+              {filters.map(f => <option key={f}>{f}</option>)}
+            </select>
+            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
         </div>
 
         {/* Empty state */}

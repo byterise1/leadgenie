@@ -169,10 +169,10 @@ const BRANDS: Brand[] = [
       <circle cx="17.6" cy="6.4" r="1" fill="currentColor" stroke="none"/>
     </svg>
   )},
-  // Facebook — f letter
+  // Facebook — f in filled circle (authentic FB logo shape)
   { name: 'Facebook', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
-      <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/>
     </svg>
   )},
   // Microsoft — 4-square Windows logo
@@ -192,13 +192,17 @@ const BRANDS: Brand[] = [
       <path d="M52 24.5 L56 27 L52 29.5" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
-  // Cloudflare — cloud silhouette + text
+  // Cloudflare — puffy cumulus cloud + CLOUDFLARE text
   { name: 'Cloudflare', icon: (
-    <svg viewBox="0 0 36 24" fill="currentColor" className="w-9 h-6">
-      <path d="M28.5 17H7.5C4.46 17 2 14.54 2 11.5S4.46 6 7.5 6c.28 0 .55.02.82.06A9 9 0 0126.1 10H28.5a5.5 5.5 0 010 11v-4z" opacity=".15"/>
-      <path d="M29 16H8a5 5 0 010-10c.31 0 .61.03.91.08A8 8 0 0125.07 10H27a5 5 0 012 9.58V16z"/>
+    <svg viewBox="0 0 80 40" fill="currentColor" className="w-20 h-10">
+      {/* cloud body */}
+      <path d="M22 28H56a8 8 0 000-16h-1.3A12 12 0 0031 17.5l-.5-.5A8 8 0 0022 28z"/>
+      {/* extra left bump */}
+      <circle cx="24" cy="24" r="6"/>
+      {/* CLOUDFLARE text */}
+      <text x="0" y="38" fontSize="7.5" fontWeight="600" fontFamily="Arial,sans-serif" letterSpacing="0.5">CLOUDFLARE</text>
     </svg>
-  ), label: 'Cloudflare' },
+  ) },
   // Google — wordmark text
   { name: 'Google', label: 'Google' },
   // LinkedIn — in box

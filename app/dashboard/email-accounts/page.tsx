@@ -5,32 +5,31 @@ import { useState } from 'react';
 type Account = {
   id: number;
   email: string;
-  type: 'gmail-oauth' | 'gmail-app' | 'outlook' | 'smtp';
+  type: 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
   status: 'active' | 'warming' | 'error';
   health: number;
-  dailyLimit: number;
   sentToday: number;
 };
 
 const TYPE_LABELS: Record<Account['type'], string> = {
   'gmail-oauth': 'Gmail OAuth',
   'gmail-app': 'Gmail App Password',
-  'outlook': 'Outlook',
+  'imap': 'IMAP',
   'smtp': 'Custom SMTP',
 };
 
 const TYPE_COLORS: Record<Account['type'], string> = {
   'gmail-oauth': 'text-red-600 bg-red-50 border-red-100',
   'gmail-app': 'text-orange-600 bg-orange-50 border-orange-100',
-  'outlook': 'text-blue-600 bg-blue-50 border-blue-100',
+  'imap': 'text-violet-600 bg-violet-50 border-violet-100',
   'smtp': 'text-gray-600 bg-gray-100 border-gray-200',
 };
 
-type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'outlook' | 'smtp';
+type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
 
-function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, limit: number) => void }) {
-  const [form, setForm] = useState({ email: '', host: '', port: '587', user: '', pass: '', limit: 50 });
-  const set = (k: keyof typeof form, v: string | number) => setForm(f => ({ ...f, [k]: v }));
+function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
+  const [form, setForm] = useState({ email: '', host: '', port: '587', user: '', pass: '' });
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.email && form.host && form.user && form.pass;
   return (
     <div className="space-y-3">
@@ -48,24 +47,16 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
         </div>
       ))}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Port</label>
-          <select value={form.port} onChange={e => set('port', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-            {['25', '465', '587', '2525'].map(p => <option key={p}>{p}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Daily Limit</label>
-          <input type="number" value={form.limit} min={1} max={500}
-            onChange={e => set('limit', Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-        </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1">Port</label>
+        <select value={form.port} onChange={e => set('port', e.target.value)}
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+          {['25', '465', '587', '2525'].map(p => <option key={p}>{p}</option>)}
+        </select>
       </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(form.email, form.limit)}
+        <button disabled={!valid} onClick={() => onConnect(form.email)}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
@@ -74,10 +65,66 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
   );
 }
 
-function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, limit: number) => void }) {
+function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
+  const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', user: '', pass: '' });
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const valid = form.email && form.imapHost && form.smtpHost && form.user && form.pass;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-400 mb-2">Connect any email via IMAP/SMTP. Works with Yahoo, Zoho, Fastmail, and most providers.</p>
+      {[
+        { label: 'Email Address', key: 'email', placeholder: 'you@yourprovider.com', type: 'email' },
+        { label: 'Password', key: 'pass', placeholder: '••••••••', type: 'password' },
+      ].map(f => (
+        <div key={f.key}>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+          <input type={f.type} placeholder={f.placeholder} value={form[f.key as keyof typeof form]}
+            onChange={e => set(f.key as keyof typeof form, e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+        </div>
+      ))}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Host</label>
+          <input placeholder="imap.yourprovider.com" value={form.imapHost} onChange={e => set('imapHost', e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+          <select value={form.imapPort} onChange={e => set('imapPort', e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            {['993', '143'].map(p => <option key={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Host</label>
+          <input placeholder="smtp.yourprovider.com" value={form.smtpHost} onChange={e => set('smtpHost', e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+          <select value={form.smtpPort} onChange={e => set('smtpPort', e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            {['587', '465', '25'].map(p => <option key={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-2 pt-2">
+        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
+        <button disabled={!valid} onClick={() => onConnect(form.email)}
+          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Connect Account
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
   const [email, setEmail] = useState('');
   const [appPass, setAppPass] = useState('');
-  const [limit, setLimit] = useState(50);
   const valid = email && appPass.length >= 16;
   return (
     <div className="space-y-3">
@@ -100,15 +147,9 @@ function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (e
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
         </div>
       ))}
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Daily Limit</label>
-        <input type="number" value={limit} min={1} max={500} onChange={e => setLimit(Number(e.target.value))}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-        <p className="text-[10px] text-gray-400 mt-1">Google recommends max 500/day for workspace accounts.</p>
-      </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(email, limit)}
+        <button disabled={!valid} onClick={() => onConnect(email)}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
@@ -147,15 +188,13 @@ const CONNECT_OPTIONS = [
     ),
   },
   {
-    id: 'outlook' as const,
-    name: 'Microsoft Outlook / Office 365',
-    desc: 'Connect via Microsoft OAuth',
+    id: 'imap' as const,
+    name: 'IMAP / Any Email',
+    desc: 'Yahoo, Zoho, Fastmail, or any IMAP provider',
     tag: null,
     icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6">
-        <path fill="#0078D4" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-        <path fill="#fff" opacity=".6" d="M14 2v6h6"/>
-        <path fill="#fff" d="M8 13h8v1.5H8zm0 3h5v1.5H8z"/>
+      <svg className="w-6 h-6 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
       </svg>
     ),
   },
@@ -175,12 +214,11 @@ const CONNECT_OPTIONS = [
 export default function EmailAccountsPage() {
   const [step, setStep] = useState<ConnectStep>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [editLimit, setEditLimit] = useState<{ id: number; val: number } | null>(null);
 
-  const addAccount = (type: Account['type'], email: string, limit: number) => {
+  const addAccount = (type: Account['type'], email: string) => {
     setAccounts(prev => [...prev, {
       id: Date.now(), email, type,
-      status: 'warming', health: 72, dailyLimit: limit, sentToday: 0,
+      status: 'warming', health: 72, sentToday: 0,
     }]);
     setStep(null);
   };
@@ -194,7 +232,7 @@ export default function EmailAccountsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Accounts</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Connect sending accounts — each has its own daily limit.</p>
+          <p className="text-sm text-gray-400 mt-0.5">Connect sending accounts — rotate across multiple for better deliverability.</p>
         </div>
         <button onClick={() => setStep('choose')}
           className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
@@ -220,55 +258,33 @@ export default function EmailAccountsPage() {
       {/* Account list */}
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span>Daily Limit</span><span></span>
+          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span></span>
           </div>
           {accounts.map((acc, i) => (
-            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 items-center">
-              {/* Account */}
+            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 items-center">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {i + 1}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{acc.email}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
                   <p className="text-[10px] text-gray-400">Added just now</p>
                 </div>
               </div>
-              {/* Type badge */}
               <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border w-fit ${TYPE_COLORS[acc.type]}`}>
                 {TYPE_LABELS[acc.type]}
               </span>
-              {/* Status */}
               <div className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-red-400'}`}/>
                 <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
               </div>
-              {/* Health */}
               <div className="flex items-center gap-2">
                 <div className="flex-1 max-w-[60px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${acc.health >= 80 ? 'bg-emerald-500' : acc.health >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${acc.health}%` }}/>
                 </div>
                 <span className="text-xs font-semibold text-gray-700">{acc.health}%</span>
               </div>
-              {/* Daily limit — editable */}
-              <div>
-                {editLimit?.id === acc.id ? (
-                  <div className="flex items-center gap-1">
-                    <input type="number" value={editLimit.val} min={1} max={500} onChange={e => setEditLimit({ id: acc.id, val: Number(e.target.value) })}
-                      className="w-16 border border-blue-300 rounded-lg px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"/>
-                    <button onClick={() => { setAccounts(p => p.map(a => a.id === acc.id ? { ...a, dailyLimit: editLimit.val } : a)); setEditLimit(null); }}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-700">OK</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setEditLimit({ id: acc.id, val: acc.dailyLimit })}
-                    className="flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-blue-600 group">
-                    {acc.dailyLimit}/day
-                    <svg className="w-3 h-3 text-gray-300 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                  </button>
-                )}
-              </div>
-              {/* Remove */}
               <button onClick={() => setAccounts(p => p.filter(a => a.id !== acc.id))}
                 className="text-gray-300 hover:text-red-400 transition-colors p-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -283,7 +299,7 @@ export default function EmailAccountsPage() {
           </div>
           <h3 className="text-base font-bold text-gray-900 mb-2">No email accounts connected</h3>
           <p className="text-sm text-gray-400 mb-6 max-w-sm leading-relaxed">
-            Connect Gmail (OAuth or App Password), Outlook, or any custom SMTP. Each account has its own daily sending limit.
+            Connect Gmail (OAuth or App Password), IMAP, or Custom SMTP. Rotate across multiple accounts for better deliverability.
           </p>
           <button onClick={() => setStep('choose')}
             className="bg-blue-600 text-white text-sm font-semibold rounded-xl px-6 py-3 hover:bg-blue-700 transition-colors">
@@ -330,16 +346,10 @@ export default function EmailAccountsPage() {
                     {CONNECT_OPTIONS[0].icon}
                   </div>
                   <p className="text-sm text-gray-600 mb-2">You'll be redirected to Google to authorise access.</p>
-                  <p className="text-xs text-gray-400 mb-5">We only request permission to send email on your behalf.</p>
-                  <div className="mb-4">
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 text-left">Daily Limit</label>
-                    <input type="number" defaultValue={50} min={1} max={500}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/>
-                    <p className="text-[10px] text-gray-400 mt-1 text-left">Google Workspace: up to 2000/day · Free Gmail: up to 500/day</p>
-                  </div>
+                  <p className="text-xs text-gray-400 mb-6">We only request permission to send email on your behalf.</p>
                   <div className="flex gap-2">
                     <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-                    <button onClick={() => addAccount('gmail-oauth', 'you@gmail.com', 50)}
+                    <button onClick={() => addAccount('gmail-oauth', 'you@gmail.com')}
                       className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors">
                       Connect with Google
                     </button>
@@ -348,27 +358,15 @@ export default function EmailAccountsPage() {
               )}
 
               {step === 'gmail-app' && (
-                <GmailAppForm onBack={() => setStep('choose')} onConnect={(email, limit) => addAccount('gmail-app', email, limit)} />
+                <GmailAppForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('gmail-app', email)} />
               )}
 
-              {step === 'outlook' && (
-                <div className="text-center py-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                    {CONNECT_OPTIONS[2].icon}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-5">Redirect to Microsoft to authorise access to your Outlook / Office 365 account.</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-                    <button onClick={() => addAccount('outlook', 'you@outlook.com', 100)}
-                      className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors">
-                      Connect with Microsoft
-                    </button>
-                  </div>
-                </div>
+              {step === 'imap' && (
+                <ImapForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('imap', email)} />
               )}
 
               {step === 'smtp' && (
-                <SmtpForm onBack={() => setStep('choose')} onConnect={(email, limit) => addAccount('smtp', email, limit)} />
+                <SmtpForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('smtp', email)} />
               )}
             </div>
           </div>
