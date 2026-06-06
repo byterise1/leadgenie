@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 /* ── icon helpers ─────────────────────────────────────────────────────────── */
 const Ic = {
@@ -158,10 +161,25 @@ const ucColors = ['bg-blue-50 text-blue-600','bg-indigo-50 text-indigo-600','bg-
 const resColors = ['bg-sky-50 text-sky-600','bg-emerald-50 text-emerald-600',
                    'bg-violet-50 text-violet-600','bg-amber-50 text-amber-600'];
 
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
 export function Navbar() {
   const [mob, setMob] = useState(false);
   const [drop, setDrop] = useState<DropKey>(null);
+  const [user, setUser] = useState<User | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setDrop(null); };
@@ -169,7 +187,17 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push('/');
+    router.refresh();
+  };
+
   const close = () => { setDrop(null); setMob(false); };
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
+  const initials = displayName ? getInitials(displayName) : '?';
 
   return (
     <header ref={ref} className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
@@ -202,16 +230,36 @@ export function Navbar() {
           </Link>
         </nav>
 
-        {/* CTAs — only Login + Get Started */}
+        {/* CTAs — auth-aware */}
         <div className="hidden md:flex items-center gap-2">
-          <Link href="/login" onClick={close}
-            className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-            Login
-          </Link>
-          <Link href="/signup" onClick={close}
-            className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
-            Get Started Free
-          </Link>
+          {user ? (
+            <>
+              <Link href="/dashboard" onClick={close}
+                className="px-4 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
+                Dashboard
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+                  {initials}
+                </span>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" onClick={close}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
+                Login
+              </Link>
+              <Link href="/signup" onClick={close}
+                className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
+                Get Started Free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -361,8 +409,17 @@ export function Navbar() {
             ))}
           </div>
           <div className="border-t border-gray-100 pt-4 flex flex-col gap-2">
-            <Link href="/login" onClick={close} className="text-center py-2.5 text-sm font-semibold text-gray-700 hover:text-gray-900">Login</Link>
-            <Link href="/signup" onClick={close} className="text-center py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">Get Started Free</Link>
+            {user ? (
+              <>
+                <Link href="/dashboard" onClick={close} className="text-center py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">Go to Dashboard</Link>
+                <button onClick={handleSignOut} className="text-center py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">Sign out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={close} className="text-center py-2.5 text-sm font-semibold text-gray-700 hover:text-gray-900">Login</Link>
+                <Link href="/signup" onClick={close} className="text-center py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">Get Started Free</Link>
+              </>
+            )}
           </div>
         </div>
       )}
