@@ -11,6 +11,7 @@ export type EmailAccount = {
 
 export function createTransport(account: EmailAccount) {
   if (account.type === 'gmail-oauth') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
@@ -22,7 +23,7 @@ export function createTransport(account: EmailAccount) {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         refreshToken: account.smtp_pass,
       },
-    });
+    } as any);
   }
   if (account.type === 'gmail-app') {
     return nodemailer.createTransport({
