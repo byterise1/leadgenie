@@ -41,7 +41,7 @@ export default function NewCampaignPage() {
   // Step 0
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('Book a Meeting');
-  const [selectedAccounts, setSelectedAccounts] = useState<number[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [allAccounts, setAllAccounts] = useState(false);
   const [dailyLimitStr, setDailyLimitStr] = useState('50');
   const dailyLimit = Math.max(1, parseInt(dailyLimitStr) || 1);
@@ -59,7 +59,7 @@ export default function NewCampaignPage() {
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
 
-  const toggleAccount = (id: number) => {
+  const toggleAccount = (id: string) => {
     setSelectedAccounts(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     setAllAccounts(false);
   };
@@ -330,7 +330,7 @@ export default function NewCampaignPage() {
                 setLaunching(true);
                 setLaunchError('');
                 try {
-                  const accountIds = allAccounts ? realAccounts.map(a => a.id) : realAccounts.filter(a => selectedAccounts.includes(Number(a.id))).map(a => a.id);
+                  const accountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
                   const res = await fetch('/api/campaigns', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
