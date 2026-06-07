@@ -2,6 +2,7 @@ import Groq from 'groq-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
+  const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
   try {
     const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const { query } = await req.json();
