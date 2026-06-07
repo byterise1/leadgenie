@@ -1,13 +1,16 @@
 import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
-import Redis from 'ioredis';
 import { createClient } from '@supabase/supabase-js';
 import { createTransport, replaceVars } from '../lib/mailer';
 
-const connection = new Redis(process.env.REDIS_URL!, {
-  maxRetriesPerRequest: null,
+const u = new URL(process.env.REDIS_URL!);
+const connection = {
+  host: u.hostname,
+  port: Number(u.port),
+  password: u.password ? decodeURIComponent(u.password) : undefined,
+  maxRetriesPerRequest: null as null,
   enableReadyCheck: false,
-});
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

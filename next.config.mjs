@@ -8,7 +8,7 @@ const nextConfig = {
       },
     ],
   },
-  serverExternalPackages: ['nodemailer', 'imapflow', 'bullmq', 'ioredis'],
+  serverExternalPackages: ['nodemailer', 'imapflow', 'bullmq'],
 };
 
 export default nextConfig;
