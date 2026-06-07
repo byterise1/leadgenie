@@ -7,6 +7,10 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/dashboard';
 
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
+  const siteOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin;
+
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -26,9 +30,9 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${siteOrigin}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  return NextResponse.redirect(`${siteOrigin}/login?error=auth_failed`);
 }
