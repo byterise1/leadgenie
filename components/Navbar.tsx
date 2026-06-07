@@ -171,9 +171,9 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
+    const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -188,6 +188,7 @@ export function Navbar() {
   }, []);
 
   const handleSignOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
     router.push('/');
