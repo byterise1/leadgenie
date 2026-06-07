@@ -12,9 +12,9 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const supabase = createClient();
 
   const handleGoogle = async () => {
+    const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${location.origin}/auth/callback` },
@@ -25,6 +25,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    const supabase = createClient();
 
     const { error } = await supabase.auth.signUp({
       email: form.email,
