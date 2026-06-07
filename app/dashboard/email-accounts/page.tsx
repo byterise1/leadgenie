@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 type Account = {
-  id: number;
+  id: string;
   email: string;
   type: 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
   status: 'active' | 'warming' | 'error';
-  health: number;
-  sentToday: number;
+  health_score: number;
+  sent_today: number;
 };
 
 const TYPE_LABELS: Record<Account['type'], string> = {
@@ -212,34 +213,71 @@ const CONNECT_OPTIONS = [
 ];
 
 export default function EmailAccountsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [step, setStep] = useState<ConnectStep>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState('');
+  const [addError, setAddError] = useState('');
 
-  useEffect(() => {
+  const fetchAccounts = useCallback(() => {
     fetch('/api/email-accounts')
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setAccounts(data); })
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    fetchAccounts();
+    const connected = searchParams.get('connected');
+    const err = searchParams.get('error');
+    if (connected === 'gmail') {
+      setToast('Gmail account connected successfully!');
+      router.replace('/dashboard/email-accounts');
+    } else if (err === 'oauth_failed') {
+      setToast('Google OAuth failed. Try Gmail App Password instead.');
+      router.replace('/dashboard/email-accounts');
+    }
+  }, [fetchAccounts, searchParams, router]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const addAccount = async (type: Account['type'], email: string, extra?: Record<string, string>) => {
+    setAddError('');
     const res = await fetch('/api/email-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, email, ...extra }),
     });
     const data = await res.json();
-    if (res.ok) setAccounts(prev => [data, ...prev]);
-    setStep(null);
+    if (res.ok) {
+      setAccounts(prev => [data, ...prev]);
+      setToast('Account connected successfully!');
+      setStep(null);
+    } else {
+      setAddError(data.error || 'Failed to connect account');
+    }
   };
 
   const totalAccounts = accounts.length;
   const warming = accounts.filter(a => a.status === 'warming').length;
-  const avgHealth = accounts.length ? Math.round(accounts.reduce((s, a) => s + a.health, 0) / accounts.length) : 0;
+  const avgHealth = accounts.length
+    ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
+    : 0;
 
   return (
     <main className="flex-1 p-6">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.includes('success') || toast.includes('connected') ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Accounts</h1>
@@ -252,12 +290,11 @@ export default function EmailAccountsPage() {
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: 'Total Accounts', value: String(totalAccounts), color: 'blue' },
-          { label: 'Warming Up', value: String(warming), color: 'amber' },
-          { label: 'Avg Health Score', value: totalAccounts ? `${avgHealth}%` : '—', color: 'emerald' },
+          { label: 'Total Accounts', value: String(totalAccounts) },
+          { label: 'Warming Up', value: String(warming) },
+          { label: 'Avg Health Score', value: totalAccounts ? `${avgHealth}%` : '—' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
@@ -266,7 +303,6 @@ export default function EmailAccountsPage() {
         ))}
       </div>
 
-      {/* Account list */}
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -280,7 +316,7 @@ export default function EmailAccountsPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                  <p className="text-[10px] text-gray-400">Added just now</p>
+                  <p className="text-[10px] text-gray-400 capitalize">{acc.status}</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border w-fit ${TYPE_COLORS[acc.type]}`}>
@@ -292,9 +328,10 @@ export default function EmailAccountsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 max-w-[60px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${acc.health >= 80 ? 'bg-emerald-500' : acc.health >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${acc.health}%` }}/>
+                  <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                    style={{ width: `${acc.health_score || 0}%` }}/>
                 </div>
-                <span className="text-xs font-semibold text-gray-700">{acc.health}%</span>
+                <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
               </div>
               <button onClick={async () => {
                 await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
@@ -322,7 +359,6 @@ export default function EmailAccountsPage() {
         </div>
       )}
 
-      {/* Modal */}
       {step && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setStep(null)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
@@ -335,6 +371,10 @@ export default function EmailAccountsPage() {
               </button>
             </div>
             <div className="p-6">
+              {addError && (
+                <div className="mb-4 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-medium">{addError}</div>
+              )}
+
               {step === 'choose' && (
                 <div className="space-y-2.5">
                   {CONNECT_OPTIONS.map(opt => (
@@ -363,10 +403,10 @@ export default function EmailAccountsPage() {
                   <p className="text-xs text-gray-400 mb-6">We only request permission to send email on your behalf.</p>
                   <div className="flex gap-2">
                     <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-                    <button onClick={() => addAccount('gmail-oauth', 'you@gmail.com')}
-                      className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors">
+                    <a href="/api/email-accounts/oauth/google"
+                      className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors text-center">
                       Connect with Google
-                    </button>
+                    </a>
                   </div>
                 </div>
               )}
