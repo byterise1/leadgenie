@@ -12,7 +12,9 @@ export type EmailAccount = {
 export function createTransport(account: EmailAccount) {
   if (account.type === 'gmail-oauth') {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         type: 'OAuth2',
         user: account.smtp_user || account.email,
