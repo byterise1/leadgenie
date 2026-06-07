@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 type Account = {
   id: string;
@@ -213,7 +213,6 @@ const CONNECT_OPTIONS = [
 ];
 
 export default function EmailAccountsPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [step, setStep] = useState<ConnectStep>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -230,8 +229,9 @@ export default function EmailAccountsPage() {
 
   useEffect(() => {
     fetchAccounts();
-    const connected = searchParams.get('connected');
-    const err = searchParams.get('error');
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const err = params.get('error');
     if (connected === 'gmail') {
       setToast('Gmail account connected successfully!');
       router.replace('/dashboard/email-accounts');
@@ -239,7 +239,7 @@ export default function EmailAccountsPage() {
       setToast('Google OAuth failed. Try Gmail App Password instead.');
       router.replace('/dashboard/email-accounts');
     }
-  }, [fetchAccounts, searchParams, router]);
+  }, [fetchAccounts, router]);
 
   useEffect(() => {
     if (!toast) return;
