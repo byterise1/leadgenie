@@ -1,14 +1,17 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
     const { Worker } = await import('bullmq');
-    const Redis = (await import('ioredis')).default;
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
     const { createTransport, replaceVars } = await import('./lib/mailer');
 
-    const connection = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: null,
+    const redisUrl = new URL(process.env.REDIS_URL!);
+    const connection = {
+      host: redisUrl.hostname,
+      port: Number(redisUrl.port),
+      password: redisUrl.password ? decodeURIComponent(redisUrl.password) : undefined,
+      maxRetriesPerRequest: null as null,
       enableReadyCheck: false,
-    });
+    };
 
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
