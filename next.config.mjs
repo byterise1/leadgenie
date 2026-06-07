@@ -1,5 +1,8 @@
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    instrumentationHook: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -8,6 +11,7 @@ const nextConfig = {
       },
     ],
   },
+  serverExternalPackages: ['nodemailer', 'imapflow', 'bullmq', 'ioredis'],
 };
 
 export default nextConfig;

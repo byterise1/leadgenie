@@ -1,15 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const steps = ['Details', 'Sequence', 'Schedule', 'Review'];
 
-const MOCK_ACCOUNTS = [
-  { id: 1, email: 'john@company.com', type: 'Gmail OAuth' },
-  { id: 2, email: 'outreach@startup.io', type: 'Custom SMTP' },
-  { id: 3, email: 'sales@agency.co', type: 'Gmail App Password' },
-];
+type RealAccount = { id: string; email: string; type: string };
 
 const MOCK_TEMPLATES = [
   { id: 1, name: 'The Problem Solver', category: 'Cold Outreach', subject: "Quick question about {{company}}'s growth", body: `Hi {{first_name}},\n\nI was looking at {{company}} and noticed most teams in {{industry}} struggle with {{pain_point}}.\n\nWorth a 15-min call?\n\n[Your Name]` },
@@ -31,7 +28,15 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function NewCampaignPage() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
+  const [realAccounts, setRealAccounts] = useState<RealAccount[]>([]);
+  const [launching, setLaunching] = useState(false);
+  const [launchError, setLaunchError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
+  }, []);
 
   // Step 0
   const [name, setName] = useState('');
@@ -60,7 +65,7 @@ export default function NewCampaignPage() {
   };
   const toggleAllAccounts = () => {
     if (allAccounts) { setAllAccounts(false); setSelectedAccounts([]); }
-    else { setAllAccounts(true); setSelectedAccounts(MOCK_ACCOUNTS.map(a => a.id)); }
+    else { setAllAccounts(true); setSelectedAccounts(realAccounts.map(a => a.id)); }
   };
 
   const applyTemplate = (idx: number, tId: number) => {
@@ -73,7 +78,7 @@ export default function NewCampaignPage() {
   const updateEmail = (idx: number, key: keyof EmailStep, val: unknown) =>
     setEmails(em => em.map((x, i) => i === idx ? { ...x, [key]: val } : x));
 
-  const activeAccountCount = allAccounts ? MOCK_ACCOUNTS.length : selectedAccounts.length;
+  const activeAccountCount = allAccounts ? realAccounts.length : selectedAccounts.length;
 
   return (
     <main className="flex-1 p-6 flex flex-col items-center">
@@ -137,7 +142,7 @@ export default function NewCampaignPage() {
                 <label className="text-sm font-semibold text-gray-700">Sending Accounts</label>
                 <span className="text-xs text-gray-400">Rotates sends across selected</span>
               </div>
-              {MOCK_ACCOUNTS.length === 0 ? (
+              {realAccounts.length === 0 ? (
                 <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
                   <p className="text-sm text-gray-400 mb-2">No accounts connected yet</p>
                   <Link href="/dashboard/email-accounts" className="text-xs font-bold text-blue-600 hover:underline">+ Connect account →</Link>
@@ -146,9 +151,9 @@ export default function NewCampaignPage() {
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
                     <input type="checkbox" checked={allAccounts} onChange={toggleAllAccounts} className="w-4 h-4 rounded accent-blue-600"/>
-                    <span className="text-sm font-semibold text-gray-700">All accounts ({MOCK_ACCOUNTS.length})</span>
+                    <span className="text-sm font-semibold text-gray-700">All accounts ({realAccounts.length})</span>
                   </label>
-                  {MOCK_ACCOUNTS.map(acc => (
+                  {realAccounts.map(acc => (
                     <label key={acc.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors">
                       <input type="checkbox" checked={allAccounts || selectedAccounts.includes(acc.id)} onChange={() => toggleAccount(acc.id)} className="w-4 h-4 rounded accent-blue-600"/>
                       <div className="flex-1">
@@ -317,9 +322,42 @@ export default function NewCampaignPage() {
                 ⚠️ Select at least one email account to launch.
               </div>
             )}
-            <button disabled={activeAccountCount === 0}
+            {launchError && (
+              <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-xs text-red-600">{launchError}</div>
+            )}
+            <button disabled={activeAccountCount === 0 || launching}
+              onClick={async () => {
+                setLaunching(true);
+                setLaunchError('');
+                try {
+                  const accountIds = allAccounts ? realAccounts.map(a => a.id) : realAccounts.filter(a => selectedAccounts.includes(Number(a.id))).map(a => a.id);
+                  const res = await fetch('/api/campaigns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name,
+                      goal,
+                      daily_limit: dailyLimit,
+                      from_hour: fromHour,
+                      to_hour: toHour,
+                      active_days: activeDays,
+                      timezone,
+                      start_date: startDate || null,
+                      steps: emails.map((e, i) => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub })),
+                      account_ids: accountIds,
+                    }),
+                  });
+                  const campaign = await res.json();
+                  if (!res.ok) throw new Error(campaign.error || 'Failed to create campaign');
+                  await fetch(`/api/campaigns/${campaign.id}/start`, { method: 'POST' });
+                  router.push('/dashboard/campaigns');
+                } catch (err: any) {
+                  setLaunchError(err.message);
+                  setLaunching(false);
+                }
+              }}
               className="w-full bg-blue-600 text-white font-bold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              Launch Campaign →
+              {launching ? 'Launching…' : 'Launch Campaign →'}
             </button>
           </div>
         )}

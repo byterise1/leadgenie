@@ -1,20 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-
-const stats = [
-  { label: 'Active Campaigns', value: '0', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>, color: 'blue' },
-  { label: 'Emails Sent', value: '0', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>, color: 'indigo' },
-  { label: 'Avg Open Rate', value: '—', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>, color: 'emerald' },
-  { label: 'Avg Reply Rate', value: '—', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>, color: 'violet' },
-];
-
-const colorMap: Record<string, string> = {
-  blue: 'bg-blue-50 text-blue-600',
-  indigo: 'bg-indigo-50 text-indigo-600',
-  emerald: 'bg-emerald-50 text-emerald-600',
-  violet: 'bg-violet-50 text-violet-600',
-};
+import { useEffect, useState } from 'react';
 
 const quickActions = [
   { step: 1, label: 'Connect Email', desc: 'Add Gmail, SMTP or IMAP', href: '/dashboard/email-accounts', color: 'blue' },
@@ -23,17 +10,29 @@ const quickActions = [
   { step: 4, label: 'Check Inbox', desc: 'Read and reply to prospects', href: '/dashboard/inbox', color: 'violet' },
 ];
 
-const stepColor: Record<string, { num: string; bar: string; text: string }> = {
-  blue:    { num: 'bg-blue-600 text-white',    bar: 'bg-blue-100',    text: 'text-blue-600' },
-  indigo:  { num: 'bg-indigo-600 text-white',  bar: 'bg-indigo-100',  text: 'text-indigo-600' },
-  emerald: { num: 'bg-emerald-600 text-white', bar: 'bg-emerald-100', text: 'text-emerald-600' },
-  violet:  { num: 'bg-violet-600 text-white',  bar: 'bg-violet-100',  text: 'text-violet-600' },
+const stepColor: Record<string, { num: string }> = {
+  blue:    { num: 'bg-blue-600 text-white' },
+  indigo:  { num: 'bg-indigo-600 text-white' },
+  emerald: { num: 'bg-emerald-600 text-white' },
+  violet:  { num: 'bg-violet-600 text-white' },
 };
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState({ activeCampaigns: 0, totalSent: 0, openRate: '—', replyRate: '—' });
+
+  useEffect(() => {
+    fetch('/api/dashboard/stats').then(r => r.json()).then(d => { if (!d.error) setStats(d); });
+  }, []);
+
+  const statCards = [
+    { label: 'Active Campaigns', value: String(stats.activeCampaigns) },
+    { label: 'Emails Sent', value: String(stats.totalSent) },
+    { label: 'Avg Open Rate', value: stats.openRate },
+    { label: 'Avg Reply Rate', value: stats.replyRate },
+  ];
+
   return (
     <main className="flex-1 p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Overview</h1>
@@ -46,19 +45,17 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(s => (
+        {statCards.map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-400 mt-1.5">No data yet</p>
+            <p className="text-xs text-gray-400 mt-1.5">{s.value === '0' || s.value === '—' ? 'No data yet' : 'All time'}</p>
           </div>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent campaigns */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900">Recent Campaigns</h2>
@@ -68,17 +65,19 @@ export default function DashboardPage() {
             <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
               <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
-            <p className="text-sm font-semibold text-gray-700 mb-1">No campaigns yet</p>
-            <p className="text-xs text-gray-400 mb-5 max-w-xs">Create your first cold email campaign to start generating replies and meetings.</p>
+            <p className="text-sm font-semibold text-gray-700 mb-1">
+              {stats.activeCampaigns > 0 ? `${stats.activeCampaigns} active campaign${stats.activeCampaigns > 1 ? 's' : ''}` : 'No campaigns yet'}
+            </p>
+            <p className="text-xs text-gray-400 mb-5 max-w-xs">
+              {stats.totalSent > 0 ? `${stats.totalSent} emails sent total.` : 'Create your first cold email campaign to start generating replies and meetings.'}
+            </p>
             <Link href="/dashboard/campaigns/new" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
               Create Campaign →
             </Link>
           </div>
         </div>
 
-        {/* Side panel */}
         <div className="space-y-4">
-          {/* AI Co-pilot */}
           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white">
             <div className="flex items-center gap-2 mb-3">
               <svg className="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -91,7 +90,6 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Quick Actions — numbered step cards */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</p>
             <div className="space-y-2">
@@ -110,29 +108,8 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-
-          {/* Setup Checklist */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Setup Checklist</p>
-            <div className="space-y-2.5">
-              {[
-                { label: 'Create account', done: true },
-                { label: 'Connect email account', done: false },
-                { label: 'Import leads', done: false },
-                { label: 'Launch first campaign', done: false },
-              ].map(item => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${item.done ? 'bg-emerald-500' : 'border-2 border-gray-200'}`}>
-                    {item.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                  </span>
-                  <span className={`text-xs ${item.done ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
-
     </main>
   );
 }

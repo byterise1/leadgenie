@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Account = {
   id: number;
@@ -27,7 +27,7 @@ const TYPE_COLORS: Record<Account['type'], string> = {
 
 type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
 
-function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
+function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void }) {
   const [form, setForm] = useState({ email: '', host: '', port: '587', user: '', pass: '' });
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.email && form.host && form.user && form.pass;
@@ -56,7 +56,7 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
       </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(form.email)}
+        <button disabled={!valid} onClick={() => onConnect(form.email, { smtp_host: form.host, smtp_port: form.port, smtp_user: form.user, smtp_pass: form.pass })}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
@@ -65,7 +65,7 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
   );
 }
 
-function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
+function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void }) {
   const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', user: '', pass: '' });
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.email && form.imapHost && form.smtpHost && form.user && form.pass;
@@ -113,7 +113,7 @@ function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
       </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(form.email)}
+        <button disabled={!valid} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.user, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
@@ -122,7 +122,7 @@ function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
   );
 }
 
-function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string) => void }) {
+function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, pass: string) => void }) {
   const [email, setEmail] = useState('');
   const [appPass, setAppPass] = useState('');
   const valid = email && appPass.length >= 16;
@@ -149,7 +149,7 @@ function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (e
       ))}
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(email)}
+        <button disabled={!valid} onClick={() => onConnect(email, appPass.replace(/\s/g, ''))}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
@@ -214,12 +214,23 @@ const CONNECT_OPTIONS = [
 export default function EmailAccountsPage() {
   const [step, setStep] = useState<ConnectStep>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addAccount = (type: Account['type'], email: string) => {
-    setAccounts(prev => [...prev, {
-      id: Date.now(), email, type,
-      status: 'warming', health: 72, sentToday: 0,
-    }]);
+  useEffect(() => {
+    fetch('/api/email-accounts')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAccounts(data); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const addAccount = async (type: Account['type'], email: string, extra?: Record<string, string>) => {
+    const res = await fetch('/api/email-accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, email, ...extra }),
+    });
+    const data = await res.json();
+    if (res.ok) setAccounts(prev => [data, ...prev]);
     setStep(null);
   };
 
@@ -285,7 +296,10 @@ export default function EmailAccountsPage() {
                 </div>
                 <span className="text-xs font-semibold text-gray-700">{acc.health}%</span>
               </div>
-              <button onClick={() => setAccounts(p => p.filter(a => a.id !== acc.id))}
+              <button onClick={async () => {
+                await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
+                setAccounts(p => p.filter(a => a.id !== acc.id));
+              }}
                 className="text-gray-300 hover:text-red-400 transition-colors p-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -358,15 +372,15 @@ export default function EmailAccountsPage() {
               )}
 
               {step === 'gmail-app' && (
-                <GmailAppForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('gmail-app', email)} />
+                <GmailAppForm onBack={() => setStep('choose')} onConnect={(email, pass) => addAccount('gmail-app', email, { smtp_user: email, smtp_pass: pass })} />
               )}
 
               {step === 'imap' && (
-                <ImapForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('imap', email)} />
+                <ImapForm onBack={() => setStep('choose')} onConnect={(email, extra) => addAccount('imap', email, extra)} />
               )}
 
               {step === 'smtp' && (
-                <SmtpForm onBack={() => setStep('choose')} onConnect={(email) => addAccount('smtp', email)} />
+                <SmtpForm onBack={() => setStep('choose')} onConnect={(email, extra) => addAccount('smtp', email, extra)} />
               )}
             </div>
           </div>
