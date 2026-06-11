@@ -169,25 +169,17 @@ export default function NewCampaignPage() {
                   <Link href="/dashboard/leads" className="text-xs font-bold text-blue-600 hover:underline">+ Create a lead list →</Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-1.5">
+                <select
+                  value={selectedListId}
+                  onChange={e => setSelectedListId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                  <option value="">— Select a list —</option>
                   {leadLists.map(list => (
-                    <label key={list.id}
-                      className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-all ${selectedListId === list.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
-                      <input type="radio" name="lead_list" value={list.id}
-                        checked={selectedListId === list.id}
-                        onChange={() => setSelectedListId(list.id)}
-                        className="accent-blue-600"/>
-                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{list.name}</p>
-                        <p className="text-xs text-gray-400">{list.count} lead{list.count !== 1 ? 's' : ''}</p>
-                      </div>
-                      {selectedListId === list.id && (
-                        <svg className="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
-                      )}
-                    </label>
+                    <option key={list.id} value={list.id}>
+                      {list.name} ({list.count} lead{list.count !== 1 ? 's' : ''})
+                    </option>
                   ))}
-                </div>
+                </select>
               )}
             </div>
 

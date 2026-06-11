@@ -61,7 +61,7 @@ export default function LeadsPage() {
   const [deleting, setDeleting] = useState(false);
 
   // List picker modal — shown before Add Lead or Import when no list is selected
-  const [listPickerAction, setListPickerAction] = useState<'add' | 'import' | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
   const [pickerListId, setPickerListId] = useState('');
   const [pickerNewName, setPickerNewName] = useState('');
   const [pickerShowNew, setPickerShowNew] = useState(false);
@@ -108,19 +108,26 @@ export default function LeadsPage() {
   };
 
   // ── List Picker helpers ──────────────────────────────────────────────
-  const openPicker = (action: 'add' | 'import') => {
+  const openPicker = () => {
     setPickerListId('');
     setPickerNewName('');
-    setPickerShowNew(lists.length === 0); // Auto-show create if no lists
-    setListPickerAction(action);
+    setPickerShowNew(lists.length === 0);
+    setShowPicker(true);
   };
 
-  const handlePickerConfirm = async () => {
+  const closePicker = () => {
+    setShowPicker(false);
+    setPickerListId('');
+    setPickerNewName('');
+    setPickerShowNew(false);
+  };
+
+  // action is chosen at click time ('add' = manual form, 'import' = file picker)
+  const handlePickerConfirm = async (action: 'add' | 'import') => {
     setPickerSaving(true);
     let listId = pickerListId;
 
     if (pickerShowNew && pickerNewName.trim()) {
-      // Create the new list
       const res = await fetch('/api/lead-lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,21 +150,15 @@ export default function LeadsPage() {
       return;
     }
 
-    const action = listPickerAction;
-    setListPickerAction(null);
+    closePicker();
     setPickerSaving(false);
-    setPickerNewName('');
-    setPickerShowNew(false);
-
-    // Navigate to the chosen list, then do the action
     selectList(listId);
 
     if (action === 'add') {
       setEditingLead(null);
       setForm(EMPTY_FORM);
       setShowForm(true);
-    } else if (action === 'import') {
-      // Delay slightly so selectedList state updates before handleImport reads it
+    } else {
       setTimeout(() => fileRef.current?.click(), 50);
     }
   };
@@ -194,7 +195,7 @@ export default function LeadsPage() {
       setForm(EMPTY_FORM);
       setShowForm(true);
     } else {
-      openPicker('add');
+      openPicker();
     }
   };
 
@@ -202,7 +203,7 @@ export default function LeadsPage() {
     if (selectedList) {
       fileRef.current?.click();
     } else {
-      openPicker('import');
+      openPicker();
     }
   };
 
@@ -465,7 +466,7 @@ export default function LeadsPage() {
                             </div>
                           )}
                           {!currentList && lists.length === 0 && (
-                            <button onClick={() => openPicker('add')} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Create First List →</button>
+                            <button onClick={() => openPicker()} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Create First List →</button>
                           )}
                         </div>
                       </td>
@@ -580,15 +581,12 @@ export default function LeadsPage() {
       )}
 
       {/* ── List Picker Modal ──────────────────────────────────────────── */}
-      {listPickerAction && (
+      {showPicker && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">
-                {listPickerAction === 'add' ? 'Add Lead to…' : 'Import into…'}
-              </h2>
-              <button onClick={() => { setListPickerAction(null); setPickerNewName(''); setPickerShowNew(false); setPickerListId(''); }}
-                className="text-gray-400 hover:text-gray-700 transition-colors">
+              <h2 className="text-base font-bold text-gray-900">Add Leads to…</h2>
+              <button onClick={closePicker} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
@@ -636,16 +634,26 @@ export default function LeadsPage() {
               )}
             </div>
 
-            <div className="px-4 pb-4 flex gap-2">
-              <button onClick={() => { setListPickerAction(null); setPickerNewName(''); setPickerShowNew(false); setPickerListId(''); }}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
+            <div className="px-4 pb-4 space-y-2">
+              <div className="flex gap-2">
+                <button
+                  disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
+                  onClick={() => handlePickerConfirm('import')}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-blue-600 text-blue-600 font-bold text-sm rounded-xl hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                  Upload File
+                </button>
+                <button
+                  disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
+                  onClick={() => handlePickerConfirm('add')}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                  Add Manually
+                </button>
+              </div>
+              <button onClick={closePicker}
+                className="w-full py-2 text-gray-400 font-semibold text-sm hover:text-gray-600 transition-colors">
                 Cancel
-              </button>
-              <button
-                disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
-                onClick={handlePickerConfirm}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                {pickerSaving ? 'Creating…' : `Continue →`}
               </button>
             </div>
           </div>
