@@ -51,16 +51,23 @@ export async function POST(req: NextRequest) {
   // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
-  // Prevent duplicate: same email + same type
+  // If already in DB, return the existing row (don't error — just show it)
   const { data: dup } = await supabaseAdmin
     .from('email_accounts')
-    .select('id')
+    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
     .eq('user_id', user.id)
     .eq('email', email)
     .eq('type', type)
     .maybeSingle();
 
-  if (dup) return NextResponse.json({ error: 'This account is already connected. Remove it first to re-add.' }, { status: 409 });
+  if (dup) {
+    const todayUTC = new Date(); todayUTC.setUTCHours(0, 0, 0, 0);
+    const { count } = await supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true })
+      .eq('account_id', dup.id).gte('created_at', todayUTC.toISOString());
+    const sentReal = count || 0;
+    const limit = dup.daily_limit || 50;
+    return NextResponse.json({ ...dup, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal), _already_existed: true });
+  }
 
   // Safe daily limits per type (conservative defaults to protect deliverability)
   const DEFAULT_DAILY_LIMITS: Record<string, number> = {

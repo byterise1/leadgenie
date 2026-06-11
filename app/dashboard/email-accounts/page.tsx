@@ -264,8 +264,9 @@ export default function EmailAccountsPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      setAccounts(prev => [data, ...prev]);
-      setToast('Account connected successfully!');
+      // If it already existed, add to list only if not already shown
+      setAccounts(prev => prev.some(a => a.id === data.id) ? prev : [data, ...prev]);
+      setToast(data._already_existed ? 'Account already connected — shown in list.' : 'Account connected successfully!');
       setStep(null);
     } else {
       setAddError(data.error || 'Failed to connect account');
