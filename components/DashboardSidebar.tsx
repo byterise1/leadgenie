@@ -57,11 +57,16 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    fetch('/api/profile').then(r => r.json()).then(d => {
+      if (d?.avatar_url) setAvatarUrl(d.avatar_url);
+      if (d?.full_name) setUser(u => u ? { ...u, user_metadata: { ...u.user_metadata, full_name: d.full_name } } : u);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -148,15 +153,19 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
         </nav>
 
         <div className="px-3 py-3 border-t border-gray-100 shrink-0">
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-              {initials}
+          <Link href="/dashboard/settings" onClick={onClose}
+            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover"/>
+                : initials}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
               <p className="text-[10px] text-gray-400 truncate">{email}</p>
             </div>
-          </div>
+            <svg className="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+          </Link>
           <button onClick={signOut}
             className="mt-1 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

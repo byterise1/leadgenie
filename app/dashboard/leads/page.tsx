@@ -122,8 +122,7 @@ export default function LeadsPage() {
     setPickerShowNew(false);
   };
 
-  // action is chosen at click time ('add' = manual form, 'import' = file picker)
-  const handlePickerConfirm = async (action: 'add' | 'import') => {
+  const handlePickerConfirm = async () => {
     setPickerSaving(true);
     let listId = pickerListId;
 
@@ -153,14 +152,7 @@ export default function LeadsPage() {
     closePicker();
     setPickerSaving(false);
     selectList(listId);
-
-    if (action === 'add') {
-      setEditingLead(null);
-      setForm(EMPTY_FORM);
-      setShowForm(true);
-    } else {
-      setTimeout(() => fileRef.current?.click(), 50);
-    }
+    // User lands on the empty list page — they choose to Import or Add Manually from there
   };
 
   // ── Import ────────────────────────────────────────────────────────────
@@ -361,12 +353,9 @@ export default function LeadsPage() {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Lists</p>
 
           <button onClick={() => selectList(null)}
-            className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all ${!selectedList ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              All Leads
-            </span>
-            <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${!selectedList ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>{totalCount}</span>
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${!selectedList ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            All Leads
           </button>
 
           {lists.map(list => (
@@ -380,12 +369,9 @@ export default function LeadsPage() {
                 </div>
               ) : (
                 <button onClick={() => selectList(list.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all ${selectedList === list.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-                  <span className="flex items-center gap-2 min-w-0">
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                    <span className="truncate">{list.name}</span>
-                  </span>
-                  <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 shrink-0 ml-1 ${selectedList === list.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>{list.count}</span>
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${selectedList === list.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                  <span className="truncate">{list.name}</span>
                 </button>
               )}
               <button onClick={e => { e.stopPropagation(); setCtxMenu({ list, x: e.clientX, y: e.clientY }); }}
@@ -634,26 +620,16 @@ export default function LeadsPage() {
               )}
             </div>
 
-            <div className="px-4 pb-4 space-y-2">
-              <div className="flex gap-2">
-                <button
-                  disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
-                  onClick={() => handlePickerConfirm('import')}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-blue-600 text-blue-600 font-bold text-sm rounded-xl hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                  Upload File
-                </button>
-                <button
-                  disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
-                  onClick={() => handlePickerConfirm('add')}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-                  Add Manually
-                </button>
-              </div>
+            <div className="px-4 pb-4 flex gap-2">
               <button onClick={closePicker}
-                className="w-full py-2 text-gray-400 font-semibold text-sm hover:text-gray-600 transition-colors">
+                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
                 Cancel
+              </button>
+              <button
+                disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
+                onClick={handlePickerConfirm}
+                className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {pickerSaving ? 'Creating…' : 'Go to List →'}
               </button>
             </div>
           </div>

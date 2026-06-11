@@ -69,14 +69,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...dup, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal), _already_existed: true });
   }
 
-  // Safe daily limits per type (conservative defaults to protect deliverability)
+  // Free plan: 5/day limit — update when pricing is set up
   const DEFAULT_DAILY_LIMITS: Record<string, number> = {
-    'gmail-oauth': 50,
-    'gmail-app': 50,
-    'imap': 100,
-    'smtp': 150,
+    'gmail-oauth': 5,
+    'gmail-app': 5,
+    'imap': 5,
+    'smtp': 5,
   };
-  const defaultLimit = DEFAULT_DAILY_LIMITS[type] ?? 50;
+  const defaultLimit = DEFAULT_DAILY_LIMITS[type] ?? 5;
 
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
