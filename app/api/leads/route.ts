@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get('search') || '';
   const campaign_id = searchParams.get('campaign_id');
+  const list_id = searchParams.get('list_id');
 
   let query = supabaseAdmin
     .from('leads')
@@ -20,6 +21,16 @@ export async function GET(req: NextRequest) {
 
   if (search) {
     query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,company.ilike.%${search}%`);
+  }
+
+  if (list_id) {
+    const { data: members } = await supabaseAdmin
+      .from('lead_list_members')
+      .select('lead_id')
+      .eq('list_id', list_id);
+    const leadIds = (members || []).map((m: { lead_id: string }) => m.lead_id);
+    if (!leadIds.length) return NextResponse.json([]);
+    query = query.in('id', leadIds);
   }
 
   const { data, error } = await query;

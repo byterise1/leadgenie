@@ -39,7 +39,9 @@ export async function register() {
       const accounts = campaign.campaign_accounts.map((ca: any) => ca.account).filter(Boolean);
       if (!accounts.length) return;
 
-      const account = accounts[stepNumber % accounts.length];
+      // Use accountIndex from scheduler (round-robin), fall back to stepNumber rotation
+      const accountIndex = typeof job.data.accountIndex === 'number' ? job.data.accountIndex : stepNumber;
+      const account = accounts[accountIndex % accounts.length];
       const lead = cl.lead;
       const subject = replaceVars(step.subject, lead);
       const body = replaceVars(step.body, lead);

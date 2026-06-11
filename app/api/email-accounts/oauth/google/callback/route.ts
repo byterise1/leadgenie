@@ -69,5 +69,6 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?connected=gmail`);
+  const connectedParam = existingAccount ? 'gmail_refreshed' : 'gmail';
+  return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?connected=${connectedParam}`);
 }

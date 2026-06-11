@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids } = body;
+  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs } = body;
 
   if (!name || !steps?.length) {
     return NextResponse.json({ error: 'name and steps required' }, { status: 400 });
@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
       active_days: active_days || [true,true,true,true,true,false,false],
       timezone: timezone || 'UTC',
       start_date: start_date || null,
+      min_delay_secs: min_delay_secs || 60,
+      max_delay_secs: max_delay_secs || 300,
       status: 'draft',
     })
     .select()

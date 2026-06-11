@@ -30,6 +30,17 @@ export async function POST(req: NextRequest) {
   // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
+  // Prevent duplicate: same email + same type
+  const { data: dup } = await supabaseAdmin
+    .from('email_accounts')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('email', email)
+    .eq('type', type)
+    .maybeSingle();
+
+  if (dup) return NextResponse.json({ error: 'This account is already connected. Remove it first to re-add.' }, { status: 409 });
+
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
     .insert({

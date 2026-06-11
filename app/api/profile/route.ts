@@ -21,11 +21,14 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { full_name, company, website, timezone } = await req.json();
+  const { full_name, company, website, timezone, avatar_url } = await req.json();
+
+  const updates: Record<string, string> = { full_name, company, website, timezone };
+  if (avatar_url !== undefined) updates.avatar_url = avatar_url;
 
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .update({ full_name, company, website, timezone })
+    .update(updates)
     .eq('id', user.id)
     .select()
     .single();

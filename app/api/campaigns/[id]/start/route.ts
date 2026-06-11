@@ -12,14 +12,30 @@ const TZ_MAP: Record<string, string> = {
   'Asia/Dubai (GST)': 'Asia/Dubai',
 };
 
-function parseHour(timeStr: string): number {
-  const match = timeStr?.match(/^(\d+):\d+\s*(AM|PM)$/i);
-  if (!match) return 9;
-  let h = parseInt(match[1]);
-  const ampm = match[2].toUpperCase();
-  if (ampm === 'PM' && h !== 12) h += 12;
-  if (ampm === 'AM' && h === 12) h = 0;
-  return h;
+// Returns total minutes from midnight.
+// Accepts "08:30" (24h), "8:30 AM" / "6:00 PM" (legacy), or plain number.
+function parseTimeToMinutes(timeStr: string | number | null | undefined): number {
+  if (!timeStr) return 9 * 60;
+  const s = String(timeStr);
+
+  // "HH:MM" 24h format (new default)
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+
+  // "H:MM AM/PM" legacy format
+  const m12 = s.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (m12) {
+    let h = parseInt(m12[1]);
+    const mins = parseInt(m12[2]);
+    const ampm = m12[3].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + mins;
+  }
+
+  // Plain integer → treat as hour
+  if (/^\d+$/.test(s)) return parseInt(s) * 60;
+  return 9 * 60;
 }
 
 function getTzOffsetMs(ianaZone: string): number {
@@ -59,39 +75,66 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   await supabaseAdmin.from('campaigns').update({ status: 'active' }).eq('id', id);
 
-  const fromH = parseHour(campaign.from_hour || '8:00 AM');
-  const toH = parseHour(campaign.to_hour || '6:00 PM');
-  const windowH = Math.max(1, toH - fromH);
-  const windowMs = windowH * 60 * 60 * 1000;
-  const dailyLimit = campaign.daily_limit || 50;
-  const perEmailMs = Math.max(60000, Math.floor(windowMs / dailyLimit));
+  // ── Sending window ──
+  const fromMins = parseTimeToMinutes(campaign.from_hour || '08:00');
+  const toMins = parseTimeToMinutes(campaign.to_hour || '18:00');
+  const windowMins = Math.max(60, toMins - fromMins);
+  const windowMs = windowMins * 60 * 1000;
+
+  const dailyLimit = Math.max(1, campaign.daily_limit || 50);
+  const minDelayMs = Math.max(10_000, (campaign.min_delay_secs || 60) * 1000);
+  const maxDelayMs = Math.max(minDelayMs + 1000, (campaign.max_delay_secs || 300) * 1000);
 
   const ianaZone = TZ_MAP[campaign.timezone] || 'UTC';
   const offsetMs = getTzOffsetMs(ianaZone);
   const nowUtc = Date.now();
 
-  // Find start of today's sending window in UTC
+  // Start of today's sending window in UTC
   const localNow = new Date(nowUtc + offsetMs);
+  const fromH = Math.floor(fromMins / 60);
+  const fromMin = fromMins % 60;
   const todayWindowStartUtc =
-    Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate(), fromH) - offsetMs;
+    Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate(), fromH, fromMin) - offsetMs;
   const todayWindowEndUtc = todayWindowStartUtc + windowMs;
 
-  let windowStartUtcMs: number;
+  // If we're past today's window, start from tomorrow
+  let dayWindowStartUtc: number;
   if (nowUtc < todayWindowStartUtc) {
-    windowStartUtcMs = todayWindowStartUtc;
+    dayWindowStartUtc = todayWindowStartUtc;
   } else if (nowUtc < todayWindowEndUtc) {
-    windowStartUtcMs = nowUtc;
+    dayWindowStartUtc = nowUtc; // Start from now (mid-window)
   } else {
-    windowStartUtcMs = todayWindowStartUtc + 24 * 60 * 60 * 1000;
+    dayWindowStartUtc = todayWindowStartUtc + 24 * 60 * 60 * 1000;
   }
 
+  // ── Schedule with random delays, respecting daily limit and window ──
+  const numAccounts = campaign.campaign_accounts.length;
+  let cursor = dayWindowStartUtc;
+  let dayStart = dayWindowStartUtc;
+  let dayEnd = dayStart + windowMs;
+  let emailsThisDay = 0;
+
   const jobs = campaignLeads.map((cl, i) => {
-    const dayOffset = Math.floor(i / dailyLimit) * 24 * 60 * 60 * 1000;
-    const withinDay = (i % dailyLimit) * perEmailMs;
-    const sendAt = windowStartUtcMs + dayOffset + withinDay;
+    // Roll to next day if we've hit the limit or passed the window
+    if (emailsThisDay >= dailyLimit || cursor >= dayEnd) {
+      dayStart += 24 * 60 * 60 * 1000;
+      dayEnd = dayStart + windowMs;
+      cursor = dayStart;
+      emailsThisDay = 0;
+    }
+
+    const sendAt = cursor;
+    const randomGap = minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+    cursor += randomGap;
+    emailsThisDay++;
+
     return {
       name: 'send',
-      data: { campaignLeadId: cl.id, stepNumber: 0 },
+      data: {
+        campaignLeadId: cl.id,
+        stepNumber: 0,
+        accountIndex: i % numAccounts, // Round-robin across accounts
+      },
       opts: {
         delay: Math.max(0, sendAt - Date.now()),
         attempts: 3,

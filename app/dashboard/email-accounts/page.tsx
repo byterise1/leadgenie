@@ -235,6 +235,9 @@ export default function EmailAccountsPage() {
     if (connected === 'gmail') {
       setToast('Gmail account connected successfully!');
       router.replace('/dashboard/email-accounts');
+    } else if (connected === 'gmail_refreshed') {
+      setToast('Gmail credentials refreshed — account updated.');
+      router.replace('/dashboard/email-accounts');
     } else if (err === 'oauth_failed') {
       setToast('Google OAuth failed. Try Gmail App Password instead.');
       router.replace('/dashboard/email-accounts');
@@ -302,6 +305,24 @@ export default function EmailAccountsPage() {
           </div>
         ))}
       </div>
+
+      {/* Duplicate warning */}
+      {(() => {
+        const seen = new Map<string, number>();
+        accounts.forEach(a => { const k = `${a.email}::${a.type}`; seen.set(k, (seen.get(k) || 0) + 1); });
+        const dupes = accounts.filter(a => (seen.get(`${a.email}::${a.type}`) || 0) > 1);
+        if (!dupes.length) return null;
+        const emails = [...new Set(dupes.map(a => a.email))];
+        return (
+          <div className="mb-4 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex items-start gap-3">
+            <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+              <p className="text-xs font-bold text-amber-700 mb-0.5">Duplicate accounts detected</p>
+              <p className="text-xs text-amber-600">{emails.join(', ')} — remove the extra {dupes.length > 1 ? 'entries' : 'entry'} using the delete button.</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">

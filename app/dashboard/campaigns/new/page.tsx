@@ -52,10 +52,12 @@ export default function NewCampaignPage() {
 
   // Step 2
   const [startDate, setStartDate] = useState('');
-  const [fromHour, setFromHour] = useState('8:00 AM');
-  const [toHour, setToHour] = useState('6:00 PM');
+  const [fromTime, setFromTime] = useState('08:00');
+  const [toTime, setToTime] = useState('18:00');
   const [activeDays, setActiveDays] = useState([true, true, true, true, true, false, false]);
   const [timezone, setTimezone] = useState('UTC');
+  const [minDelayStr, setMinDelayStr] = useState('1');
+  const [maxDelayStr, setMaxDelayStr] = useState('5');
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
 
@@ -261,22 +263,39 @@ export default function NewCampaignPage() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white transition"/>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Hours</label>
-              <p className="text-xs text-gray-400 mb-2 -mt-1">Emails will only be sent within this window (whole hours only).</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Window</label>
+              <p className="text-xs text-gray-400 mb-2 -mt-1">Emails are only sent within this time range in the selected timezone.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'From', val: fromHour, set: setFromHour, opts: ['5:00 AM','6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM'] },
-                  { label: 'To', val: toHour, set: setToHour, opts: ['1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM','10:00 PM'] },
+                  { label: 'From', val: fromTime, set: setFromTime },
+                  { label: 'To', val: toTime, set: setToTime },
                 ].map(f => (
                   <div key={f.label}>
                     <p className="text-xs text-gray-400 mb-1">{f.label}</p>
-                    <select value={f.val} onChange={e => f.set(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-                      {f.opts.map(t => <option key={t}>{t}</option>)}
-                    </select>
+                    <input type="time" value={f.val} onChange={e => f.set(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delay Between Emails</label>
+              <p className="text-xs text-gray-400 mb-2">Randomised gap between sends to simulate human behaviour and avoid spam flags.</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Min delay (mins)', val: minDelayStr, set: setMinDelayStr },
+                  { label: 'Max delay (mins)', val: maxDelayStr, set: setMaxDelayStr },
+                ].map(f => (
+                  <div key={f.label}>
+                    <p className="text-xs text-gray-400 mb-1">{f.label}</p>
+                    <input type="number" min="0" step="1" value={f.val}
+                      onChange={e => f.set(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5">Recommended: 1–5 min for warm accounts, 3–10 min for cold.</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Active Days</label>
@@ -309,6 +328,8 @@ export default function NewCampaignPage() {
                 { label: 'Goal', value: goal },
                 { label: 'Sending Accounts', value: activeAccountCount > 0 ? `${activeAccountCount} account${activeAccountCount > 1 ? 's' : ''}` : '⚠️ None selected' },
                 { label: 'Daily Limit', value: `${dailyLimit} emails/day` },
+                { label: 'Sending Window', value: `${fromTime} – ${toTime}` },
+                { label: 'Email Delay', value: `${minDelayStr}–${maxDelayStr} min (randomised)` },
                 { label: 'Email Steps', value: `${emails.length} email${emails.length > 1 ? 's' : ''} in sequence` },
                 { label: 'Sending Days', value: ['Mo','Tu','We','Th','Fr','Sa','Su'].filter((_, i) => activeDays[i]).join(', ') || '—' },
                 { label: 'Timezone', value: timezone },
@@ -341,8 +362,10 @@ export default function NewCampaignPage() {
                       name,
                       goal,
                       daily_limit: dailyLimit,
-                      from_hour: fromHour,
-                      to_hour: toHour,
+                      from_hour: fromTime,
+                      to_hour: toTime,
+                      min_delay_secs: Math.max(10, parseInt(minDelayStr) || 1) * 60,
+                      max_delay_secs: Math.max(30, parseInt(maxDelayStr) || 5) * 60,
                       active_days: activeDays,
                       timezone,
                       start_date: startDate || null,
