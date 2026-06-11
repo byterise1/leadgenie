@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
 
   if (!type || !email) return NextResponse.json({ error: 'type and email required' }, { status: 400 });
 
+  // Ensure profile row exists
+  await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
+
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
     .insert({

@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No valid email addresses found in file' }, { status: 400 });
   }
 
-  // Get existing emails to detect duplicates in file
+  // Ensure profile row exists
+  await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
+
   const emails = leads.map(l => l.email);
   const { data: existing } = await supabaseAdmin
     .from('leads')
@@ -68,13 +70,31 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .in('email', emails);
 
-  const existingSet = new Set((existing || []).map(e => e.email));
+  const existingSet = new Set((existing || []).map((e: { email: string }) => e.email));
   const duplicatesInFile = emails.length - new Set(emails).size;
   const duplicatesInDB = leads.filter(l => existingSet.has(l.email)).length;
 
+  // Deduplicate within the file too, then filter out DB duplicates — plain insert only new
+  const seenInFile = new Set<string>();
+  const newLeads = leads.filter(l => {
+    if (seenInFile.has(l.email) || existingSet.has(l.email)) return false;
+    seenInFile.add(l.email);
+    return true;
+  });
+
+  if (!newLeads.length) {
+    return NextResponse.json({
+      imported: 0,
+      total_in_file: leads.length,
+      duplicates_in_file: duplicatesInFile,
+      already_in_db: duplicatesInDB,
+      enrolled: 0,
+    });
+  }
+
   const { data: inserted, error } = await supabaseAdmin
     .from('leads')
-    .upsert(leads, { onConflict: 'email,user_id', ignoreDuplicates: true })
+    .insert(newLeads)
     .select('id');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

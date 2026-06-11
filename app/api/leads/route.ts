@@ -32,17 +32,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Ensure profile row exists (test accounts pre-date the signup trigger)
+  await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
+
   const body = await req.json();
 
   if (Array.isArray(body)) {
-    // Bulk insert
     const rows = body.map((l: any) => ({ ...l, user_id: user.id }));
     const { data, error } = await supabaseAdmin.from('leads').insert(rows).select();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   }
 
-  // Single insert
   const { data, error } = await supabaseAdmin
     .from('leads')
     .insert({ ...body, user_id: user.id })

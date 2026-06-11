@@ -39,16 +39,35 @@ export async function GET(request: NextRequest) {
   const info = await infoRes.json();
   if (!info.email) return NextResponse.redirect(failUrl);
 
-  // Upsert account — store refresh token in smtp_pass
-  await supabaseAdmin.from('email_accounts').upsert({
-    user_id: state,
-    type: 'gmail-oauth',
-    email: info.email,
-    smtp_user: info.email,
-    smtp_pass: tokens.refresh_token,
-    status: 'active',
-    health_score: 85,
-  }, { onConflict: 'user_id,email' });
+  // Ensure profile row exists for this user
+  await supabaseAdmin.from('profiles').upsert({ id: state }, { onConflict: 'id', ignoreDuplicates: true });
+
+  // Manual check-then-insert-or-update (no unique constraint on user_id+email yet)
+  const { data: existingAccount } = await supabaseAdmin
+    .from('email_accounts')
+    .select('id')
+    .eq('user_id', state)
+    .eq('email', info.email)
+    .maybeSingle();
+
+  if (existingAccount) {
+    await supabaseAdmin.from('email_accounts').update({
+      smtp_pass: tokens.refresh_token,
+      smtp_user: info.email,
+      status: 'active',
+      health_score: 85,
+    }).eq('id', existingAccount.id);
+  } else {
+    await supabaseAdmin.from('email_accounts').insert({
+      user_id: state,
+      type: 'gmail-oauth',
+      email: info.email,
+      smtp_user: info.email,
+      smtp_pass: tokens.refresh_token,
+      status: 'active',
+      health_score: 85,
+    });
+  }
 
   return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?connected=gmail`);
 }
