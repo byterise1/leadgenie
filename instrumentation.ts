@@ -42,6 +42,34 @@ export async function register() {
       // Use accountIndex from scheduler (round-robin), fall back to stepNumber rotation
       const accountIndex = typeof job.data.accountIndex === 'number' ? job.data.accountIndex : stepNumber;
       const account = accounts[accountIndex % accounts.length];
+
+      // Enforce per-account daily limit across all campaigns
+      const todayUTC = new Date();
+      todayUTC.setUTCHours(0, 0, 0, 0);
+      const { count: sentTodayCount } = await supabase
+        .from('sent_emails')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_id', account.id)
+        .gte('created_at', todayUTC.toISOString());
+
+      const accountDailyLimit = account.daily_limit ?? 50;
+      if ((sentTodayCount || 0) >= accountDailyLimit) {
+        // Requeue for 25 hours from now (lands in tomorrow's sending window)
+        // Only requeue once (isRequeued flag) to avoid infinite loops
+        if (!job.data.isRequeued) {
+          const { emailQueue } = await import('./lib/queue');
+          await emailQueue.add('send', { ...job.data, isRequeued: true }, {
+            delay: 25 * 60 * 60 * 1000,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60000 },
+          });
+          console.log(`⏸ ${account.email} at daily limit (${accountDailyLimit}/day), requeueing in 25h`);
+        } else {
+          console.log(`⚠ ${account.email} still at daily limit after requeue — skipping lead ${cl.lead?.email}`);
+        }
+        return;
+      }
+
       const lead = cl.lead;
       const subject = replaceVars(step.subject, lead);
       const body = replaceVars(step.body, lead);

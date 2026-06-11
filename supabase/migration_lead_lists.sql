@@ -23,3 +23,6 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 -- Campaign sending delay (seconds between each email)
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS min_delay_secs INTEGER DEFAULT 60;
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS max_delay_secs INTEGER DEFAULT 300;
+
+-- Per-account daily send cap (across all campaigns)
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 50;

@@ -10,6 +10,7 @@ type Account = {
   status: 'active' | 'warming' | 'error';
   health_score: number;
   sent_today: number;
+  daily_limit: number;
 };
 
 const TYPE_LABELS: Record<Account['type'], string> = {
@@ -219,6 +220,8 @@ export default function EmailAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [addError, setAddError] = useState('');
+  const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
+  const [limitDraft, setLimitDraft] = useState('');
 
   const fetchAccounts = useCallback(() => {
     fetch('/api/email-accounts')
@@ -326,11 +329,11 @@ export default function EmailAccountsPage() {
 
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span></span>
+          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_120px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span>Daily Limit</span><span></span>
           </div>
           {accounts.map((acc, i) => (
-            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 items-center">
+            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_120px_auto] gap-4 items-center">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {i + 1}
@@ -353,6 +356,46 @@ export default function EmailAccountsPage() {
                     style={{ width: `${acc.health_score || 0}%` }}/>
                 </div>
                 <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
+              </div>
+              {/* Inline editable daily limit */}
+              <div>
+                {editingLimitId === acc.id ? (
+                  <input
+                    autoFocus
+                    type="number"
+                    min="1"
+                    max="2000"
+                    value={limitDraft}
+                    onChange={e => setLimitDraft(e.target.value)}
+                    onKeyDown={async e => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        const newLimit = parseInt(limitDraft);
+                        if (e.key === 'Enter' && newLimit > 0) {
+                          await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
+                          setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
+                        }
+                        setEditingLimitId(null);
+                      }
+                    }}
+                    onBlur={async () => {
+                      const newLimit = parseInt(limitDraft);
+                      if (newLimit > 0) {
+                        await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
+                        setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
+                      }
+                      setEditingLimitId(null);
+                    }}
+                    className="w-20 border border-blue-300 rounded-lg px-2 py-1 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { setEditingLimitId(acc.id); setLimitDraft(String(acc.daily_limit || 50)); }}
+                    title="Click to edit daily send limit"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2 py-1 transition-all group">
+                    <span>{acc.daily_limit ?? 50}/day</span>
+                    <svg className="w-3 h-3 text-gray-300 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                )}
               </div>
               <button onClick={async () => {
                 await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
