@@ -262,9 +262,12 @@ export default function NewCampaignPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Hours</label>
+              <p className="text-xs text-gray-400 mb-2 -mt-1">Emails will only be sent within this window (whole hours only).</p>
               <div className="grid grid-cols-2 gap-3">
-                {[{ label: 'From', val: fromHour, set: setFromHour, opts: ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM'] },
-                  { label: 'To', val: toHour, set: setToHour, opts: ['4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM'] }].map(f => (
+                {[
+                  { label: 'From', val: fromHour, set: setFromHour, opts: ['5:00 AM','6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM'] },
+                  { label: 'To', val: toHour, set: setToHour, opts: ['1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM','10:00 PM'] },
+                ].map(f => (
                   <div key={f.label}>
                     <p className="text-xs text-gray-400 mb-1">{f.label}</p>
                     <select value={f.val} onChange={e => f.set(e.target.value)}

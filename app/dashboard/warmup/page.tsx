@@ -1,21 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type WarmupAccount = {
-  id: number;
+  id: string;
   email: string;
   type: string;
-  enabled: boolean;
-  score: number;
-  sentToday: number;
-  receivedToday: number;
-  spamRate: number;
-  daysActive: number;
-  status: 'warming' | 'ready' | 'paused';
+  warmup_enabled: boolean;
+  health_score: number;
+  sent_today: number;
+  status: 'active' | 'warming' | 'error' | 'paused';
 };
-
-const MOCK_ACCOUNTS: WarmupAccount[] = [];
 
 const tabs = [
   { id: 'accounts', label: 'Accounts' },
@@ -50,20 +45,42 @@ function ScoreRing({ score }: { score: number }) {
 
 export default function WarmupPage() {
   const [tab, setTab] = useState('accounts');
-  const [accounts, setAccounts] = useState<WarmupAccount[]>(MOCK_ACCOUNTS);
+  const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
+  const [loading, setLoading] = useState(true);
   const [rampTarget, setRampTarget] = useState(40);
   const [replyRate, setReplyRate] = useState(30);
   const [weekdays, setWeekdays] = useState([true, true, true, true, true, false, false]);
 
-  const toggleWarmup = (id: number) =>
-    setAccounts(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled, status: a.enabled ? 'paused' : 'warming' } : a));
+  useEffect(() => {
+    fetch('/api/email-accounts')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setAccounts(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const activeCount = accounts.filter(a => a.enabled).length;
-  const avgScore = accounts.length ? Math.round(accounts.reduce((s, a) => s + a.score, 0) / accounts.length) : 0;
+  const toggleWarmup = async (id: string, currentlyEnabled: boolean) => {
+    const enabled = !currentlyEnabled;
+    setAccounts(prev => prev.map(a => a.id === id
+      ? { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' }
+      : a
+    ));
+    await fetch('/api/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, enabled }),
+    });
+  };
+
+  const activeCount = accounts.filter(a => a.warmup_enabled || a.status === 'warming').length;
+  const avgScore = accounts.length
+    ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
+    : 0;
+  const totalSentToday = accounts.reduce((s, a) => s + (a.sent_today || 0), 0);
 
   return (
     <main className="flex-1 p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Warmup</h1>
@@ -71,12 +88,11 @@ export default function WarmupPage() {
         </div>
       </div>
 
-      {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Accounts warming', value: String(activeCount) },
           { label: 'Avg health score', value: accounts.length ? `${avgScore}%` : '—' },
-          { label: 'Emails sent today', value: accounts.reduce((s, a) => s + a.sentToday, 0).toString() },
+          { label: 'Emails sent today', value: String(totalSentToday) },
           { label: 'Inbox placement', value: accounts.length ? '—' : '—' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -86,7 +102,6 @@ export default function WarmupPage() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -96,10 +111,13 @@ export default function WarmupPage() {
         ))}
       </div>
 
-      {/* ── Accounts tab ── */}
       {tab === 'accounts' && (
         <>
-          {accounts.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-16 flex items-center justify-center">
+              <p className="text-sm text-gray-400">Loading accounts…</p>
+            </div>
+          ) : accounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-16 flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-5">
                 <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,32 +136,37 @@ export default function WarmupPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_1fr_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                <span>Account</span><span>Status</span><span>Score</span><span>Sent today</span><span>Received</span><span>Spam rate</span><span>Warmup</span>
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Account</span><span>Status</span><span>Score</span><span>Sent today</span><span>Health</span><span>Warmup</span>
               </div>
               {accounts.map(acc => (
-                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_1fr_1fr_1fr_auto] gap-4 items-center">
+                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_1fr_1fr_auto] gap-4 items-center">
                   <div>
                     <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                    <p className="text-[10px] text-gray-400">{acc.type} · {acc.daysActive}d active</p>
+                    <p className="text-[10px] text-gray-400">{acc.type}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${acc.status === 'ready' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-gray-300'}`}/>
+                    <span className={`w-1.5 h-1.5 rounded-full ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-gray-300'}`}/>
                     <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
                   </div>
-                  <ScoreRing score={acc.score}/>
-                  <span className="text-sm font-semibold text-gray-700">{acc.sentToday}</span>
-                  <span className="text-sm font-semibold text-gray-700">{acc.receivedToday}</span>
-                  <span className={`text-sm font-semibold ${acc.spamRate > 5 ? 'text-red-500' : acc.spamRate > 2 ? 'text-amber-500' : 'text-emerald-600'}`}>
-                    {acc.spamRate.toFixed(1)}%
-                  </span>
-                  <Toggle on={acc.enabled} onToggle={() => toggleWarmup(acc.id)}/>
+                  <ScoreRing score={acc.health_score || 0}/>
+                  <span className="text-sm font-semibold text-gray-700">{acc.sent_today || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                        style={{ width: `${acc.health_score || 0}%` }}/>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
+                  </div>
+                  <Toggle
+                    on={acc.warmup_enabled || acc.status === 'warming'}
+                    onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
+                  />
                 </div>
               ))}
             </div>
           )}
 
-          {/* How it works */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-4">How warmup works</h3>
             <div className="grid sm:grid-cols-4 gap-4">
@@ -166,7 +189,6 @@ export default function WarmupPage() {
         </>
       )}
 
-      {/* ── Settings tab ── */}
       {tab === 'settings' && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 max-w-xl">
           <h2 className="text-base font-bold text-gray-900">Warmup Settings</h2>
@@ -197,7 +219,6 @@ export default function WarmupPage() {
             <div className="flex justify-between text-[10px] text-gray-400 mt-1">
               <span>10% (conservative)</span><span>50% (realistic)</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1.5">Higher reply rates signal good sender reputation to ISPs.</p>
           </div>
 
           <div>
@@ -213,29 +234,12 @@ export default function WarmupPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between py-4 border-t border-gray-100">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Smart sending</p>
-              <p className="text-xs text-gray-400 mt-0.5">Randomise send times and delays to appear human</p>
-            </div>
-            <Toggle on={true} onToggle={() => {}}/>
-          </div>
-
-          <div className="flex items-center justify-between py-4 border-t border-gray-100">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Auto-move from spam</p>
-              <p className="text-xs text-gray-400 mt-0.5">Move warmup emails out of spam automatically</p>
-            </div>
-            <Toggle on={true} onToggle={() => {}}/>
-          </div>
-
           <button className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
             Save Settings
           </button>
         </div>
       )}
 
-      {/* ── Stats tab ── */}
       {tab === 'stats' && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
@@ -248,9 +252,9 @@ export default function WarmupPage() {
             ) : (
               <div className="grid sm:grid-cols-3 gap-6">
                 {[
-                  { label: 'Total sent', value: accounts.reduce((s, a) => s + a.sentToday, 0), suffix: 'today' },
-                  { label: 'Total received', value: accounts.reduce((s, a) => s + a.receivedToday, 0), suffix: 'today' },
-                  { label: 'Avg spam rate', value: (accounts.reduce((s, a) => s + a.spamRate, 0) / accounts.length).toFixed(1), suffix: '%' },
+                  { label: 'Total accounts warming', value: activeCount, suffix: '' },
+                  { label: 'Emails sent today', value: totalSentToday, suffix: '' },
+                  { label: 'Avg health score', value: avgScore, suffix: '%' },
                 ].map(s => (
                   <div key={s.label} className="text-center">
                     <p className="text-3xl font-extrabold text-gray-900">{s.value}<span className="text-sm font-normal text-gray-400 ml-1">{s.suffix}</span></p>
@@ -261,7 +265,6 @@ export default function WarmupPage() {
             )}
           </div>
 
-          {/* Score legend */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-4">Health Score Guide</h3>
             <div className="grid sm:grid-cols-3 gap-4">

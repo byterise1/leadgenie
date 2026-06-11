@@ -26,7 +26,6 @@ const navItems = [
   {
     label: 'Unibox', href: '/dashboard/inbox',
     icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/></svg>,
-    badge: '3',
   },
   {
     label: 'Email Accounts', href: '/dashboard/email-accounts',
@@ -58,10 +57,27 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  }, []);
+
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch('/api/inbox?status=All')
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setUnreadCount(data.filter((t: any) => !t.read).length);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const signOut = async () => {
@@ -83,7 +99,6 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
       {open && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={onClose} />}
       <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
-        {/* Logo */}
         <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0">
           <Link href="/" className="flex items-center gap-2 font-extrabold text-[15px] text-gray-900">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs">
@@ -93,7 +108,6 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
           </Link>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Main</p>
           {navItems.slice(0, 5).map(item => (
@@ -105,8 +119,8 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
               }`}>
               <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
               <span className="flex-1">{item.label}</span>
-              {item.badge && (
-                <span className="text-[10px] font-bold text-gray-400 tabular-nums">{item.badge}</span>
+              {item.label === 'Unibox' && unreadCount > 0 && (
+                <span className="text-[10px] font-bold text-blue-600 tabular-nums">{unreadCount}</span>
               )}
             </Link>
           ))}
@@ -124,7 +138,6 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
             </Link>
           ))}
 
-          {/* Upgrade card */}
           <div className="mt-6 mx-1 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 text-white">
             <p className="text-xs font-bold mb-1">Free Plan</p>
             <p className="text-[11px] text-blue-200 mb-3">Upgrade for unlimited campaigns & accounts</p>
@@ -134,7 +147,6 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
           </div>
         </nav>
 
-        {/* User */}
         <div className="px-3 py-3 border-t border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">

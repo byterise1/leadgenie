@@ -1,16 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Cycle = 'monthly' | 'annual';
 
-const USAGE = [
-  { label: 'Campaigns', used: 0, max: 3 },
-  { label: 'Leads', used: 0, max: 500 },
-  { label: 'Emails / mo', used: 0, max: 1000 },
-  { label: 'Email accounts', used: 0, max: 1 },
-];
+type Usage = {
+  plan: string;
+  credits_used: number;
+  credits_total: number;
+  usage: {
+    campaigns: { used: number; max: number };
+    leads: { used: number; max: number };
+    emails: { used: number; max: number };
+    accounts: { used: number; max: number };
+  };
+};
 
 const PLANS = [
   {
@@ -18,59 +23,61 @@ const PLANS = [
     name: 'Free',
     monthly: 0,
     annual: 0,
-    current: true,
     highlight: false,
     cta: 'Current plan',
-    features: [
-      '3 campaigns',
-      '500 leads',
-      '1,000 emails / mo',
-      '1 email account',
-      'Built-in templates',
-      'Basic analytics',
-    ],
+    features: ['3 campaigns', '500 leads', '1,000 emails / mo', '1 email account', 'Built-in templates', 'Basic analytics'],
   },
   {
     id: 'pro',
     name: 'Pro',
     monthly: 49,
     annual: 39,
-    current: false,
     highlight: true,
     cta: 'Upgrade to Pro',
-    features: [
-      'Unlimited campaigns',
-      'Unlimited leads',
-      '50,000 emails / mo',
-      'Unlimited accounts',
-      'AI email writer',
-      'A/B testing',
-      'Unibox (all replies)',
-      'Priority support',
-    ],
+    features: ['Unlimited campaigns', 'Unlimited leads', '50,000 emails / mo', 'Unlimited accounts', 'AI email writer', 'A/B testing', 'Unibox (all replies)', 'Priority support'],
   },
   {
     id: 'agency',
     name: 'Agency',
     monthly: 149,
     annual: 119,
-    current: false,
     highlight: false,
     cta: 'Contact Sales',
-    features: [
-      'Everything in Pro',
-      'Multi-workspace',
-      'White-label reports',
-      'Dedicated CSM',
-      'Custom integrations',
-      'SLA guarantee',
-      'Onboarding session',
-    ],
+    features: ['Everything in Pro', 'Multi-workspace', 'White-label reports', 'Dedicated CSM', 'Custom integrations', 'SLA guarantee', 'Onboarding session'],
   },
 ];
 
+function UsageBar({ used, max, label }: { used: number; max: number; label: string }) {
+  const pct = max === Infinity ? 0 : max === 0 ? 0 : Math.max(2, (used / max) * 100);
+  const remaining = max === Infinity ? '∞' : String(max - used);
+  const maxLabel = max === Infinity ? '∞' : String(max);
+  const warn = max !== Infinity && pct > 80;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500 font-medium">{label}</span>
+        <span className="text-xs font-bold text-gray-700">{used}<span className="text-gray-400 font-normal">/{maxLabel}</span></span>
+      </div>
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${warn ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(100, pct)}%` }}/>
+      </div>
+      <p className="text-[10px] text-gray-400">{remaining} remaining</p>
+    </div>
+  );
+}
+
 export default function BillingPage() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
+  const [usage, setUsage] = useState<Usage | null>(null);
+
+  useEffect(() => {
+    fetch('/api/billing/usage')
+      .then(r => r.json())
+      .then(data => { if (!data.error) setUsage(data); })
+      .catch(() => {});
+  }, []);
+
+  const currentPlan = usage?.plan || 'free';
 
   return (
     <main className="flex-1 p-6 space-y-7">
@@ -79,7 +86,6 @@ export default function BillingPage() {
         <p className="text-sm text-gray-400 mt-0.5">Manage your subscription, usage, and payment details.</p>
       </div>
 
-      {/* ── Current plan + usage ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
@@ -90,10 +96,10 @@ export default function BillingPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-lg font-extrabold text-gray-900">Free Plan</p>
-                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 uppercase tracking-wide">Free</span>
+                <p className="text-lg font-extrabold text-gray-900 capitalize">{currentPlan} Plan</p>
+                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 uppercase tracking-wide">{currentPlan}</span>
               </div>
-              <p className="text-sm text-gray-400 mt-0.5">$0 / month · No expiry</p>
+              <p className="text-sm text-gray-400 mt-0.5">{currentPlan === 'free' ? '$0 / month · No expiry' : 'Active subscription'}</p>
             </div>
           </div>
           <Link href="#plans"
@@ -103,27 +109,26 @@ export default function BillingPage() {
           </Link>
         </div>
 
-        {/* Usage meters */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {USAGE.map(u => (
-            <div key={u.label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500 font-medium">{u.label}</span>
-                <span className="text-xs font-bold text-gray-700">{u.used}<span className="text-gray-400 font-normal">/{u.max}</span></span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {usage ? (
+            <>
+              <UsageBar label="Campaigns" used={usage.usage.campaigns.used} max={usage.usage.campaigns.max} />
+              <UsageBar label="Leads" used={usage.usage.leads.used} max={usage.usage.leads.max} />
+              <UsageBar label="Emails / mo" used={usage.usage.emails.used} max={usage.usage.emails.max} />
+              <UsageBar label="Email accounts" used={usage.usage.accounts.used} max={usage.usage.accounts.max} />
+            </>
+          ) : (
+            [1,2,3,4].map(i => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3"/>
+                <div className="h-1.5 bg-gray-100 rounded-full"/>
+                <div className="h-2 bg-gray-100 rounded animate-pulse w-1/2"/>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${u.max === 0 ? 0 : Math.max(2, (u.used / u.max) * 100)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-gray-400">{u.max - u.used} remaining</p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
-      {/* ── Plan comparison ── */}
       <div id="plans" className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-900">Choose your plan</h2>
@@ -140,22 +145,22 @@ export default function BillingPage() {
         <div className="grid sm:grid-cols-3 gap-4">
           {PLANS.map(plan => {
             const price = cycle === 'annual' ? plan.annual : plan.monthly;
+            const isCurrent = plan.id === currentPlan;
             return (
               <div key={plan.id}
                 className={`relative rounded-2xl border-2 p-6 flex flex-col bg-white transition-shadow ${
                   plan.highlight ? 'border-blue-500 shadow-lg shadow-blue-100' : 'border-gray-200'
                 }`}>
-                {plan.highlight && (
+                {plan.highlight && !isCurrent && (
                   <div className="absolute -top-3.5 left-0 right-0 flex justify-center">
                     <span className="text-[10px] font-extrabold text-white bg-blue-600 rounded-full px-3 py-1 uppercase tracking-wide">Most Popular</span>
                   </div>
                 )}
-                {plan.current && (
+                {isCurrent && (
                   <div className="absolute -top-3.5 left-0 right-0 flex justify-center">
                     <span className="text-[10px] font-extrabold text-white bg-emerald-500 rounded-full px-3 py-1">Current Plan</span>
                   </div>
                 )}
-
                 <div className="mb-5">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{plan.name}</p>
                   <div className="flex items-end gap-1">
@@ -163,12 +168,9 @@ export default function BillingPage() {
                     <span className="text-sm text-gray-400 mb-1">/mo</span>
                   </div>
                   {cycle === 'annual' && plan.id !== 'free' && (
-                    <p className="text-[11px] text-emerald-600 font-semibold mt-1">
-                      Save ${(plan.monthly - plan.annual) * 12}/yr
-                    </p>
+                    <p className="text-[11px] text-emerald-600 font-semibold mt-1">Save ${(plan.monthly - plan.annual) * 12}/yr</p>
                   )}
                 </div>
-
                 <ul className="space-y-2.5 flex-1 mb-6">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-center gap-2.5 text-xs text-gray-600">
@@ -179,17 +181,13 @@ export default function BillingPage() {
                     </li>
                   ))}
                 </ul>
-
-                <button
+                <button disabled={isCurrent}
                   className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                    plan.current
-                      ? 'bg-gray-100 text-gray-400 cursor-default'
-                      : plan.highlight
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
-                  }`}
-                  disabled={plan.current}>
-                  {plan.cta}
+                    isCurrent ? 'bg-gray-100 text-gray-400 cursor-default' :
+                    plan.highlight ? 'bg-blue-600 text-white hover:bg-blue-700' :
+                    'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}>
+                  {isCurrent ? 'Current plan' : plan.cta}
                 </button>
               </div>
             );
@@ -197,9 +195,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* ── Payment & Invoices ── */}
       <div className="grid sm:grid-cols-2 gap-6">
-        {/* Payment method */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="text-sm font-bold text-gray-900 mb-4">Payment Method</h2>
           <div className="flex items-center gap-4 p-4 border border-dashed border-gray-200 rounded-xl mb-4">
@@ -217,10 +213,7 @@ export default function BillingPage() {
             + Add payment method
           </button>
           <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-            {[
-              { label: 'Next billing date', value: '—' },
-              { label: 'Billing email', value: '—' },
-            ].map(r => (
+            {[{ label: 'Next billing date', value: '—' }, { label: 'Billing email', value: '—' }].map(r => (
               <div key={r.label} className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">{r.label}</span>
                 <span className="text-xs font-semibold text-gray-700">{r.value}</span>
@@ -229,11 +222,9 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {/* Invoice history */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900">Invoice History</h2>
-            <button className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">Download all</button>
           </div>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-3">

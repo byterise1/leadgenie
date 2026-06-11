@@ -7,7 +7,7 @@ const filters = ['All', 'Interested', 'Not Interested', 'Out of Office', 'Do Not
 type Thread = {
   id: string;
   subject: string;
-  snippet: string;
+  last_message: string;
   status: string;
   read: boolean;
   received_at: string;
@@ -59,7 +59,6 @@ export default function InboxPage() {
 
   return (
     <main className="flex-1 flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
-      {/* Left panel */}
       <div className="w-80 shrink-0 border-r border-gray-100 flex flex-col bg-white">
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -111,14 +110,13 @@ export default function InboxPage() {
                 <p className="text-[10px] text-gray-400 shrink-0">{new Date(thread.received_at).toLocaleDateString()}</p>
               </div>
               <p className="text-xs text-gray-600 truncate">{thread.subject}</p>
-              {thread.snippet && <p className="text-[10px] text-gray-400 truncate mt-0.5">{thread.snippet}</p>}
+              {thread.last_message && <p className="text-[10px] text-gray-400 truncate mt-0.5">{thread.last_message}</p>}
               {!thread.read && <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"/>}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Right panel */}
       {selected ? (
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
@@ -131,7 +129,7 @@ export default function InboxPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-6">
             <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {selected.snippet || 'No message content.'}
+              {selected.last_message || 'No message content.'}
             </div>
           </div>
           <div className="px-6 py-4 border-t border-gray-100">
@@ -157,7 +155,7 @@ export default function InboxPage() {
             <svg className="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.98l7.5-4.04a2.25 2.25 0 012.134 0l7.5 4.04a2.25 2.25 0 011.183 1.98V19.5z"/></svg>
           </div>
           <p className="text-sm font-semibold text-gray-700 mb-1">Select a conversation</p>
-          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Choose a reply from the left panel to read and respond to it here.</p>
+          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Choose a reply from the left panel to read it here.</p>
         </div>
       )}
     </main>

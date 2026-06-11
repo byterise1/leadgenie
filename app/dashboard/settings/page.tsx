@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> },
@@ -8,18 +8,69 @@ const tabs = [
   { id: 'notifications', label: 'Notifications', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg> },
 ];
 
-function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button onClick={() => setOn(v => !v)}
+    <button onClick={onToggle}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${on ? 'bg-blue-600' : 'bg-gray-200'}`}>
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}/>
     </button>
   );
 }
 
+const TIMEZONES = ['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'];
+
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
+  const [website, setWebsite] = useState('');
+  const [timezone, setTimezone] = useState('UTC');
+
+  const [notifs, setNotifs] = useState({
+    new_reply: true,
+    campaign_complete: true,
+    warmup_alert: false,
+    lead_open: false,
+    weekly_report: true,
+    unsubscribe: false,
+  });
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) {
+          setFullName(data.full_name || '');
+          setEmail(data.email || '');
+          setCompany(data.company || '');
+          setWebsite(data.website || '');
+          setTimezone(data.timezone || 'UTC');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    setSaveMsg('');
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: fullName, company, website, timezone }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSaveMsg('Saved successfully');
+    } else {
+      setSaveMsg(data.error || 'Save failed');
+    }
+    setSaving(false);
+    setTimeout(() => setSaveMsg(''), 3000);
+  };
 
   return (
     <main className="flex-1 p-6">
@@ -29,7 +80,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex gap-8">
-        {/* Side tabs */}
         <nav className="w-52 shrink-0 space-y-0.5">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -42,52 +92,68 @@ export default function SettingsPage() {
           ))}
         </nav>
 
-        {/* Content */}
         <div className="flex-1 max-w-xl">
 
-          {/* ── Profile ── */}
           {tab === 'profile' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <h2 className="text-base font-bold text-gray-900">Profile Information</h2>
 
-              {/* Avatar */}
               <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold select-none">U</div>
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold select-none">
+                  {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                </div>
                 <div>
-                  <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">Change photo</button>
-                  <p className="text-xs text-gray-400 mt-0.5">JPG or PNG, max 2 MB</p>
+                  <p className="text-sm font-semibold text-gray-700">{fullName || 'Your Name'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{email}</p>
                 </div>
               </div>
 
-              {[
-                { label: 'Full Name', placeholder: 'John Smith', type: 'text' },
-                { label: 'Email Address', placeholder: 'you@company.com', type: 'email' },
-                { label: 'Company Name', placeholder: 'Acme Inc.', type: 'text' },
-                { label: 'Website', placeholder: 'https://yoursite.com', type: 'url' },
-              ].map(f => (
-                <div key={f.label}>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">{f.label}</label>
-                  <input type={f.type} placeholder={f.placeholder}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Smith"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <input type="email" value={email} disabled placeholder="you@company.com"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed"/>
+                <p className="text-xs text-gray-400 mt-1">Email cannot be changed here. Update via Supabase auth.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Company Name</label>
+                <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Acme Inc."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Website</label>
+                <input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yoursite.com"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Timezone</label>
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-                  {['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'].map(tz => (
-                    <option key={tz}>{tz}</option>
-                  ))}
+                <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                  {TIMEZONES.map(tz => <option key={tz}>{tz}</option>)}
                 </select>
               </div>
 
-              <button className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
-                Save Changes
+              {saveMsg && (
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg.includes('success') || saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                  {saveMsg}
+                </div>
+              )}
+
+              <button onClick={saveProfile} disabled={saving}
+                className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           )}
 
-          {/* ── Sending Defaults ── */}
           {tab === 'sending' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <h2 className="text-base font-bold text-gray-900">Sending Defaults</h2>
@@ -136,43 +202,36 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Email warmup</p>
-                  <p className="text-xs text-gray-400">Auto-warm connected accounts</p>
-                </div>
-                <Toggle defaultOn />
-              </div>
-
               <button className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
                 Save Defaults
               </button>
             </div>
           )}
 
-          {/* ── Notifications ── */}
           {tab === 'notifications' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-1">
               <h2 className="text-base font-bold text-gray-900 mb-4">Notification Preferences</h2>
               {[
-                { label: 'New reply received', desc: 'When a prospect replies to any campaign', on: true },
-                { label: 'Campaign completed', desc: 'When a campaign finishes sending', on: true },
-                { label: 'Warmup health alert', desc: 'When warmup score drops below 80%', on: false },
-                { label: 'Lead opens email', desc: 'Real-time open tracking notification', on: false },
-                { label: 'Weekly performance report', desc: 'Summary email every Monday morning', on: true },
-                { label: 'Unsubscribe received', desc: 'When a lead unsubscribes from your list', on: false },
+                { key: 'new_reply', label: 'New reply received', desc: 'When a prospect replies to any campaign' },
+                { key: 'campaign_complete', label: 'Campaign completed', desc: 'When a campaign finishes sending' },
+                { key: 'warmup_alert', label: 'Warmup health alert', desc: 'When warmup score drops below 80%' },
+                { key: 'lead_open', label: 'Lead opens email', desc: 'Real-time open tracking notification' },
+                { key: 'weekly_report', label: 'Weekly performance report', desc: 'Summary email every Monday morning' },
+                { key: 'unsubscribe', label: 'Unsubscribe received', desc: 'When a lead unsubscribes from your list' },
               ].map(n => (
-                <div key={n.label} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
+                <div key={n.key} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{n.label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{n.desc}</p>
                   </div>
-                  <Toggle defaultOn={n.on} />
+                  <Toggle
+                    on={notifs[n.key as keyof typeof notifs]}
+                    onToggle={() => setNotifs(p => ({ ...p, [n.key]: !p[n.key as keyof typeof notifs] }))}
+                  />
                 </div>
               ))}
             </div>
           )}
-
         </div>
       </div>
     </main>

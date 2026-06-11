@@ -19,6 +19,8 @@ export async function register() {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    const SITE_URL = process.env.SITE_URL || 'https://leadgenie-production.up.railway.app';
+
     new Worker('email-sending', async (job) => {
       const { campaignLeadId, stepNumber } = job.data;
 
@@ -41,16 +43,32 @@ export async function register() {
       const lead = cl.lead;
       const subject = replaceVars(step.subject, lead);
       const body = replaceVars(step.body, lead);
+
+      // Insert sent_email record first to get the ID for the tracking pixel
+      const { data: sentEmail } = await supabase.from('sent_emails').insert({
+        user_id: campaign.user_id,
+        campaign_id: campaign.id,
+        lead_id: lead.id,
+        account_id: account.id,
+        step_number: stepNumber,
+        subject,
+      }).select('id').single();
+
+      const trackPixel = sentEmail?.id
+        ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" style="display:none" alt="">`
+        : '';
+
       const htmlBody = body.split('\n').map((l: string) =>
         l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${l}</p>` : ''
       ).join('');
 
       const transport = createTransport(account);
-      await transport.sendMail({ from: account.email, to: lead.email, subject, text: body, html: `<html><body>${htmlBody}</body></html>` });
-
-      await supabase.from('sent_emails').insert({
-        user_id: campaign.user_id, campaign_id: campaign.id, lead_id: lead.id,
-        account_id: account.id, step_number: stepNumber, subject,
+      await transport.sendMail({
+        from: account.email,
+        to: lead.email,
+        subject,
+        text: body,
+        html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
       });
 
       const nextStep = stepNumber + 1;
