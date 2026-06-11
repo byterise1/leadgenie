@@ -87,9 +87,10 @@ export async function POST(req: NextRequest) {
       health_score: 72,
       daily_limit: defaultLimit,
     })
-    .select('id,email,type,status,health_score,warmup_enabled,sent_today,created_at')
+    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // Enrich with real-time capacity (just added → 0 sent today)
+  return NextResponse.json({ ...data, sent_today_real: 0, remaining_today: defaultLimit });
 }

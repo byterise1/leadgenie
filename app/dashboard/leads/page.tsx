@@ -60,6 +60,13 @@ export default function LeadsPage() {
   const [showAddToList, setShowAddToList] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // List picker modal — shown before Add Lead or Import when no list is selected
+  const [listPickerAction, setListPickerAction] = useState<'add' | 'import' | null>(null);
+  const [pickerListId, setPickerListId] = useState('');
+  const [pickerNewName, setPickerNewName] = useState('');
+  const [pickerShowNew, setPickerShowNew] = useState(false);
+  const [pickerSaving, setPickerSaving] = useState(false);
+
   const fetchLists = useCallback(() => {
     fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLists(d); });
   }, []);
@@ -100,18 +107,78 @@ export default function LeadsPage() {
     (window as any)._lSearch = setTimeout(() => fetchLeads(q, selectedList), 350);
   };
 
+  // ── List Picker helpers ──────────────────────────────────────────────
+  const openPicker = (action: 'add' | 'import') => {
+    setPickerListId('');
+    setPickerNewName('');
+    setPickerShowNew(lists.length === 0); // Auto-show create if no lists
+    setListPickerAction(action);
+  };
+
+  const handlePickerConfirm = async () => {
+    setPickerSaving(true);
+    let listId = pickerListId;
+
+    if (pickerShowNew && pickerNewName.trim()) {
+      // Create the new list
+      const res = await fetch('/api/lead-lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: pickerNewName.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setLists(p => [...p, d]);
+        listId = d.id;
+      } else {
+        showMsg(`Error: ${d.error}`);
+        setPickerSaving(false);
+        return;
+      }
+    }
+
+    if (!listId) {
+      showMsg('Please select or create a list first');
+      setPickerSaving(false);
+      return;
+    }
+
+    const action = listPickerAction;
+    setListPickerAction(null);
+    setPickerSaving(false);
+    setPickerNewName('');
+    setPickerShowNew(false);
+
+    // Navigate to the chosen list, then do the action
+    selectList(listId);
+
+    if (action === 'add') {
+      setEditingLead(null);
+      setForm(EMPTY_FORM);
+      setShowForm(true);
+    } else if (action === 'import') {
+      // Delay slightly so selectedList state updates before handleImport reads it
+      setTimeout(() => fileRef.current?.click(), 50);
+    }
+  };
+
+  // ── Import ────────────────────────────────────────────────────────────
   const handleImport = async (file: File) => {
     setImporting(true);
     const fd = new FormData();
     fd.append('file', file);
+    // Always pass the currently selected list
+    if (selectedList) fd.append('list_id', selectedList);
+
     const res = await fetch('/api/leads/import', { method: 'POST', body: fd });
     const d = await res.json();
     if (res.ok) {
       const parts = [`✓ Imported ${d.imported} new leads`];
-      if (d.already_in_db > 0) parts.push(`${d.already_in_db} already in list`);
+      if (d.already_in_db > 0) parts.push(`${d.already_in_db} already exist`);
       if (d.duplicates_in_file > 0) parts.push(`${d.duplicates_in_file} file duplicates`);
+      if (d.list_id) parts.push(`added to list`);
       showMsg(parts.join(' · '));
-      fetchLeads('', null);
+      fetchLeads('', selectedList);
       fetchLists();
       fetch('/api/leads?search=').then(r => r.json()).then(data => { if (Array.isArray(data)) setTotalCount(data.length); });
     } else {
@@ -120,7 +187,25 @@ export default function LeadsPage() {
     setImporting(false);
   };
 
-  const openAdd = () => { setEditingLead(null); setForm(EMPTY_FORM); setShowForm(true); };
+  // ── Add / Edit buttons ────────────────────────────────────────────────
+  const handleAddClick = () => {
+    if (selectedList) {
+      setEditingLead(null);
+      setForm(EMPTY_FORM);
+      setShowForm(true);
+    } else {
+      openPicker('add');
+    }
+  };
+
+  const handleImportClick = () => {
+    if (selectedList) {
+      fileRef.current?.click();
+    } else {
+      openPicker('import');
+    }
+  };
+
   const openEdit = (lead: Lead) => {
     setEditingLead(lead);
     setForm({ email: lead.email, first_name: lead.first_name || '', last_name: lead.last_name || '', company: lead.company || '', title: lead.title || '', website: lead.website || '', phone: lead.phone || '' });
@@ -147,12 +232,17 @@ export default function LeadsPage() {
       });
       const d = await res.json();
       if (res.ok) {
-        setLeads(p => [d, ...p]);
-        setTotalCount(c => c + 1);
+        // Always add to current list (picker ensures a list is selected)
         if (selectedList) {
-          await fetch(`/api/lead-lists/${selectedList}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_ids: [d.id] }) });
+          await fetch(`/api/lead-lists/${selectedList}/members`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_ids: [d.id] }),
+          });
           fetchLists();
         }
+        setLeads(p => [d, ...p]);
+        setTotalCount(c => c + 1);
         setForm(EMPTY_FORM);
         setShowForm(false);
         showMsg('✓ Lead added');
@@ -243,12 +333,12 @@ export default function LeadsPage() {
           </a>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
-          <button onClick={() => fileRef.current?.click()} disabled={importing}
+          <button onClick={handleImportClick} disabled={importing}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             {importing ? 'Importing…' : 'Import'}
           </button>
-          <button onClick={openAdd}
+          <button onClick={handleAddClick}
             className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl px-3 py-2 hover:bg-blue-700 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
             Add Lead
@@ -269,7 +359,6 @@ export default function LeadsPage() {
         <div className="w-52 shrink-0 flex flex-col gap-0.5 overflow-y-auto">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Lists</p>
 
-          {/* All Leads */}
           <button onClick={() => selectList(null)}
             className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-all ${!selectedList ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
             <span className="flex items-center gap-2">
@@ -279,7 +368,6 @@ export default function LeadsPage() {
             <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${!selectedList ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>{totalCount}</span>
           </button>
 
-          {/* List items */}
           {lists.map(list => (
             <div key={list.id} className="group relative">
               {renamingList?.id === list.id ? (
@@ -306,7 +394,6 @@ export default function LeadsPage() {
             </div>
           ))}
 
-          {/* New list */}
           <div className="mt-1">
             {showNewList ? (
               <div className="px-1">
@@ -368,12 +455,17 @@ export default function LeadsPage() {
                             <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
                           </div>
                           <p className="text-sm font-semibold text-gray-700 mb-1">{currentList ? `No leads in "${currentList.name}"` : 'No leads yet'}</p>
-                          <p className="text-xs text-gray-400 mb-5">{currentList ? 'Select leads from All Leads and add to this list.' : 'Import a file or add manually.'}</p>
-                          {!currentList && (
+                          <p className="text-xs text-gray-400 mb-5">
+                            {currentList ? 'Add or import leads to this list.' : 'Select a list from the sidebar, then add or import leads.'}
+                          </p>
+                          {currentList && (
                             <div className="flex gap-2">
-                              <button onClick={() => fileRef.current?.click()} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Import File →</button>
-                              <button onClick={openAdd} className="text-xs font-bold border border-gray-200 text-gray-700 rounded-xl px-5 py-2.5 hover:bg-gray-50 transition-colors">+ Add Manually</button>
+                              <button onClick={handleImportClick} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Import File →</button>
+                              <button onClick={handleAddClick} className="text-xs font-bold border border-gray-200 text-gray-700 rounded-xl px-5 py-2.5 hover:bg-gray-50 transition-colors">+ Add Manually</button>
                             </div>
+                          )}
+                          {!currentList && lists.length === 0 && (
+                            <button onClick={() => openPicker('add')} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Create First List →</button>
                           )}
                         </div>
                       </td>
@@ -487,12 +579,90 @@ export default function LeadsPage() {
         </>
       )}
 
+      {/* ── List Picker Modal ──────────────────────────────────────────── */}
+      {listPickerAction && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">
+                {listPickerAction === 'add' ? 'Add Lead to…' : 'Import into…'}
+              </h2>
+              <button onClick={() => { setListPickerAction(null); setPickerNewName(''); setPickerShowNew(false); setPickerListId(''); }}
+                className="text-gray-400 hover:text-gray-700 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="p-4 space-y-2 max-h-60 overflow-y-auto">
+              {lists.length === 0 && !pickerShowNew && (
+                <p className="text-sm text-gray-400 text-center py-2">No lists yet — create one below.</p>
+              )}
+              {!pickerShowNew && lists.map(list => (
+                <label key={list.id}
+                  className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-all ${pickerListId === list.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
+                  <input type="radio" name="picker_list" value={list.id}
+                    checked={pickerListId === list.id}
+                    onChange={() => setPickerListId(list.id)}
+                    className="accent-blue-600"/>
+                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{list.name}</p>
+                    <p className="text-xs text-gray-400">{list.count} lead{list.count !== 1 ? 's' : ''}</p>
+                  </div>
+                  {pickerListId === list.id && (
+                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                  )}
+                </label>
+              ))}
+
+              {pickerShowNew ? (
+                <div className="flex items-center gap-2 px-1">
+                  <input autoFocus value={pickerNewName} placeholder="List name…"
+                    onChange={e => setPickerNewName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && pickerNewName.trim()) handlePickerConfirm(); if (e.key === 'Escape') { setPickerShowNew(false); setPickerNewName(''); } }}
+                    className="flex-1 border border-blue-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/>
+                  {lists.length > 0 && (
+                    <button onClick={() => { setPickerShowNew(false); setPickerNewName(''); }} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button onClick={() => { setPickerShowNew(true); setPickerListId(''); }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-xl transition-colors border border-dashed border-blue-200">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                  Create new list
+                </button>
+              )}
+            </div>
+
+            <div className="px-4 pb-4 flex gap-2">
+              <button onClick={() => { setListPickerAction(null); setPickerNewName(''); setPickerShowNew(false); setPickerListId(''); }}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button
+                disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
+                onClick={handlePickerConfirm}
+                className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {pickerSaving ? 'Creating…' : `Continue →`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add / Edit Lead modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">{editingLead ? 'Edit Lead' : 'Add Lead'}</h2>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">{editingLead ? 'Edit Lead' : 'Add Lead'}</h2>
+                {!editingLead && currentList && (
+                  <p className="text-xs text-gray-400 mt-0.5">Adding to: <span className="font-semibold text-blue-600">{currentList.name}</span></p>
+                )}
+              </div>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>

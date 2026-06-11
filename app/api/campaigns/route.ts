@@ -14,7 +14,24 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  // Enrich with list names
+  const listIds = [...new Set((data || []).filter(c => c.list_id).map(c => c.list_id as string))];
+  const listMap: Record<string, { name: string; count?: number }> = {};
+  if (listIds.length) {
+    const { data: lists } = await supabaseAdmin
+      .from('lead_lists')
+      .select('id,name')
+      .in('id', listIds);
+    (lists || []).forEach((l: { id: string; name: string }) => { listMap[l.id] = { name: l.name }; });
+  }
+
+  const enriched = (data || []).map(c => ({
+    ...c,
+    list_name: c.list_id ? (listMap[c.list_id]?.name ?? null) : null,
+  }));
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(req: NextRequest) {

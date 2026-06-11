@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   const campaign_id = formData.get('campaign_id') as string | null;
+  const list_id = formData.get('list_id') as string | null;
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
 
@@ -99,8 +100,17 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Add imported leads to the chosen list
+  if (list_id && inserted?.length) {
+    const memberRows = inserted.map((l: { id: string }) => ({ list_id, lead_id: l.id }));
+    await supabaseAdmin
+      .from('lead_list_members')
+      .upsert(memberRows, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
+  }
+
+  // Also enroll in campaign if provided
   if (campaign_id && inserted?.length) {
-    const enrollRows = inserted.map(l => ({
+    const enrollRows = inserted.map((l: { id: string }) => ({
       campaign_id,
       lead_id: l.id,
       status: 'pending',
@@ -115,6 +125,7 @@ export async function POST(req: NextRequest) {
     total_in_file: leads.length,
     duplicates_in_file: duplicatesInFile,
     already_in_db: duplicatesInDB,
+    list_id: list_id || null,
     enrolled: campaign_id ? (inserted?.length ?? 0) : 0,
   });
 }

@@ -9,6 +9,8 @@ type Campaign = {
   id: string;
   name: string;
   status: string;
+  list_id?: string | null;
+  list_name?: string | null;
   total_sent: number;
   total_opened: number;
   total_replied: number;
@@ -74,17 +76,17 @@ export default function CampaignsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Campaign Name', 'Status', 'Sent', 'Opened', 'Replied', 'Reply Rate', 'Created', ''].map(col => (
+                {['Campaign Name', 'Lead List', 'Status', 'Sent', 'Opened', 'Replied', 'Reply Rate', 'Created', ''].map(col => (
                   <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={9} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-20 text-center">
+                  <td colSpan={9} className="px-5 py-20 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
                         <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -98,6 +100,7 @@ export default function CampaignsPage() {
                   </td>
                 </tr>
               ) : filtered.map(c => {
+                const openRate = c.total_sent > 0 ? ((c.total_opened / c.total_sent) * 100).toFixed(0) + '%' : '—';
                 const replyRate = c.total_sent > 0 ? ((c.total_replied / c.total_sent) * 100).toFixed(1) + '%' : '—';
                 return (
                   <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
@@ -105,13 +108,24 @@ export default function CampaignsPage() {
                       <p className="text-sm font-semibold text-gray-900">{c.name}</p>
                     </td>
                     <td className="px-5 py-4">
+                      {c.list_name ? (
+                        <Link href={`/dashboard/leads`}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors max-w-[160px]">
+                          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                          <span className="truncate">{c.list_name}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">No list</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
                       <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border capitalize ${STATUS_COLORS[c.status] || STATUS_COLORS.draft}`}>
                         {c.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_sent}</td>
-                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_opened}</td>
-                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_replied}</td>
+                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_sent ?? 0}</td>
+                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{openRate}</td>
+                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_replied ?? 0}</td>
                     <td className="px-5 py-4 text-sm font-semibold text-gray-900">{replyRate}</td>
                     <td className="px-5 py-4 text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-4">

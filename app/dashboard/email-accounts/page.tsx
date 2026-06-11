@@ -11,6 +11,8 @@ type Account = {
   health_score: number;
   sent_today: number;
   daily_limit: number;
+  sent_today_real?: number;
+  remaining_today?: number;
 };
 
 const TYPE_LABELS: Record<Account['type'], string> = {
@@ -329,11 +331,11 @@ export default function EmailAccountsPage() {
 
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_120px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span>Daily Limit</span><span></span>
+          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
           </div>
           {accounts.map((acc, i) => (
-            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_120px_auto] gap-4 items-center">
+            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 items-center">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {i + 1}
@@ -357,45 +359,66 @@ export default function EmailAccountsPage() {
                 </div>
                 <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
               </div>
-              {/* Inline editable daily limit */}
-              <div>
-                {editingLimitId === acc.id ? (
-                  <input
-                    autoFocus
-                    type="number"
-                    min="1"
-                    max="2000"
-                    value={limitDraft}
-                    onChange={e => setLimitDraft(e.target.value)}
-                    onKeyDown={async e => {
-                      if (e.key === 'Enter' || e.key === 'Escape') {
-                        const newLimit = parseInt(limitDraft);
-                        if (e.key === 'Enter' && newLimit > 0) {
-                          await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
-                          setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
-                        }
-                        setEditingLimitId(null);
-                      }
-                    }}
-                    onBlur={async () => {
-                      const newLimit = parseInt(limitDraft);
-                      if (newLimit > 0) {
-                        await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
-                        setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
-                      }
-                      setEditingLimitId(null);
-                    }}
-                    className="w-20 border border-blue-300 rounded-lg px-2 py-1 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <button
-                    onClick={() => { setEditingLimitId(acc.id); setLimitDraft(String(acc.daily_limit || 50)); }}
-                    title="Click to edit daily send limit"
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg px-2 py-1 transition-all group">
-                    <span>{acc.daily_limit ?? 50}/day</span>
-                    <svg className="w-3 h-3 text-gray-300 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                  </button>
-                )}
+              {/* Today / Limit — inline-editable limit, real-time sent display */}
+              <div className="flex flex-col gap-1 min-w-0">
+                {(() => {
+                  const limit = acc.daily_limit || 50;
+                  const sent = acc.sent_today_real ?? 0;
+                  const pct = Math.min(100, Math.round((sent / limit) * 100));
+                  const atLimit = sent >= limit;
+                  return (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs font-bold ${atLimit ? 'text-red-600' : 'text-gray-800'}`}>
+                          {sent}
+                        </span>
+                        <span className="text-[10px] text-gray-400">of</span>
+                        {editingLimitId === acc.id ? (
+                          <input
+                            autoFocus
+                            type="number"
+                            min="1"
+                            max="2000"
+                            value={limitDraft}
+                            onChange={e => setLimitDraft(e.target.value)}
+                            onKeyDown={async e => {
+                              if (e.key === 'Enter' || e.key === 'Escape') {
+                                const newLimit = parseInt(limitDraft);
+                                if (e.key === 'Enter' && newLimit > 0) {
+                                  await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
+                                  setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
+                                }
+                                setEditingLimitId(null);
+                              }
+                            }}
+                            onBlur={async () => {
+                              const newLimit = parseInt(limitDraft);
+                              if (newLimit > 0) {
+                                await fetch(`/api/email-accounts/${acc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: newLimit }) });
+                                setAccounts(p => p.map(a => a.id === acc.id ? { ...a, daily_limit: newLimit } : a));
+                              }
+                              setEditingLimitId(null);
+                            }}
+                            className="w-14 border border-blue-300 rounded-md px-1.5 py-0.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { setEditingLimitId(acc.id); setLimitDraft(String(acc.daily_limit || 50)); }}
+                            title="Click to edit daily send limit"
+                            className="group flex items-center gap-0.5 text-xs font-semibold text-gray-500 hover:text-blue-600 rounded-md px-1 py-0.5 hover:bg-blue-50 transition-all">
+                            {limit}
+                            <svg className="w-2.5 h-2.5 text-gray-300 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          </button>
+                        )}
+                        {atLimit && <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5 shrink-0">AT LIMIT</span>}
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${atLimit ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-blue-400'}`}
+                          style={{ width: `${pct}%` }}/>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <button onClick={async () => {
                 await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
