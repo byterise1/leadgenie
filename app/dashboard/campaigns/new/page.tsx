@@ -6,7 +6,16 @@ import { useRouter } from 'next/navigation';
 
 const steps = ['Details', 'Sequence', 'Schedule', 'Review'];
 
-type RealAccount = { id: string; email: string; type: string };
+type RealAccount = {
+  id: string;
+  email: string;
+  type: string;
+  daily_limit?: number;
+  remaining_today?: number;
+  sent_today_real?: number;
+};
+
+type LeadList = { id: string; name: string; count: number };
 
 const MOCK_TEMPLATES = [
   { id: 1, name: 'The Problem Solver', category: 'Cold Outreach', subject: "Quick question about {{company}}'s growth", body: `Hi {{first_name}},\n\nI was looking at {{company}} and noticed most teams in {{industry}} struggle with {{pain_point}}.\n\nWorth a 15-min call?\n\n[Your Name]` },
@@ -31,12 +40,9 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [realAccounts, setRealAccounts] = useState<RealAccount[]>([]);
+  const [leadLists, setLeadLists] = useState<LeadList[]>([]);
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
-
-  useEffect(() => {
-    fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
-  }, []);
 
   // Step 0
   const [name, setName] = useState('');
@@ -44,6 +50,7 @@ export default function NewCampaignPage() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [allAccounts, setAllAccounts] = useState(false);
   const [dailyLimitStr, setDailyLimitStr] = useState('50');
+  const [selectedListId, setSelectedListId] = useState('');
   const dailyLimit = Math.max(1, parseInt(dailyLimitStr) || 1);
 
   // Step 1
@@ -58,6 +65,11 @@ export default function NewCampaignPage() {
   const [timezone, setTimezone] = useState('UTC');
   const [minDelayStr, setMinDelayStr] = useState('1');
   const [maxDelayStr, setMaxDelayStr] = useState('5');
+
+  useEffect(() => {
+    fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
+    fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLeadLists(d); });
+  }, []);
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
 
@@ -81,6 +93,13 @@ export default function NewCampaignPage() {
     setEmails(em => em.map((x, i) => i === idx ? { ...x, [key]: val } : x));
 
   const activeAccountCount = allAccounts ? realAccounts.length : selectedAccounts.length;
+
+  // Capacity calculation for review step
+  const activeAccountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
+  const selectedAccountData = realAccounts.filter(a => activeAccountIds.includes(a.id));
+  const totalRemainingToday = selectedAccountData.reduce((sum, a) => sum + (a.remaining_today ?? a.daily_limit ?? 50), 0);
+  const selectedListData = leadLists.find(l => l.id === selectedListId);
+  const listLeadCount = selectedListData?.count || 0;
 
   return (
     <main className="flex-1 p-6 flex flex-col items-center">
@@ -114,7 +133,7 @@ export default function NewCampaignPage() {
         </div>
       </div>
 
-      {/* Content — centered */}
+      {/* Content */}
       <div className="w-full max-w-4xl">
 
         {/* ── Step 0: Details ── */}
@@ -138,11 +157,45 @@ export default function NewCampaignPage() {
               </div>
             </div>
 
+            {/* Lead List — required */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-gray-700">Lead List</label>
+                <Link href="/dashboard/leads" className="text-xs font-bold text-blue-600 hover:underline">Manage lists →</Link>
+              </div>
+              {leadLists.length === 0 ? (
+                <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
+                  <p className="text-sm text-gray-400 mb-2">No lists yet — create one first</p>
+                  <Link href="/dashboard/leads" className="text-xs font-bold text-blue-600 hover:underline">+ Create a lead list →</Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-1.5">
+                  {leadLists.map(list => (
+                    <label key={list.id}
+                      className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-all ${selectedListId === list.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
+                      <input type="radio" name="lead_list" value={list.id}
+                        checked={selectedListId === list.id}
+                        onChange={() => setSelectedListId(list.id)}
+                        className="accent-blue-600"/>
+                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-800">{list.name}</p>
+                        <p className="text-xs text-gray-400">{list.count} lead{list.count !== 1 ? 's' : ''}</p>
+                      </div>
+                      {selectedListId === list.id && (
+                        <svg className="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Sending accounts */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-gray-700">Sending Accounts</label>
-                <span className="text-xs text-gray-400">Rotates sends across selected</span>
+                <span className="text-xs text-gray-400">Round-robin rotation</span>
               </div>
               {realAccounts.length === 0 ? (
                 <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
@@ -162,13 +215,18 @@ export default function NewCampaignPage() {
                         <p className="text-sm text-gray-800 font-medium">{acc.email}</p>
                         <p className="text-xs text-gray-400">{acc.type}</p>
                       </div>
+                      {acc.remaining_today !== undefined && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${acc.remaining_today === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                          {acc.remaining_today}/{acc.daily_limit ?? 50} left
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Daily limit — clean input, default 50 */}
+            {/* Daily limit */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-gray-700">Daily Email Limit</label>
@@ -214,7 +272,6 @@ export default function NewCampaignPage() {
                   </div>
                 </div>
 
-                {/* Template picker */}
                 <button type="button" onClick={() => setTemplatePickerIdx(idx)}
                   className="w-full flex items-center gap-2 border border-dashed border-gray-200 rounded-xl px-4 py-2.5 mb-3 text-xs font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all text-left">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -230,7 +287,6 @@ export default function NewCampaignPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
                   <p className="text-[10px] text-gray-400">Variables: <span className="font-mono">{'{{first_name}}'}</span>, <span className="font-mono">{'{{company}}'}</span>, <span className="font-mono">{'{{title}}'}</span></p>
 
-                  {/* Unsubscribe toggle */}
                   <div className="flex items-center justify-between pt-3 border-t border-dashed border-gray-100">
                     <div>
                       <p className="text-xs font-semibold text-gray-700">Include unsubscribe footer</p>
@@ -240,7 +296,7 @@ export default function NewCampaignPage() {
                   </div>
                   {email.includeUnsub && (
                     <div className="bg-gray-50 rounded-xl px-3 py-2 text-xs text-gray-400 font-mono border border-gray-100">
-                      To unsubscribe, click here: {'{{unsubscribe_link}}'}<br/>{'{{company_address}}'}
+                      To unsubscribe: {'{{unsubscribe_link}}'}
                     </div>
                   )}
                 </div>
@@ -281,7 +337,7 @@ export default function NewCampaignPage() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delay Between Emails</label>
-              <p className="text-xs text-gray-400 mb-2">Randomised gap between sends to simulate human behaviour and avoid spam flags.</p>
+              <p className="text-xs text-gray-400 mb-2">Randomised gap to simulate human behaviour and avoid spam flags.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Min delay (mins)', val: minDelayStr, set: setMinDelayStr },
@@ -320,27 +376,70 @@ export default function NewCampaignPage() {
 
         {/* ── Step 3: Review ── */}
         {step === 3 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-            <h3 className="font-bold text-gray-900">Campaign Summary</h3>
-            <div className="divide-y divide-gray-100">
-              {[
-                { label: 'Campaign Name', value: name || '—' },
-                { label: 'Goal', value: goal },
-                { label: 'Sending Accounts', value: activeAccountCount > 0 ? `${activeAccountCount} account${activeAccountCount > 1 ? 's' : ''}` : '⚠️ None selected' },
-                { label: 'Daily Limit', value: `${dailyLimit} emails/day` },
-                { label: 'Sending Window', value: `${fromTime} – ${toTime}` },
-                { label: 'Email Delay', value: `${minDelayStr}–${maxDelayStr} min (randomised)` },
-                { label: 'Email Steps', value: `${emails.length} email${emails.length > 1 ? 's' : ''} in sequence` },
-                { label: 'Sending Days', value: ['Mo','Tu','We','Th','Fr','Sa','Su'].filter((_, i) => activeDays[i]).join(', ') || '—' },
-                { label: 'Timezone', value: timezone },
-                { label: 'Start Date', value: startDate || 'Immediately' },
-              ].map(r => (
-                <div key={r.label} className="flex items-center justify-between py-3">
-                  <span className="text-sm text-gray-500">{r.label}</span>
-                  <span className={`text-sm font-semibold ${r.value?.startsWith('⚠️') ? 'text-amber-600' : 'text-gray-900'}`}>{r.value}</span>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+              <h3 className="font-bold text-gray-900">Campaign Summary</h3>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Campaign Name', value: name || '—' },
+                  { label: 'Goal', value: goal },
+                  { label: 'Lead List', value: selectedListData ? `${selectedListData.name} (${listLeadCount} leads)` : '⚠️ No list selected' },
+                  { label: 'Sending Accounts', value: activeAccountCount > 0 ? `${activeAccountCount} account${activeAccountCount > 1 ? 's' : ''}` : '⚠️ None selected' },
+                  { label: 'Daily Limit', value: `${dailyLimit} emails/day` },
+                  { label: 'Sending Window', value: `${fromTime} – ${toTime}` },
+                  { label: 'Email Delay', value: `${minDelayStr}–${maxDelayStr} min (randomised)` },
+                  { label: 'Email Steps', value: `${emails.length} email${emails.length > 1 ? 's' : ''} in sequence` },
+                  { label: 'Sending Days', value: ['Mo','Tu','We','Th','Fr','Sa','Su'].filter((_, i) => activeDays[i]).join(', ') || '—' },
+                  { label: 'Timezone', value: timezone },
+                  { label: 'Start Date', value: startDate || 'Immediately' },
+                ].map(r => (
+                  <div key={r.label} className="flex items-center justify-between py-3">
+                    <span className="text-sm text-gray-500">{r.label}</span>
+                    <span className={`text-sm font-semibold ${r.value?.startsWith('⚠️') ? 'text-amber-600' : 'text-gray-900'}`}>{r.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Capacity info box */}
+            {activeAccountCount > 0 && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span className="text-sm font-bold text-blue-800">Today's Send Capacity</span>
+                </div>
+                <div className="space-y-1.5">
+                  {selectedAccountData.map(acc => (
+                    <div key={acc.id} className="flex items-center justify-between">
+                      <span className="text-xs text-blue-700 truncate max-w-[180px]">{acc.email}</span>
+                      <span className={`text-xs font-bold ${(acc.remaining_today ?? 0) === 0 ? 'text-red-600' : 'text-blue-800'}`}>
+                        {(acc.remaining_today ?? acc.daily_limit ?? 50)} / {acc.daily_limit ?? 50} remaining
+                        {(acc.remaining_today ?? 0) === 0 ? ' — AT LIMIT' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-2 border-t border-blue-200">
+                  <p className="text-xs text-blue-700">
+                    <strong>Today:</strong>{' '}
+                    {totalRemainingToday === 0
+                      ? 'All accounts are at their daily limit. Emails will start tomorrow.'
+                      : listLeadCount === 0
+                      ? `${totalRemainingToday} emails can send today (select a list to see lead count).`
+                      : totalRemainingToday >= listLeadCount
+                      ? `All ${listLeadCount} emails can send today.`
+                      : `${totalRemainingToday} of ${listLeadCount} emails will send today. The remaining ${listLeadCount - totalRemainingToday} will be spread over the following days.`
+                    }
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!selectedListId && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-xs text-amber-700 font-medium">
+                ⚠️ Select a lead list before launching. Go back to Step 1 to choose one.
+              </div>
+            )}
             {activeAccountCount === 0 && (
               <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-xs text-amber-700 font-medium">
                 ⚠️ Select at least one email account to launch.
@@ -349,7 +448,8 @@ export default function NewCampaignPage() {
             {launchError && (
               <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-xs text-red-600">{launchError}</div>
             )}
-            <button disabled={activeAccountCount === 0 || launching}
+            <button
+              disabled={activeAccountCount === 0 || !selectedListId || launching}
               onClick={async () => {
                 setLaunching(true);
                 setLaunchError('');
@@ -369,13 +469,18 @@ export default function NewCampaignPage() {
                       active_days: activeDays,
                       timezone,
                       start_date: startDate || null,
-                      steps: emails.map((e, i) => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub })),
+                      list_id: selectedListId || null,
+                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub })),
                       account_ids: accountIds,
                     }),
                   });
                   const campaign = await res.json();
                   if (!res.ok) throw new Error(campaign.error || 'Failed to create campaign');
-                  await fetch(`/api/campaigns/${campaign.id}/start`, { method: 'POST' });
+
+                  const startRes = await fetch(`/api/campaigns/${campaign.id}/start`, { method: 'POST' });
+                  const startData = await startRes.json();
+                  if (!startRes.ok) throw new Error(startData.error || 'Failed to start campaign');
+
                   router.push('/dashboard/campaigns');
                 } catch (err: any) {
                   setLaunchError(err.message);

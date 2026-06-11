@@ -1,13 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
+
+type Notification = {
+  id: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [credits, setCredits] = useState(100);
   const [usedCredits, setUsedCredits] = useState(0);
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/billing/usage')
@@ -20,6 +32,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .catch(() => {});
   }, []);
+
+  const fetchNotifications = () => {
+    fetch('/api/notifications?unread=1')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setNotifications(d); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const markAllRead = () => {
+    fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }).then(() => setNotifications([])).catch(() => {});
+  };
+
+  const openNotifications = () => {
+    setNotifOpen(v => !v);
+    if (!notifOpen && notifications.length) markAllRead();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -45,6 +94,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard/billing" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap">
               Upgrade
             </Link>
+          </div>
+
+          {/* Notification bell */}
+          <div ref={notifRef} className="relative">
+            <button onClick={openNotifications}
+              className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors relative"
+              title="Notifications">
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              {notifications.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                  {notifications.length > 9 ? '9+' : notifications.length}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900">Notifications</span>
+                  <button onClick={() => setNotifOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-sm text-gray-400">All clear — no new notifications</p>
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                    {notifications.map(n => (
+                      <div key={n.id} className={`px-4 py-3 ${
+                        n.type === 'warning' ? 'bg-amber-50' : n.type === 'error' ? 'bg-red-50' : 'bg-white'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          {n.type === 'warning' && (
+                            <span className="text-amber-500 mt-0.5 shrink-0 text-xs">⚠</span>
+                          )}
+                          <p className="text-xs text-gray-700 leading-relaxed">{n.message}</p>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1.5">
+                          {new Date(n.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <a href="/help" className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Help">

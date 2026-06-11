@@ -9,12 +9,33 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
-    .select('id,email,type,status,health_score,warmup_enabled,sent_today,created_at')
+    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  // Real-time sent count per account for today (UTC midnight)
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+  const { data: sentRows } = await supabaseAdmin
+    .from('sent_emails')
+    .select('account_id')
+    .eq('user_id', user.id)
+    .gte('created_at', todayUTC.toISOString());
+
+  const countMap: Record<string, number> = {};
+  (sentRows || []).forEach((s: { account_id: string }) => {
+    countMap[s.account_id] = (countMap[s.account_id] || 0) + 1;
+  });
+
+  const enriched = (data || []).map((acc: Record<string, unknown>) => {
+    const sentReal = countMap[acc.id as string] || 0;
+    const limit = (acc.daily_limit as number) || 50;
+    return { ...acc, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal) };
+  });
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(req: NextRequest) {

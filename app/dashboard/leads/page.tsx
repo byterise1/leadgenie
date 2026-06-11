@@ -12,6 +12,7 @@ type Lead = {
   website: string | null;
   phone: string | null;
   linkedin: string | null;
+  status: string | null;
   created_at: string;
 };
 
@@ -351,17 +352,17 @@ export default function LeadsPage() {
                         checked={leads.length > 0 && selected.size === leads.length}
                         onChange={toggleAll}/>
                     </th>
-                    {['Name', 'Email', 'Company', 'Title', 'Added', ''].map(col => (
+                    {['Name', 'Email', 'Company', 'Title', 'Status', 'Added', ''].map(col => (
                       <th key={col} className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-gray-400">Loading…</td></tr>
+                    <tr><td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">Loading…</td></tr>
                   ) : leads.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-20 text-center">
+                      <td colSpan={8} className="px-5 py-20 text-center">
                         <div className="flex flex-col items-center">
                           <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
                             <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
@@ -389,6 +390,21 @@ export default function LeadsPage() {
                       <td className="px-4 py-3 text-sm text-gray-600">{l.email}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{l.company || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{l.title || '—'}</td>
+                      <td className="px-4 py-3">
+                        {(!l.status || l.status === 'active') ? (
+                          <span className="text-xs text-gray-400">Active</span>
+                        ) : l.status === 'bounced' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 rounded-full px-2 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 inline-block"/>Bounced
+                          </span>
+                        ) : l.status === 'unsubscribed' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 rounded-full px-2 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 inline-block"/>Opted out
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">{l.status}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{new Date(l.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">

@@ -30,7 +30,7 @@ export async function register() {
         .eq('id', campaignLeadId)
         .single();
 
-      if (!cl || cl.status === 'replied' || cl.status === 'unsubscribed') return;
+      if (!cl || cl.status === 'replied' || cl.status === 'unsubscribed' || cl.status === 'bounced') return;
 
       const campaign = cl.campaign;
       const step = campaign.email_steps.find((s: any) => s.step_number === stepNumber);
@@ -54,9 +54,25 @@ export async function register() {
 
       const accountDailyLimit = account.daily_limit ?? 50;
       if ((sentTodayCount || 0) >= accountDailyLimit) {
-        // Requeue for 25 hours from now (lands in tomorrow's sending window)
-        // Only requeue once (isRequeued flag) to avoid infinite loops
         if (!job.data.isRequeued) {
+          // Write one notification per account per day (not per job)
+          const { data: existingNotif } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', campaign.user_id)
+            .ilike('message', `%${account.email}%`)
+            .gte('created_at', todayUTC.toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          if (!existingNotif) {
+            await supabase.from('notifications').insert({
+              user_id: campaign.user_id,
+              message: `Account ${account.email} reached its daily send limit of ${accountDailyLimit} emails. Affected emails have been automatically rescheduled for tomorrow.`,
+              type: 'warning',
+            });
+          }
+
           const { emailQueue } = await import('./lib/queue');
           await emailQueue.add('send', { ...job.data, isRequeued: true }, {
             delay: 25 * 60 * 60 * 1000,
@@ -72,9 +88,9 @@ export async function register() {
 
       const lead = cl.lead;
       const subject = replaceVars(step.subject, lead);
-      const body = replaceVars(step.body, lead);
+      const rawBody = replaceVars(step.body, lead);
 
-      // Insert sent_email record first to get the ID for the tracking pixel
+      // Insert sent_email record FIRST to get ID for tracking pixel + unsubscribe link
       const { data: sentEmail } = await supabase.from('sent_emails').insert({
         user_id: campaign.user_id,
         campaign_id: campaign.id,
@@ -83,6 +99,15 @@ export async function register() {
         step_number: stepNumber,
         subject,
       }).select('id').single();
+
+      // Inject unsubscribe link into body
+      const unsubUrl = sentEmail?.id ? `${SITE_URL}/api/unsubscribe/${sentEmail.id}` : '#';
+      let body = rawBody.replace(/\{\{unsubscribe_link\}\}/g, unsubUrl);
+
+      // Append unsubscribe footer if step has include_unsub flag
+      if (step.include_unsub && sentEmail?.id) {
+        body += `\n\n---\nTo unsubscribe from future emails, click here: ${unsubUrl}`;
+      }
 
       const trackPixel = sentEmail?.id
         ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" style="display:none" alt="">`
@@ -93,13 +118,31 @@ export async function register() {
       ).join('');
 
       const transport = createTransport(account);
-      await transport.sendMail({
-        from: account.email,
-        to: lead.email,
-        subject,
-        text: body,
-        html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
-      });
+      try {
+        await transport.sendMail({
+          from: account.email,
+          to: lead.email,
+          subject,
+          text: body,
+          html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
+        });
+      } catch (err: any) {
+        // Clean up the pending sent_email record (email was never delivered)
+        if (sentEmail?.id) {
+          await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
+        }
+        // Permanent delivery failure (5xx) → mark as bounced so we don't retry forever
+        const code = err.responseCode;
+        if (typeof code === 'number' && code >= 550) {
+          await Promise.all([
+            supabase.from('leads').update({ status: 'bounced' }).eq('id', lead.id),
+            supabase.from('campaign_leads').update({ status: 'bounced' }).eq('id', campaignLeadId),
+          ]);
+          console.log(`⛔ Bounced: ${lead.email} (SMTP ${code})`);
+          return; // Don't rethrow — no point retrying a hard bounce
+        }
+        throw err; // Transient error → let BullMQ retry
+      }
 
       const nextStep = stepNumber + 1;
       const hasNextStep = campaign.email_steps.some((s: any) => s.step_number === nextStep);

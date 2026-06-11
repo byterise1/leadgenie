@@ -63,6 +63,25 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Add at least one sending account first' }, { status: 400 });
   }
 
+  // Auto-enroll leads from the linked list (upsert so re-launching is safe)
+  if (campaign.list_id) {
+    const { data: members } = await supabaseAdmin
+      .from('lead_list_members')
+      .select('lead_id')
+      .eq('list_id', campaign.list_id);
+
+    if (members?.length) {
+      const enrollRows = members.map((m: { lead_id: string }) => ({
+        campaign_id: id,
+        lead_id: m.lead_id,
+        status: 'pending',
+      }));
+      await supabaseAdmin
+        .from('campaign_leads')
+        .upsert(enrollRows, { onConflict: 'campaign_id,lead_id', ignoreDuplicates: true });
+    }
+  }
+
   const { data: campaignLeads } = await supabaseAdmin
     .from('campaign_leads')
     .select('id')
@@ -70,6 +89,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     .in('status', ['pending', 'active']);
 
   if (!campaignLeads?.length) {
+    if (campaign.list_id) {
+      return NextResponse.json({ error: 'The selected lead list is empty. Add leads to the list first.' }, { status: 400 });
+    }
     return NextResponse.json({ error: 'No leads enrolled in this campaign' }, { status: 400 });
   }
 
