@@ -18,10 +18,41 @@ type RealAccount = {
 type LeadList = { id: string; name: string; count: number };
 
 const MOCK_TEMPLATES = [
-  { id: 1, name: 'The Problem Solver', category: 'Cold Outreach', subject: "Quick question about {{company}}'s growth", body: `Hi {{first_name}},\n\nI was looking at {{company}} and noticed most teams in {{industry}} struggle with {{pain_point}}.\n\nWorth a 15-min call?\n\n[Your Name]` },
-  { id: 2, name: 'The Compliment Hook', category: 'Cold Outreach', subject: 'Loved your post on {{topic}}', body: `Hi {{first_name}},\n\nSaw your post about {{topic}} — really resonated.\n\nWould you be open to a quick chat?\n\nBest,\n[Your Name]` },
-  { id: 3, name: 'The Gentle Nudge', category: 'Follow-up', subject: 'Re: my last email', body: `Hi {{first_name}},\n\nJust bumping this up in case it got buried.\n\n[Your Name]` },
-  { id: 4, name: 'The Direct Ask', category: 'Meeting Request', subject: '15 mins this week?', body: `Hi {{first_name}},\n\nI'll keep this short — can we chat for 15 mins?\n\n[Calendly Link]\n\n[Your Name]` },
+  {
+    id: 1, name: 'The Problem Solver', category: 'Cold Outreach',
+    subject: "Quick question about {{company}}'s growth",
+    body: `Hi {{first_name}},\n\nI was looking at {{company}} and noticed most teams in {{industry}} struggle with {{pain_point}}.\n\nWe helped similar companies solve this — they went from stuck to scaling in just 60 days.\n\nWorth a 15-min call to see if we can do the same for you?\n\n[Your Name]`,
+  },
+  {
+    id: 2, name: 'The Compliment Hook', category: 'Cold Outreach',
+    subject: 'Loved your post on {{topic}}',
+    body: `Hi {{first_name}},\n\nSaw your LinkedIn post about {{topic}} — really resonated with our team.\n\nThat made me think you'd appreciate what we're building — we [One-line value prop].\n\nWould you be open to a quick chat?\n\nBest,\n[Your Name]`,
+  },
+  {
+    id: 3, name: 'The Gentle Nudge', category: 'Follow-up',
+    subject: 'Re: my last email',
+    body: `Hi {{first_name}},\n\nJust wanted to bump this up in case it got buried.\n\nDid you get a chance to look at my previous email? I know inboxes get hectic.\n\nHappy to keep it to 10 minutes if that's easier.\n\n[Your Name]`,
+  },
+  {
+    id: 4, name: 'The Value Add', category: 'Follow-up',
+    subject: 'Something useful for {{company}}',
+    body: `Hi {{first_name}},\n\nI put together a quick breakdown of how companies like {{company}} are solving {{pain_point}}.\n\n[Link to resource / case study]\n\nNo strings attached — thought it might be useful.\n\n[Your Name]`,
+  },
+  {
+    id: 5, name: 'The Direct Ask', category: 'Meeting Request',
+    subject: '15 mins this week?',
+    body: `Hi {{first_name}},\n\nI'll keep this short — I think we can help {{company}} with {{pain_point}}.\n\nWe've done it for [Company A] and [Company B].\n\n15 mins this week to show you how? [Calendly Link]\n\n[Your Name]`,
+  },
+  {
+    id: 6, name: 'The Permission Email', category: 'Break-up',
+    subject: 'Should I close your file?',
+    body: `Hi {{first_name}},\n\nI've reached out a few times but haven't heard back — which usually means one of two things:\n\n1. The timing is off\n2. This isn't a priority right now\n\nEither way, totally fine. Should I close your file?\n\n[Your Name]`,
+  },
+  {
+    id: 7, name: 'The Check-In', category: 'Re-engagement',
+    subject: 'Still relevant for {{company}}?',
+    body: `Hi {{first_name}},\n\nWe spoke a while back about {{topic}}. I wanted to check in — a lot has changed on our end.\n\nWe've improved [area] that specifically addresses what we discussed.\n\nWould it make sense to reconnect?\n\n[Your Name]`,
+  },
 ];
 
 type EmailStep = { subject: string; body: string; delay: number; templateId: number | null; includeUnsub: boolean };
