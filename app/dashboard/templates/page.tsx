@@ -400,7 +400,7 @@ function TemplateModal({
   );
 }
 
-function UseModal({ template, onClose }: { template: Template; onClose: () => void }) {
+function UseModal({ template, onClose, onDuplicate }: { template: Template; onClose: () => void; onDuplicate: (t: Template) => void }) {
   const router = useRouter();
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -419,8 +419,8 @@ function UseModal({ template, onClose }: { template: Template; onClose: () => vo
             </div>
             <svg className="w-4 h-4 text-gray-300 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </button>
-          <button onClick={onClose}
-            className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
+          <button onClick={() => { onDuplicate(template); onClose(); }}
+            className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50 transition-all text-left">
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
               <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             </div>
@@ -462,6 +462,12 @@ export default function TemplatesPage() {
     }
     setCreateOpen(false);
     setEditTarget(null);
+  };
+
+  const handleDuplicate = (t: Template) => {
+    const copy: Template = { ...t, id: Date.now(), name: `${t.name} (Copy)`, builtIn: false, openRate: '—', replyRate: '—', uses: 0 };
+    setTemplates(prev => [copy, ...prev]);
+    setEditTarget(copy);
   };
 
   return (
@@ -535,7 +541,7 @@ export default function TemplatesPage() {
       {(createOpen || editTarget) && (
         <TemplateModal template={editTarget ?? {}} onSave={handleSave} onClose={() => { setCreateOpen(false); setEditTarget(null); }} />
       )}
-      {useTarget && <UseModal template={useTarget} onClose={() => setUseTarget(null)} />}
+      {useTarget && <UseModal template={useTarget} onClose={() => setUseTarget(null)} onDuplicate={handleDuplicate} />}
 
       {deleteId !== null && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setDeleteId(null)}>

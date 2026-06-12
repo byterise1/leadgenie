@@ -56,7 +56,7 @@ const MOCK_TEMPLATES = [
 ];
 
 type EmailStep = { subject: string; body: string; delay: number; templateId: number | null; includeUnsub: boolean };
-const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 3, templateId: null, includeUnsub: false };
+const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false };
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -74,6 +74,7 @@ export default function NewCampaignPage() {
   const [leadLists, setLeadLists] = useState<LeadList[]>([]);
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
 
   // Step 0
   const [name, setName] = useState('');
@@ -101,6 +102,26 @@ export default function NewCampaignPage() {
   const [maxDelayStr, setMaxDelayStr] = useState('5');
 
   const timeWindowValid = instantStart || fromTime < toTime;
+
+  const validateStep = (s: number): string[] => {
+    const errs: string[] = [];
+    if (s === 0) {
+      if (!name.trim()) errs.push('Campaign name is required.');
+      if (activeAccountCount === 0) errs.push('Select at least one sending account.');
+      if (!selectedListId && leadLists.length > 0) errs.push('Select a lead list.');
+    }
+    if (s === 1) {
+      emails.forEach((e, i) => {
+        if (!e.subject.trim()) errs.push(`Email ${i + 1}: subject line is required.`);
+        if (!e.body.trim()) errs.push(`Email ${i + 1}: body is required.`);
+      });
+    }
+    if (s === 2) {
+      if (!instantStart && !timeWindowValid) errs.push('"From" time must be earlier than "To" time.');
+      if (!instantStart && !activeDays.some(d => d)) errs.push('Select at least one active sending day.');
+    }
+    return errs;
+  };
 
   const templateCategories = ['All', ...Array.from(new Set(MOCK_TEMPLATES.map(t => t.category)))];
   const filteredTemplates = MOCK_TEMPLATES.filter(t => {
@@ -163,7 +184,7 @@ export default function NewCampaignPage() {
         <div className="flex items-center gap-0 mb-8">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center">
-              <button onClick={() => setStep(i)} className="flex items-center gap-2">
+              <button onClick={() => { if (i < step) { setStepErrors([]); setStep(i); } else if (i === step + 1) { const errs = validateStep(step); if (errs.length) { setStepErrors(errs); } else { setStepErrors([]); setStep(i); } } }} className="flex items-center gap-2">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   i < step ? 'bg-blue-600 text-white' : i === step ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-gray-100 text-gray-400'
                 }`}>
@@ -491,21 +512,35 @@ export default function NewCampaignPage() {
               </div>
             )}
 
-            {!selectedListId && (
-              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-xs text-amber-700 font-medium">
-                ⚠️ Select a lead list before launching. Go back to Step 1 to choose one.
+            {!name.trim() && (
+              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-red-600 font-medium">⚠️ Campaign name is required.</span>
+                <button onClick={() => { setStepErrors([]); setStep(0); }} className="text-xs font-bold text-red-600 underline ml-3">Fix →</button>
+              </div>
+            )}
+            {!selectedListId && leadLists.length > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-amber-700 font-medium">⚠️ No lead list selected.</span>
+                <button onClick={() => { setStepErrors([]); setStep(0); }} className="text-xs font-bold text-amber-700 underline ml-3">Fix →</button>
               </div>
             )}
             {activeAccountCount === 0 && (
-              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-xs text-amber-700 font-medium">
-                ⚠️ Select at least one email account to launch.
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-amber-700 font-medium">⚠️ No sending account selected.</span>
+                <button onClick={() => { setStepErrors([]); setStep(0); }} className="text-xs font-bold text-amber-700 underline ml-3">Fix →</button>
+              </div>
+            )}
+            {emails.some(e => !e.subject.trim() || !e.body.trim()) && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-amber-700 font-medium">⚠️ Some email steps are missing subject or body.</span>
+                <button onClick={() => { setStepErrors([]); setStep(1); }} className="text-xs font-bold text-amber-700 underline ml-3">Fix →</button>
               </div>
             )}
             {launchError && (
               <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-xs text-red-600">{launchError}</div>
             )}
             <button
-              disabled={activeAccountCount === 0 || !selectedListId || launching}
+              disabled={activeAccountCount === 0 || (!selectedListId && leadLists.length > 0) || !name.trim() || emails.some(e => !e.subject.trim() || !e.body.trim()) || launching}
               onClick={async () => {
                 setLaunching(true);
                 setLaunchError('');
@@ -549,16 +584,32 @@ export default function NewCampaignPage() {
           </div>
         )}
 
+        {/* Step errors */}
+        {stepErrors.length > 0 && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
+            {stepErrors.map((e, i) => (
+              <p key={i} className="flex items-start gap-2 text-xs text-red-600 font-medium">
+                <svg className="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                {e}
+              </p>
+            ))}
+          </div>
+        )}
+
         {/* Nav */}
-        <div className="flex items-center justify-between mt-6">
-          <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
+        <div className="flex items-center justify-between mt-4">
+          <button onClick={() => { setStepErrors([]); setStep(s => Math.max(0, s - 1)); }} disabled={step === 0}
             className="px-5 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             ← Back
           </button>
           {step < steps.length - 1 && (
-            <button onClick={() => setStep(s => s + 1)}
-              disabled={step === 2 && !timeWindowValid}
-              className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            <button onClick={() => {
+              const errs = validateStep(step);
+              if (errs.length) { setStepErrors(errs); return; }
+              setStepErrors([]);
+              setStep(s => s + 1);
+            }}
+              className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
               Continue →
             </button>
           )}
