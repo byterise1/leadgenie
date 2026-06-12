@@ -139,13 +139,20 @@ Would it make sense to reconnect?
   },
 ];
 
-// Converts plain text body → simple HTML
+// Converts body (may contain HTML) → full email HTML document
 function bodyToHtml(body: string, unsubText: string, includeUnsub: boolean): string {
-  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const bodyHtml = escape(body).split('\n').map(l => l.trim() ? `<p style="margin:0 0 12px 0">${l}</p>` : '').join('\n');
+  const escapeText = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const BLOCK_RE = /^<(p|div|ul|ol|h[1-6]|table|blockquote|pre)\b/i;
+  // Don't escape body — it may contain HTML tags (bold, links, styled buttons)
+  const bodyHtml = body.split('\n').map(l => {
+    const t = l.trim();
+    if (!t) return '';
+    if (BLOCK_RE.test(t)) return t; // already a block element, pass through
+    return `<p style="margin:0 0 12px 0">${t}</p>`;
+  }).join('\n');
   const unsubHtml = includeUnsub
-    ? escape(unsubText)
-        .replace(escape('{{unsubscribe_link}}'), '<a href="{{unsubscribe_link}}" style="color:#6b7280">unsubscribe</a>')
+    ? escapeText(unsubText)
+        .replace(escapeText('{{unsubscribe_link}}'), '<a href="{{unsubscribe_link}}" style="color:#6b7280">unsubscribe</a>')
         .split('\n').map(l => `<p style="margin:0;font-size:11px;color:#9ca3af">${l}</p>`).join('\n')
     : '';
   return `<!DOCTYPE html>
@@ -153,6 +160,7 @@ function bodyToHtml(body: string, unsubText: string, includeUnsub: boolean): str
 <head><meta charset="UTF-8"><style>
   body { font-family: Arial, sans-serif; font-size: 14px; color: #111; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 24px; }
   p { margin: 0 0 12px 0; }
+  a { color: #2563eb; }
   .unsub { border-top: 1px solid #e5e7eb; margin-top: 32px; padding-top: 16px; }
 </style></head>
 <body>
@@ -192,11 +200,17 @@ function TemplateModal({
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const linkUrlRef = useRef<HTMLInputElement>(null);
+  const btnUrlRef = useRef<HTMLInputElement>(null);
 
   const [linkDialog, setLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkNewTab, setLinkNewTab] = useState(true);
   const [linkSel, setLinkSel] = useState<{ start: number; end: number; text: string }>({ start: 0, end: 0, text: '' });
+
+  const [btnDialog, setBtnDialog] = useState(false);
+  const [btnText, setBtnText] = useState('');
+  const [btnUrl, setBtnUrl] = useState('');
+  const [btnSel, setBtnSel] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
 
   const insertVar = (v: string) => {
     const isSubject = activeField === 'subject';
@@ -233,6 +247,34 @@ function TemplateModal({
     setLinkDialog(false);
     setLinkUrl('');
     const pos = linkSel.start + tag.length;
+    setTimeout(() => { const r = bodyRef.current; if (r) { r.focus(); r.setSelectionRange(pos, pos); } }, 0);
+  };
+
+  const openBtnDialog = () => {
+    setActiveField('body');
+    const ref = bodyRef.current;
+    const s = ref?.selectionStart ?? body.length;
+    const e = ref?.selectionEnd ?? body.length;
+    setBtnSel({ start: s, end: e });
+    setBtnText(body.slice(s, e) || '');
+    setBtnUrl('');
+    setBtnDialog(true);
+    setLinkDialog(false);
+    setTimeout(() => btnUrlRef.current?.focus(), 30);
+  };
+
+  const insertButton = () => {
+    const url = btnUrl.trim();
+    if (!url) return;
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    const label = btnText.trim() || 'Click here';
+    const tag = `<a href="${fullUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">${label}</a>`;
+    const next = body.slice(0, btnSel.start) + tag + body.slice(btnSel.end);
+    setBody(next);
+    setBtnDialog(false);
+    setBtnText('');
+    setBtnUrl('');
+    const pos = btnSel.start + tag.length;
     setTimeout(() => { const r = bodyRef.current; if (r) { r.focus(); r.setSelectionRange(pos, pos); } }, 0);
   };
 
@@ -342,8 +384,8 @@ function TemplateModal({
                       className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all">
                       <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <button type="button" title="Button" onClick={() => { setActiveField('body'); applyFormat('<a href="URL" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">', '</a>'); }}
-                      className="px-2 h-7 flex items-center justify-center rounded-md text-[10px] font-bold text-gray-500 hover:bg-white hover:shadow-sm transition-all">
+                    <button type="button" title="Button" onClick={openBtnDialog}
+                      className={`px-2 h-7 flex items-center justify-center rounded-md text-[10px] font-bold transition-all ${btnDialog ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-white hover:shadow-sm'}`}>
                       BTN
                     </button>
                   </div>
@@ -369,8 +411,35 @@ function TemplateModal({
                     </button>
                   </div>
                 )}
+                {btnDialog && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider w-8 shrink-0">Text</span>
+                      <input value={btnText} onChange={e => setBtnText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Escape') setBtnDialog(false); }}
+                        placeholder="e.g. Book a Call"
+                        className="flex-1 text-sm bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 outline-none text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400"/>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider w-8 shrink-0">URL</span>
+                      <input ref={btnUrlRef} value={btnUrl} onChange={e => setBtnUrl(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') insertButton(); if (e.key === 'Escape') setBtnDialog(false); }}
+                        placeholder="https://calendly.com/yourname"
+                        className="flex-1 text-sm bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 outline-none text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400"/>
+                      <button type="button" onClick={insertButton} disabled={!btnUrl.trim()}
+                        className="text-xs font-bold bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition-colors shrink-0 disabled:opacity-40 whitespace-nowrap">
+                        Insert Button
+                      </button>
+                      <button type="button" onClick={() => setBtnDialog(false)}
+                        className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-white rounded-lg transition-all shrink-0">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-blue-400 pl-9">Button appears as a styled blue CTA in the email</p>
+                  </div>
+                )}
                 <textarea ref={bodyRef} value={body} onChange={e => setBody(e.target.value)}
-                  onFocus={() => { setActiveField('body'); setLinkDialog(false); }}
+                  onFocus={() => { setActiveField('body'); setLinkDialog(false); setBtnDialog(false); }}
                   placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
                   rows={9}
                   className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none leading-relaxed font-mono"/>
@@ -404,27 +473,32 @@ function TemplateModal({
               </div>
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Body</p>
-                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{body || <span className="text-gray-300">No body yet</span>}</p>
+                {body ? (
+                  <iframe
+                    srcDoc={bodyToHtml(body, unsubText, includeUnsub)}
+                    className="w-full min-h-[240px] border-0 rounded-xl"
+                    title="Email preview"
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-300">No body yet</p>
+                )}
               </div>
-              {includeUnsub && (
-                <div className="border-t border-dashed border-gray-200 pt-3">
-                  <p className="text-xs text-gray-400 whitespace-pre-line">{unsubText.replace('{{unsubscribe_link}}', 'https://unsubscribe.example.com/?id=abc123')}</p>
-                </div>
-              )}
             </div>
           )}
 
           {tab === 'html' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500">Generated HTML <span className="font-normal text-gray-400">— copy into your ESP or edit manually</span></p>
+                <p className="text-xs font-bold text-gray-500">HTML Body <span className="font-normal text-gray-400">— edit raw HTML directly</span></p>
                 <button type="button" onClick={() => navigator.clipboard.writeText(bodyToHtml(body, unsubText, includeUnsub))}
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors border border-blue-100 bg-blue-50 rounded-lg px-3 py-1">
-                  Copy HTML
+                  Copy Full Email HTML
                 </button>
               </div>
-              <textarea readOnly value={bodyToHtml(body, unsubText, includeUnsub)} rows={16}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-600 font-mono outline-none bg-gray-50 resize-none"/>
+              <textarea value={body} onChange={e => setBody(e.target.value)} rows={12}
+                placeholder="Write raw HTML here — e.g. <p>Hi {{first_name}},</p>"
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-600 font-mono outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 resize-none"/>
               <div className="border border-gray-100 rounded-xl overflow-hidden">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2 bg-gray-50 border-b border-gray-100">Rendered Preview</p>
                 <iframe
