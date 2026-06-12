@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
     const { Worker } = await import('bullmq');
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const { createTransport, replaceVars } = await import('./lib/mailer');
+    const { createTransportAsync, replaceVars } = await import('./lib/mailer');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -117,7 +117,7 @@ export async function register() {
         l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${l}</p>` : ''
       ).join('');
 
-      const transport = createTransport(account);
+      const transport = await createTransportAsync(account);
       try {
         await transport.sendMail({
           from: account.email,
