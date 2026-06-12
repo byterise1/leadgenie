@@ -6,6 +6,12 @@ const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA
 // Known email scanner/proxy user-agents — don't count these as real opens
 const BOT_PATTERNS = [
   'googleimageproxy',
+  'via ggpht',
+  'ggpht.com',
+  'google-apps-script',
+  'feedfetcher-google',
+  'googlebot',
+  'yahoo mail proxy',
   'yahoomailproxy',
   'bingpreview',
   'linkedinbot',
@@ -20,6 +26,9 @@ const BOT_PATTERNS = [
   'curl/',
   'python-requests',
   'postmanruntime',
+  'okhttp',
+  'go-http-client',
+  'apache-httpclient',
 ];
 
 function isBot(ua: string): boolean {
@@ -31,7 +40,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const ua = req.headers.get('user-agent') || '';
 
-  if (!isBot(ua)) {
+  // Blank UA = almost always a server-side pre-fetch (Gmail CDN, scanners)
+  if (ua && !isBot(ua)) {
     await supabaseAdmin
       .from('sent_emails')
       .update({ opened_at: new Date().toISOString() })
