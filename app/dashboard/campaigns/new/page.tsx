@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { bodyToHtml } from '@/lib/body-to-html';
 
 const steps = ['Details', 'Sequence', 'Schedule', 'Review'];
 
@@ -91,6 +92,7 @@ export default function NewCampaignPage() {
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateCategory, setTemplateCategory] = useState<string>('All');
   const [apiTemplates, setApiTemplates] = useState<{ id: string; name: string; category: string; subject: string; body: string; source_builtin_id?: number | null }[]>([]);
+  const [previewSteps, setPreviewSteps] = useState<Set<number>>(new Set());
 
   // Step 2
   const [instantStart, setInstantStart] = useState(false);
@@ -356,9 +358,45 @@ export default function NewCampaignPage() {
                   <input placeholder="Subject line" value={email.subject}
                     onChange={e => updateEmail(idx, 'subject', e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
-                  <textarea rows={6} placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
-                    value={email.body} onChange={e => updateEmail(idx, 'body', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
+
+                  {/* Body — Edit / Preview tabs */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-bold text-gray-500">Body</p>
+                      <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                        {(['Edit', 'Preview'] as const).map(t => (
+                          <button key={t} type="button"
+                            onClick={() => setPreviewSteps(prev => {
+                              const n = new Set(prev);
+                              if (t === 'Preview') n.add(idx); else n.delete(idx);
+                              return n;
+                            })}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${(t === 'Preview') === previewSteps.has(idx) ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {previewSteps.has(idx) ? (
+                      <div className="border border-gray-200 rounded-xl overflow-hidden min-h-[160px]">
+                        {email.body ? (
+                          <iframe
+                            srcDoc={bodyToHtml(email.body, 'To unsubscribe, click here: {{unsubscribe_link}}', email.includeUnsub)}
+                            className="w-full min-h-[200px] border-0"
+                            title="Email preview"
+                            sandbox="allow-same-origin"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-32 text-sm text-gray-300">No body yet</div>
+                        )}
+                      </div>
+                    ) : (
+                      <textarea rows={6} placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
+                        value={email.body} onChange={e => updateEmail(idx, 'body', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
+                    )}
+                  </div>
+
                   <p className="text-[10px] text-gray-400">Variables: <span className="font-mono">{'{{first_name}}'}</span>, <span className="font-mono">{'{{company}}'}</span>, <span className="font-mono">{'{{title}}'}</span></p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-dashed border-gray-100">
@@ -368,11 +406,6 @@ export default function NewCampaignPage() {
                     </div>
                     <Toggle on={email.includeUnsub} onToggle={() => updateEmail(idx, 'includeUnsub', !email.includeUnsub)}/>
                   </div>
-                  {email.includeUnsub && (
-                    <div className="bg-gray-50 rounded-xl px-3 py-2 text-xs text-gray-400 font-mono border border-gray-100">
-                      To unsubscribe: {'{{unsubscribe_link}}'}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
