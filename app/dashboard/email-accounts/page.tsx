@@ -234,6 +234,11 @@ export default function EmailAccountsPage() {
 
   useEffect(() => {
     fetchAccounts();
+    const pollId = setInterval(fetchAccounts, 10000);
+    return () => clearInterval(pollId);
+  }, [fetchAccounts]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get('connected');
     const err = params.get('error');
@@ -247,7 +252,7 @@ export default function EmailAccountsPage() {
       setToast('Google OAuth failed. Try Gmail App Password instead.');
       router.replace('/dashboard/email-accounts');
     }
-  }, [fetchAccounts, router]);
+  }, [router]);
 
   useEffect(() => {
     if (!toast) return;
@@ -422,11 +427,11 @@ export default function EmailAccountsPage() {
                 })()}
               </div>
               <div className="flex items-center gap-1">
-                {acc.type === 'gmail-oauth' && (
+                {acc.type === 'gmail-oauth' && acc.status === 'error' && (
                   <a href="/api/email-accounts/oauth/google"
-                    title="Refresh OAuth token"
-                    className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap">
-                    Reconnect
+                    title="OAuth token revoked — click to re-authorise"
+                    className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 hover:bg-red-100 transition-colors whitespace-nowrap">
+                    Re-authorise
                   </a>
                 )}
                 <button onClick={async () => {

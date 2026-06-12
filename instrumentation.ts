@@ -117,7 +117,24 @@ export async function register() {
         l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${l}</p>` : ''
       ).join('');
 
-      const transport = await createTransportAsync(account);
+      let transport;
+      try {
+        transport = await createTransportAsync(account);
+      } catch (authErr: any) {
+        if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
+        if (account.type === 'gmail-oauth') {
+          await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
+          await supabase.from('notifications').insert({
+            user_id: campaign.user_id,
+            message: `Gmail account ${account.email} needs to be re-authorised — token refresh failed. Go to Email Accounts to reconnect.`,
+            type: 'error',
+          });
+          console.error(`🔐 OAuth token refresh failed for ${account.email} — marked as error, skipping job`);
+          return;
+        }
+        throw authErr;
+      }
+
       try {
         await transport.sendMail({
           from: account.email,
