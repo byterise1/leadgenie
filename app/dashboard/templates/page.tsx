@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -10,7 +10,9 @@ const VARIABLES = ['{{first_name}}', '{{last_name}}', '{{company}}', '{{title}}'
 const DEFAULT_UNSUB = 'To unsubscribe, click here: {{unsubscribe_link}}\n{{company_address}}';
 
 type Template = {
-  id: number;
+  id: number | string;
+  dbId?: string;           // Supabase UUID — only on user-saved templates
+  sourceBuiltinId?: number | null; // if this is a saved edit of a built-in
   category: string;
   name: string;
   subject: string;
@@ -536,7 +538,10 @@ function UseModal({ template, onClose, onDuplicate }: { template: Template; onCl
         <h2 className="text-base font-bold text-gray-900 mb-1">Use this template</h2>
         <p className="text-sm text-gray-400 mb-5">Where do you want to use <span className="font-semibold text-gray-700">"{template.name}"</span>?</p>
         <div className="space-y-2 mb-5">
-          <button onClick={() => router.push('/dashboard/campaigns/new')}
+          <button onClick={() => {
+              localStorage.setItem('prefill_template', JSON.stringify({ subject: template.subject, body: template.body, unsubText: template.unsubText }));
+              router.push('/dashboard/campaigns/new');
+            }}
             className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -565,14 +570,47 @@ function UseModal({ template, onClose, onDuplicate }: { template: Template; onCl
   );
 }
 
+function toTemplate(row: Record<string, unknown>): Template {
+  return {
+    id: row.id as string,
+    dbId: row.id as string,
+    sourceBuiltinId: (row.source_builtin_id as number) ?? null,
+    name: row.name as string,
+    category: row.category as string,
+    subject: row.subject as string,
+    body: row.body as string,
+    unsubText: (row.unsub_text as string) ?? DEFAULT_UNSUB,
+    builtIn: false,
+    openRate: '—',
+    replyRate: '—',
+    uses: 0,
+  };
+}
+
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>(DEFAULT_TEMPLATES);
+  const [userTemplates, setUserTemplates] = useState<Template[]>([]);
   const [filterCat, setFilterCat] = useState('All');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Template | null>(null);
   const [useTarget, setUseTarget] = useState<Template | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Load user templates from Supabase on mount
+  useEffect(() => {
+    fetch('/api/templates').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setUserTemplates(data.map(toTemplate));
+    });
+  }, []);
+
+  // Merge: user templates first, then built-ins not overridden by a user edit
+  const overriddenBuiltinIds = new Set(
+    userTemplates.filter(t => t.sourceBuiltinId != null).map(t => t.sourceBuiltinId!)
+  );
+  const templates: Template[] = [
+    ...userTemplates,
+    ...DEFAULT_TEMPLATES.filter(t => !overriddenBuiltinIds.has(t.id as number)),
+  ];
 
   const allCats = ['All', ...CATEGORIES];
 
@@ -581,21 +619,54 @@ export default function TemplatesPage() {
     (t.name.toLowerCase().includes(search.toLowerCase()) || t.subject.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleSave = (data: Pick<Template, 'name' | 'category' | 'subject' | 'body' | 'unsubText'>) => {
-    if (editTarget) {
-      setTemplates(prev => prev.map(t => t.id === editTarget.id ? { ...t, ...data } : t));
-    } else {
-      const newT: Template = { ...data, id: Date.now(), builtIn: false, openRate: '—', replyRate: '—', uses: 0 };
-      setTemplates(prev => [newT, ...prev]);
-    }
+  const handleSave = async (data: Pick<Template, 'name' | 'category' | 'subject' | 'body' | 'unsubText'>) => {
+    try {
+      if (editTarget) {
+        if (editTarget.dbId) {
+          // Update existing user template in Supabase
+          await fetch(`/api/templates/${editTarget.dbId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: data.name, category: data.category, subject: data.subject, body: data.body, unsub_text: data.unsubText }),
+          });
+          setUserTemplates(prev => prev.map(t => t.dbId === editTarget.dbId ? { ...t, ...data } : t));
+        } else {
+          // Editing a built-in → save as user override in Supabase
+          const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: data.name, category: data.category, subject: data.subject, body: data.body, unsub_text: data.unsubText, source_builtin_id: editTarget.id }),
+          });
+          const created = await res.json();
+          if (created.id) setUserTemplates(prev => [toTemplate(created), ...prev]);
+        }
+      } else {
+        // Create new template
+        const res = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: data.name, category: data.category, subject: data.subject, body: data.body, unsub_text: data.unsubText }),
+        });
+        const created = await res.json();
+        if (created.id) setUserTemplates(prev => [toTemplate(created), ...prev]);
+      }
+    } catch {}
     setCreateOpen(false);
     setEditTarget(null);
   };
 
-  const handleDuplicate = (t: Template) => {
-    const copy: Template = { ...t, id: Date.now(), name: `${t.name} (Copy)`, builtIn: false, openRate: '—', replyRate: '—', uses: 0 };
-    setTemplates(prev => [copy, ...prev]);
-    setEditTarget(copy);
+  const handleDuplicate = async (t: Template) => {
+    const res = await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${t.name} (Copy)`, category: t.category, subject: t.subject, body: t.body, unsub_text: t.unsubText }),
+    });
+    const created = await res.json();
+    if (created.id) {
+      const copy = toTemplate(created);
+      setUserTemplates(prev => [copy, ...prev]);
+      setEditTarget(copy);
+    }
   };
 
   return (
@@ -649,8 +720,8 @@ export default function TemplatesPage() {
             <div className="flex gap-2">
               <button onClick={() => setEditTarget(t)} className="flex-1 text-xs font-bold text-gray-700 border border-gray-200 rounded-xl py-2 hover:bg-gray-50 transition-colors">Edit</button>
               <button onClick={() => setUseTarget(t)} className="flex-1 text-xs font-bold text-white bg-blue-600 rounded-xl py-2 hover:bg-blue-700 transition-colors">Use →</button>
-              {!t.builtIn && (
-                <button onClick={() => setDeleteId(t.id)} className="px-2.5 text-gray-300 hover:text-red-400 border border-gray-100 rounded-xl transition-colors">
+              {!t.builtIn && t.dbId && (
+                <button onClick={() => setDeleteId(t.dbId!)} className="px-2.5 text-gray-300 hover:text-red-400 border border-gray-100 rounded-xl transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
               )}
@@ -676,7 +747,11 @@ export default function TemplatesPage() {
           title="Delete this template?"
           message="This template will be permanently removed. This can't be undone."
           onCancel={() => setDeleteId(null)}
-          onConfirm={() => { setTemplates(p => p.filter(t => t.id !== deleteId)); setDeleteId(null); }}
+          onConfirm={async () => {
+            await fetch(`/api/templates/${deleteId}`, { method: 'DELETE' });
+            setUserTemplates(p => p.filter(t => t.dbId !== deleteId));
+            setDeleteId(null);
+          }}
         />
       )}
     </main>

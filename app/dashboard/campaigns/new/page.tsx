@@ -55,7 +55,7 @@ const MOCK_TEMPLATES = [
   },
 ];
 
-type EmailStep = { subject: string; body: string; delay: number; templateId: number | null; includeUnsub: boolean };
+type EmailStep = { subject: string; body: string; delay: number; templateId: string | null; includeUnsub: boolean };
 const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false };
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
@@ -90,6 +90,7 @@ export default function NewCampaignPage() {
   const [templatePickerIdx, setTemplatePickerIdx] = useState<number | null>(null);
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateCategory, setTemplateCategory] = useState<string>('All');
+  const [apiTemplates, setApiTemplates] = useState<{ id: string; name: string; category: string; subject: string; body: string; source_builtin_id?: number | null }[]>([]);
 
   // Step 2
   const [instantStart, setInstantStart] = useState(false);
@@ -123,8 +124,14 @@ export default function NewCampaignPage() {
     return errs;
   };
 
-  const templateCategories = ['All', ...Array.from(new Set(MOCK_TEMPLATES.map(t => t.category)))];
-  const filteredTemplates = MOCK_TEMPLATES.filter(t => {
+  // Merge user templates (from API) with built-ins not overridden by user edits
+  const overriddenBuiltinIds = new Set(apiTemplates.filter(t => t.source_builtin_id != null).map(t => t.source_builtin_id!));
+  const allTemplates = [
+    ...apiTemplates.map(t => ({ id: String(t.id), name: t.name, category: t.category, subject: t.subject, body: t.body })),
+    ...MOCK_TEMPLATES.filter(t => !overriddenBuiltinIds.has(t.id)).map(t => ({ id: String(t.id), name: t.name, category: t.category, subject: t.subject, body: t.body })),
+  ];
+  const templateCategories = ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))];
+  const filteredTemplates = allTemplates.filter(t => {
     const matchCat = templateCategory === 'All' || t.category === templateCategory;
     const q = templateSearch.toLowerCase();
     const matchSearch = !q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q);
@@ -132,8 +139,19 @@ export default function NewCampaignPage() {
   });
 
   useEffect(() => {
+    // Pre-fill from template when coming via "Use →" on templates page
+    try {
+      const prefill = localStorage.getItem('prefill_template');
+      if (prefill) {
+        const t = JSON.parse(prefill);
+        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: null, includeUnsub: false }]);
+        localStorage.removeItem('prefill_template');
+      }
+    } catch {}
+
     fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
     fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLeadLists(d); });
+    fetch('/api/templates').then(r => r.json()).then(d => { if (Array.isArray(d)) setApiTemplates(d); });
   }, []);
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
@@ -147,10 +165,8 @@ export default function NewCampaignPage() {
     else { setAllAccounts(true); setSelectedAccounts(realAccounts.map(a => a.id)); }
   };
 
-  const applyTemplate = (idx: number, tId: number) => {
-    const t = MOCK_TEMPLATES.find(t => t.id === tId);
-    if (!t) return;
-    setEmails(prev => prev.map((e, i) => i === idx ? { ...e, subject: t.subject, body: t.body, templateId: tId } : e));
+  const applyTemplate = (idx: number, t: { id: string; subject: string; body: string }) => {
+    setEmails(prev => prev.map((e, i) => i === idx ? { ...e, subject: t.subject, body: t.body, templateId: t.id } : e));
     setTemplatePickerIdx(null);
   };
 
@@ -333,7 +349,7 @@ export default function NewCampaignPage() {
                 <button type="button" onClick={() => setTemplatePickerIdx(idx)}
                   className="w-full flex items-center gap-2 border border-dashed border-gray-200 rounded-xl px-4 py-2.5 mb-3 text-xs font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all text-left">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  {email.templateId ? `Template: ${MOCK_TEMPLATES.find(t => t.id === email.templateId)?.name} — change` : 'Pick from template library (optional)'}
+                  {email.templateId ? `Template: ${allTemplates.find(t => t.id === email.templateId)?.name ?? 'Custom'} — change` : 'Pick from template library (optional)'}
                 </button>
 
                 <div className="space-y-3">
@@ -656,7 +672,7 @@ export default function NewCampaignPage() {
               {filteredTemplates.length === 0 ? (
                 <p className="text-center text-sm text-gray-400 py-10">No templates match your search.</p>
               ) : filteredTemplates.map(t => (
-                <button key={t.id} onClick={() => { applyTemplate(templatePickerIdx, t.id); setTemplateSearch(''); setTemplateCategory('All'); }}
+                <button key={t.id} onClick={() => { applyTemplate(templatePickerIdx, t); setTemplateSearch(''); setTemplateCategory('All'); }}
                   className="w-full flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
