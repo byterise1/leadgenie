@@ -111,14 +111,14 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const apiMsg = (body as any)?.error?.message || res.statusText;
+      console.error(`[Gmail API] ${res.status} response:`, JSON.stringify(body));
       let msg: string;
       let code: number;
       if (res.status === 404) {
-        // Gmail API not enabled in GCP — configuration issue, mark account as error
-        msg = 'Gmail API is not enabled in your Google Cloud project. Go to console.cloud.google.com → APIs & Services → Library → Gmail API → Enable.';
+        msg = `Gmail API 404: ${apiMsg}. Check that Gmail API is enabled at console.cloud.google.com and try re-authorising the account.`;
         code = 535;
       } else if (res.status === 401 || res.status === 403) {
-        msg = `Gmail authentication failed (${res.status}). Re-authorise the account in Email Accounts.`;
+        msg = `Gmail authentication failed (${res.status}): ${apiMsg}. Re-authorise the account in Email Accounts.`;
         code = 535;
       } else {
         msg = `Gmail API ${res.status}: ${apiMsg}`;
