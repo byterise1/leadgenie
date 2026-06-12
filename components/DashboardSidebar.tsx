@@ -59,6 +59,8 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   const [user, setUser] = useState<User | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [creditsUsed, setCreditsUsed] = useState(0);
+  const FREE_CREDITS = 100;
 
   useEffect(() => {
     const supabase = createClient();
@@ -73,16 +75,19 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
     const fetchUnread = () => {
       fetch('/api/inbox?status=All')
         .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setUnreadCount(data.filter((t: any) => !t.read).length);
-          }
-        })
+        .then(data => { if (Array.isArray(data)) setUnreadCount(data.filter((t: any) => !t.read).length); })
         .catch(() => {});
     };
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/dashboard/stats')
+      .then(r => r.json())
+      .then(d => { if (!d.error && typeof d.totalSent === 'number') setCreditsUsed(d.totalSent); })
+      .catch(() => {});
   }, []);
 
   const signOut = async () => {
@@ -143,8 +148,15 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
           ))}
 
           <div className="mt-6 mx-1 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 text-white">
-            <p className="text-xs font-bold mb-1">Free Plan</p>
-            <p className="text-[11px] text-blue-200 mb-3">Upgrade for unlimited campaigns & accounts</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-bold">Free Plan</p>
+              <span className="text-[10px] font-bold text-blue-200">{Math.max(0, FREE_CREDITS - creditsUsed)} left</span>
+            </div>
+            <div className="w-full h-1.5 bg-blue-800/50 rounded-full mb-1.5 overflow-hidden">
+              <div className="h-full bg-white/80 rounded-full transition-all"
+                style={{ width: `${Math.min(100, Math.round((creditsUsed / FREE_CREDITS) * 100))}%` }}/>
+            </div>
+            <p className="text-[10px] text-blue-200 mb-3">{creditsUsed} / {FREE_CREDITS} email credits used</p>
             <Link href="/pricing" className="block text-center text-[11px] font-bold bg-white text-blue-700 rounded-lg py-1.5 hover:bg-blue-50 transition-colors">
               Upgrade →
             </Link>

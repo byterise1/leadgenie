@@ -224,6 +224,8 @@ export default function EmailAccountsPage() {
   const [addError, setAddError] = useState('');
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
   const [limitDraft, setLimitDraft] = useState('');
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
 
   const fetchAccounts = useCallback(() => {
     fetch('/api/email-accounts')
@@ -431,9 +433,24 @@ export default function EmailAccountsPage() {
                   <a href="/api/email-accounts/oauth/google"
                     title="OAuth token revoked — click to re-authorise"
                     className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 hover:bg-red-100 transition-colors whitespace-nowrap">
-                    Re-authorise
+                    Re-auth
                   </a>
                 )}
+                <button
+                  disabled={testingId === acc.id}
+                  onClick={async () => {
+                    setTestingId(acc.id);
+                    setTestResult(r => ({ ...r, [acc.id]: { ok: false, msg: '' } }));
+                    const res = await fetch(`/api/email-accounts/${acc.id}/test`, { method: 'POST' });
+                    const d = await res.json();
+                    setTestResult(r => ({ ...r, [acc.id]: { ok: res.ok, msg: res.ok ? `Sent to ${d.sentTo}` : d.error } }));
+                    setTestingId(null);
+                    if (res.ok) fetchAccounts();
+                  }}
+                  title="Send a test email to verify this account works"
+                  className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50">
+                  {testingId === acc.id ? '…' : 'Test'}
+                </button>
                 <button onClick={async () => {
                   await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
                   setAccounts(p => p.filter(a => a.id !== acc.id));
@@ -442,6 +459,11 @@ export default function EmailAccountsPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
               </div>
+              {testResult[acc.id]?.msg && (
+                <div className={`col-span-full mt-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg ${testResult[acc.id].ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+                  {testResult[acc.id].ok ? '✓ ' : '✗ '}{testResult[acc.id].msg}
+                </div>
+              )}
             </div>
           ))}
         </div>

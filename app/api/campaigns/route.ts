@@ -33,8 +33,7 @@ export async function GET() {
     const { data: sentRows } = await supabaseAdmin
       .from('sent_emails')
       .select('campaign_id')
-      .in('campaign_id', campaignIds)
-      .eq('user_id', user.id);
+      .in('campaign_id', campaignIds);
     (sentRows || []).forEach((s: { campaign_id: string }) => {
       sentPerCampaign[s.campaign_id] = (sentPerCampaign[s.campaign_id] || 0) + 1;
     });

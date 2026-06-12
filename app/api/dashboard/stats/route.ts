@@ -7,12 +7,17 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [campaigns, sent, leads, inbox] = await Promise.all([
+  const [campaigns, leads, inbox] = await Promise.all([
     supabaseAdmin.from('campaigns').select('id,name,status,total_sent,total_opened,total_replied,created_at').eq('user_id', user.id),
-    supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,replied_at,bounced').eq('user_id', user.id),
     supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabaseAdmin.from('inbox_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false),
   ]);
+
+  // Filter sent_emails by campaign_id (never by user_id — that column may not exist or may be wrong)
+  const campaignIds = (campaigns.data || []).map(c => c.id);
+  const sent = campaignIds.length
+    ? await supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,replied_at,bounced').in('campaign_id', campaignIds)
+    : { data: [] };
 
   const activeCampaigns = campaigns.data?.filter(c => c.status === 'active').length ?? 0;
   const totalSent = sent.data?.length ?? 0;

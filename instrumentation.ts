@@ -86,6 +86,29 @@ export async function register() {
         return;
       }
 
+      // Credits check — 1 credit per sent email (100 free on free plan)
+      const FREE_CREDITS = 100;
+      const { data: userCampaigns } = await supabase.from('campaigns').select('id').eq('user_id', campaign.user_id);
+      const userCampaignIds = (userCampaigns || []).map((c: any) => c.id as string);
+      const { count: usedCredits } = userCampaignIds.length
+        ? await supabase.from('sent_emails').select('id', { count: 'exact', head: true }).in('campaign_id', userCampaignIds)
+        : { count: 0 };
+
+      if ((usedCredits ?? 0) >= FREE_CREDITS) {
+        console.log(`⛔ User ${campaign.user_id} out of credits (${usedCredits}/${FREE_CREDITS})`);
+        const { data: existingCreditNotif } = await supabase
+          .from('notifications').select('id').eq('user_id', campaign.user_id)
+          .ilike('message', '%free email credits%').limit(1).maybeSingle();
+        if (!existingCreditNotif) {
+          await supabase.from('notifications').insert({
+            user_id: campaign.user_id,
+            message: `You've used all ${FREE_CREDITS} free email credits. Upgrade your plan to continue sending.`,
+            type: 'warning',
+          });
+        }
+        return;
+      }
+
       const lead = cl.lead;
       const subject = replaceVars(step.subject, lead);
       const rawBody = replaceVars(step.body, lead);
