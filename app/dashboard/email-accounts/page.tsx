@@ -262,6 +262,8 @@ export default function EmailAccountsPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  useEffect(() => { setAddError(''); }, [step]);
+
   const addAccount = async (type: Account['type'], email: string, extra?: Record<string, string>) => {
     setAddError('');
     const res = await fetch('/api/email-accounts', {

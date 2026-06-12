@@ -51,22 +51,26 @@ export async function POST(req: NextRequest) {
   // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
-  // If already in DB, return the existing row (don't error — just show it)
+  // Block duplicate emails regardless of type (unique constraint is on user_id + email)
   const { data: dup } = await supabaseAdmin
     .from('email_accounts')
-    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
+    .select('id,type')
     .eq('user_id', user.id)
     .eq('email', email)
-    .eq('type', type)
     .maybeSingle();
 
   if (dup) {
-    const todayUTC = new Date(); todayUTC.setUTCHours(0, 0, 0, 0);
-    const { count } = await supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true })
-      .eq('account_id', dup.id).gte('sent_at', todayUTC.toISOString());
-    const sentReal = count || 0;
-    const limit = dup.daily_limit || 50;
-    return NextResponse.json({ ...dup, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal), _already_existed: true });
+    const typeLabel: Record<string, string> = {
+      'gmail-oauth': 'Gmail (OAuth)',
+      'gmail-app': 'Gmail (App Password)',
+      'imap': 'IMAP',
+      'smtp': 'SMTP',
+    };
+    const existing = typeLabel[dup.type] ?? dup.type;
+    return NextResponse.json(
+      { error: `${email} is already connected as ${existing}. Remove it first before adding it again.` },
+      { status: 409 }
+    );
   }
 
   // Free plan: 5/day limit — update when pricing is set up
