@@ -106,6 +106,10 @@ export default function NewCampaignPage() {
 
   const timeWindowValid = instantStart || fromTime < toTime;
 
+  // Lead list count — needed by capacity helpers below
+  const selectedListData = leadLists.find(l => l.id === selectedListId);
+  const listLeadCount = selectedListData?.count || 0;
+
   const parsedMinDelay = Math.max(1, parseInt(minDelayStr) || 1);
   const parsedMaxDelay = Math.max(parsedMinDelay + 1, parseInt(maxDelayStr) || 5);
   const delayOrderValid = (parseInt(minDelayStr) || 1) < (parseInt(maxDelayStr) || 5);
@@ -200,8 +204,6 @@ export default function NewCampaignPage() {
   const activeAccountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
   const selectedAccountData = realAccounts.filter(a => activeAccountIds.includes(a.id));
   const totalRemainingToday = selectedAccountData.reduce((sum, a) => sum + (a.remaining_today ?? a.daily_limit ?? 50), 0);
-  const selectedListData = leadLists.find(l => l.id === selectedListId);
-  const listLeadCount = selectedListData?.count || 0;
 
   return (
     <main className="flex-1 p-6 flex flex-col items-center">
