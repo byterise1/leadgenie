@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
     const { Worker } = await import('bullmq');
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const { createTransportAsync, replaceVars } = await import('./lib/mailer');
+    const { sendEmail, replaceVars } = await import('./lib/mailer');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -140,26 +140,8 @@ export async function register() {
         l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${l}</p>` : ''
       ).join('');
 
-      let transport;
       try {
-        transport = await createTransportAsync(account);
-      } catch (authErr: any) {
-        if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
-        if (account.type === 'gmail-oauth') {
-          await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
-          await supabase.from('notifications').insert({
-            user_id: campaign.user_id,
-            message: `Gmail account ${account.email} needs to be re-authorised — token refresh failed. Go to Email Accounts to reconnect.`,
-            type: 'error',
-          });
-          console.error(`🔐 OAuth token refresh failed for ${account.email} — marked as error, skipping job`);
-          return;
-        }
-        throw authErr;
-      }
-
-      try {
-        await transport.sendMail({
+        await sendEmail(account, {
           from: account.email,
           to: lead.email,
           subject,
@@ -167,21 +149,35 @@ export async function register() {
           html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
         });
       } catch (err: any) {
-        // Clean up the pending sent_email record (email was never delivered)
-        if (sentEmail?.id) {
-          await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
+        if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
+
+        const code = err.responseCode as number | undefined;
+
+        // Auth failure (535 = SMTP auth failed, 401 = Gmail API unauthorized)
+        if (code === 535 || code === 401 || err.code === 'EAUTH') {
+          if (account.type === 'gmail-oauth') {
+            await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
+            await supabase.from('notifications').insert({
+              user_id: campaign.user_id,
+              message: `Gmail account ${account.email} needs to be re-authorised. Go to Email Accounts to reconnect.`,
+              type: 'error',
+            });
+            console.error(`🔐 Auth failure for ${account.email} — marked as error`);
+            return;
+          }
         }
-        // Permanent delivery failure (5xx) → mark as bounced so we don't retry forever
-        const code = err.responseCode;
+
+        // Hard bounce (5xx delivery failure) — don't retry
         if (typeof code === 'number' && code >= 550) {
           await Promise.all([
             supabase.from('leads').update({ status: 'bounced' }).eq('id', lead.id),
             supabase.from('campaign_leads').update({ status: 'bounced' }).eq('id', campaignLeadId),
           ]);
-          console.log(`⛔ Bounced: ${lead.email} (SMTP ${code})`);
-          return; // Don't rethrow — no point retrying a hard bounce
+          console.log(`⛔ Bounced: ${lead.email} (${code})`);
+          return;
         }
-        throw err; // Transient error → let BullMQ retry
+
+        throw err; // Transient error → BullMQ retries
       }
 
       const nextStep = stepNumber + 1;

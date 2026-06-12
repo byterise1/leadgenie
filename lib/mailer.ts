@@ -1,9 +1,7 @@
 import nodemailer from 'nodemailer';
 import dns from 'dns';
 
-// Node.js 18 changed default DNS order to prefer IPv6 (verbatim).
-// Railway does not support IPv6 outbound — smtp.gmail.com resolves to an IPv6
-// address and the connection fails with ENETUNREACH. Force IPv4 first globally.
+// Node.js 18+ defaults to verbatim IPv6-first DNS. Railway has no IPv6 outbound.
 dns.setDefaultResultOrder('ipv4first');
 
 export type EmailAccount = {
@@ -16,14 +14,21 @@ export type EmailAccount = {
   smtp_pass?: string | null;
 };
 
-// In-memory cache: accountId → { token, expiresAt }
-// Refreshed automatically when token is within 5 minutes of expiry.
-// Cache survives for the lifetime of the Railway process (days/weeks).
+type SendOptions = {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
+
+// ─── Token cache ──────────────────────────────────────────────────────────────
+
 const _tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 async function fetchAccessToken(refreshToken: string): Promise<{ token: string; expiresIn: number }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000); // 12s timeout
+  const timer = setTimeout(() => controller.abort(), 12000);
   try {
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -46,48 +51,80 @@ async function fetchAccessToken(refreshToken: string): Promise<{ token: string; 
   }
 }
 
-async function getAccessToken(account: EmailAccount): Promise<string> {
-  // Include first 20 chars of refresh token in key: auto-invalidates cache when user reconnects
+export async function getAccessToken(account: EmailAccount): Promise<string> {
+  // Include first 20 chars of refresh token so cache auto-invalidates on reconnect
   const cacheKey = `${account.id || account.email}:${(account.smtp_pass || '').slice(0, 20)}`;
   const cached = _tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) {
-    return cached.token;
-  }
+  if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) return cached.token;
   const { token, expiresIn } = await fetchAccessToken(account.smtp_pass!);
   _tokenCache.set(cacheKey, { token, expiresAt: Date.now() + expiresIn * 1000 });
   return token;
 }
 
-// Use this for gmail-oauth — async, handles token refresh automatically.
-// Non-OAuth accounts can use the sync createTransport below.
-export async function createTransportAsync(account: EmailAccount) {
-  if (account.type === 'gmail-oauth') {
-    const accessToken = await getAccessToken(account);
-    // Pass ONLY accessToken — no refresh credentials.
-    // We manage token refresh ourselves (getAccessToken above).
-    // Passing refreshToken+clientId to nodemailer causes it to treat the token
-    // as expired (no `expires` field set) and run its own refresh loop, which
-    // creates a second independent refresh cycle and causes intermittent auth failures.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,        // 587+STARTTLS works on Railway; 465 resolves to IPv6 which Railway can't reach
-      secure: false,
-      family: 4,        // Force IPv4 — Railway does not support IPv6 outbound
-      connectionTimeout: 20000,
-      greetingTimeout: 15000,
-      socketTimeout: 30000,
-      auth: {
-        type: 'OAuth2',
-        user: account.smtp_user || account.email,
-        accessToken,
+// ─── Gmail REST API sender (bypasses SMTP entirely) ───────────────────────────
+// Railway runs on GCP; Google blocks GCP→smtp.gmail.com to prevent spam.
+// The Gmail REST API uses HTTPS (port 443) which is never blocked.
+
+async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<void> {
+  const accessToken = await getAccessToken(account);
+
+  const boundary = `----=_Part_${Date.now()}`;
+  const subjectEncoded = `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`;
+  const raw = [
+    `From: ${opts.from}`,
+    `To: ${opts.to}`,
+    `Subject: ${subjectEncoded}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/plain; charset=UTF-8`,
+    ``,
+    opts.text,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    ``,
+    opts.html,
+    ``,
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const encoded = Buffer.from(raw)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/send', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
-    } as any);
+      body: JSON.stringify({ raw: encoded }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const msg = (body as any)?.error?.message || res.statusText;
+      // Map HTTP status to SMTP-like responseCode so the worker can detect auth errors
+      const code = res.status === 401 ? 535 : res.status >= 400 && res.status < 500 ? 550 : res.status;
+      const err = new Error(`Gmail API ${res.status}: ${msg}`);
+      (err as any).responseCode = code;
+      throw err;
+    }
+  } finally {
+    clearTimeout(timer);
   }
-  return createTransport(account);
 }
 
-export function createTransport(account: EmailAccount) {
+// ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
+
+function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
@@ -113,6 +150,35 @@ export function createTransport(account: EmailAccount) {
     auth: { user: account.smtp_user!, pass: account.smtp_pass! },
   } as any);
 }
+
+// ─── Unified send (used by worker and test route) ─────────────────────────────
+
+export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<void> {
+  if (account.type === 'gmail-oauth') {
+    // Use Gmail REST API — SMTP is blocked on Railway/GCP for Gmail
+    await sendViaGmailApi(account, opts);
+    return;
+  }
+  const transport = createSmtpTransport(account);
+  await transport.sendMail(opts);
+}
+
+// ─── Legacy exports kept for backward compat ─────────────────────────────────
+
+export async function createTransportAsync(account: EmailAccount) {
+  if (account.type === 'gmail-oauth') {
+    // For gmail-oauth the caller should use sendEmail() instead.
+    // This shim returns a fake transport so old call sites still work.
+    return {
+      sendMail: async (opts: any) => sendViaGmailApi(account, { from: opts.from, to: opts.to, subject: opts.subject, text: opts.text || '', html: opts.html || '' }),
+    };
+  }
+  return createSmtpTransport(account);
+}
+
+export { createSmtpTransport as createTransport };
+
+// ─── Template variable replacement ────────────────────────────────────────────
 
 export function replaceVars(text: string, lead: Record<string, string | null>): string {
   return text

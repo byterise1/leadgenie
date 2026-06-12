@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createTransportAsync } from '@/lib/mailer';
+import { sendEmail } from '@/lib/mailer';
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -20,8 +20,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
   try {
-    const transport = await createTransportAsync(account);
-    await transport.sendMail({
+    await sendEmail(account, {
       from: account.email,
       to: user.email!,
       subject: 'LeadGenie — Test Email',
