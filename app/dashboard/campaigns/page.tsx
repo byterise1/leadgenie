@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 const tabs = ['All', 'Active', 'Paused', 'Completed', 'Draft'];
 
@@ -29,12 +30,14 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
-    fetch('/api/campaigns')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setCampaigns(data); })
-      .finally(() => setLoading(false));
+    const fetchCampaigns = () =>
+      fetch('/api/campaigns').then(r => r.json()).then(data => { if (Array.isArray(data)) setCampaigns(data); }).finally(() => setLoading(false));
+    fetchCampaigns();
+    const id = setInterval(fetchCampaigns, 10000);
+    return () => clearInterval(id);
   }, []);
 
   const filtered = tab === 'All' ? campaigns : campaigns.filter(c => c.status === tab.toLowerCase());
@@ -51,13 +54,19 @@ export default function CampaignsPage() {
     if (res.ok) setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: next } : x));
   };
 
-  const deleteCampaign = async (e: React.MouseEvent, c: Campaign) => {
+  const deleteCampaign = (e: React.MouseEvent, c: Campaign) => {
     e.preventDefault();
-    if (!confirm(`Delete "${c.name}"? This cannot be undone.`)) return;
-    setDeletingId(c.id);
-    const res = await fetch(`/api/campaigns/${c.id}`, { method: 'DELETE' });
-    if (res.ok) setCampaigns(prev => prev.filter(x => x.id !== c.id));
-    setDeletingId(null);
+    setConfirmModal({
+      title: 'Delete campaign?',
+      message: `"${c.name}" and all its data will be permanently removed. This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setDeletingId(c.id);
+        const res = await fetch(`/api/campaigns/${c.id}`, { method: 'DELETE' });
+        if (res.ok) setCampaigns(prev => prev.filter(x => x.id !== c.id));
+        setDeletingId(null);
+      },
+    });
   };
 
   return (
@@ -166,6 +175,14 @@ export default function CampaignsPage() {
           </table>
         </div>
       </div>
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
     </main>
   );
 }

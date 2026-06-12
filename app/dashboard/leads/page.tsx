@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 type Lead = {
   id: string;
@@ -59,6 +60,7 @@ export default function LeadsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAddToList, setShowAddToList] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   // List picker modal — shown before Add Lead or Import when no list is selected
   const [showPicker, setShowPicker] = useState(false);
@@ -244,24 +246,37 @@ export default function LeadsPage() {
     setSaving(false);
   };
 
-  const handleDeleteLead = async (leadId: string) => {
-    if (!confirm('Delete this lead? This cannot be undone.')) return;
-    await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
-    setLeads(p => p.filter(l => l.id !== leadId));
-    setSelected(p => { const n = new Set(p); n.delete(leadId); return n; });
-    setTotalCount(c => Math.max(0, c - 1));
-    fetchLists();
+  const handleDeleteLead = (leadId: string) => {
+    setConfirmModal({
+      title: 'Delete lead?',
+      message: 'This lead will be permanently removed. This cannot be undone.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
+        setLeads(p => p.filter(l => l.id !== leadId));
+        setSelected(p => { const n = new Set(p); n.delete(leadId); return n; });
+        setTotalCount(c => Math.max(0, c - 1));
+        fetchLists();
+      },
+    });
   };
 
-  const handleBulkDelete = async () => {
-    if (!selected.size || !confirm(`Delete ${selected.size} lead${selected.size !== 1 ? 's' : ''}? Cannot be undone.`)) return;
-    setDeleting(true);
-    await Promise.all([...selected].map(id => fetch(`/api/leads/${id}`, { method: 'DELETE' })));
-    setLeads(p => p.filter(l => !selected.has(l.id)));
-    setTotalCount(c => Math.max(0, c - selected.size));
-    setSelected(new Set());
-    setDeleting(false);
-    fetchLists();
+  const handleBulkDelete = () => {
+    if (!selected.size) return;
+    setConfirmModal({
+      title: `Delete ${selected.size} lead${selected.size !== 1 ? 's' : ''}?`,
+      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be permanently removed. This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setDeleting(true);
+        await Promise.all([...selected].map(id => fetch(`/api/leads/${id}`, { method: 'DELETE' })));
+        setLeads(p => p.filter(l => !selected.has(l.id)));
+        setTotalCount(c => Math.max(0, c - selected.size));
+        setSelected(new Set());
+        setDeleting(false);
+        fetchLists();
+      },
+    });
   };
 
   const handleAddToList = async (listId: string) => {
@@ -672,6 +687,15 @@ export default function LeadsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </main>
   );

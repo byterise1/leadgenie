@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import ConfirmModal from '@/components/ConfirmModal';
 
 type EmailStep = {
   id: string;
@@ -71,18 +72,24 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [editName, setEditName] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [msg, setMsg] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/campaigns/${id}`).then(r => r.json()),
-      fetch(`/api/campaigns/${id}/leads`).then(r => r.json()).catch(() => []),
-    ]).then(([c, l]) => {
-      if (c && !c.error) {
-        setCampaign(c);
-        setEditName(c.name);
-      }
-      if (Array.isArray(l)) setLeads(l);
-    }).finally(() => setLoading(false));
+    const fetchAll = (initial = false) =>
+      Promise.all([
+        fetch(`/api/campaigns/${id}`).then(r => r.json()),
+        fetch(`/api/campaigns/${id}/leads`).then(r => r.json()).catch(() => []),
+      ]).then(([c, l]) => {
+        if (c && !c.error) {
+          setCampaign(c);
+          if (initial) setEditName(c.name);
+        }
+        if (Array.isArray(l)) setLeads(l);
+      }).finally(() => { if (initial) setLoading(false); });
+
+    fetchAll(true);
+    const pollId = setInterval(() => fetchAll(false), 10000);
+    return () => clearInterval(pollId);
   }, [id]);
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 4000); };
@@ -110,12 +117,18 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     setEditingName(false);
   };
 
-  const deleteCampaign = async () => {
-    if (!confirm(`Delete "${campaign?.name}"? This cannot be undone.`)) return;
-    setDeleting(true);
-    const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
-    if (res.ok) router.push('/dashboard/campaigns');
-    else { showMsg('Delete failed'); setDeleting(false); }
+  const deleteCampaign = () => {
+    setConfirmModal({
+      title: 'Delete campaign?',
+      message: `"${campaign?.name}" and all its data will be permanently removed. This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setDeleting(true);
+        const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+        if (res.ok) router.push('/dashboard/campaigns');
+        else { showMsg('Delete failed'); setDeleting(false); }
+      },
+    });
   };
 
   if (loading) return (
@@ -308,6 +321,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             </table>
           </div>
         </div>
+      )}
+
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </main>
   );
