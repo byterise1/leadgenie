@@ -9,7 +9,7 @@ export async function GET() {
 
   const [campaigns, sent, leads, inbox] = await Promise.all([
     supabaseAdmin.from('campaigns').select('id,name,status,total_sent,total_opened,total_replied,created_at').eq('user_id', user.id),
-    supabaseAdmin.from('sent_emails').select('id,opened_at,replied_at,bounced').eq('user_id', user.id),
+    supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,replied_at,bounced').eq('user_id', user.id),
     supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabaseAdmin.from('inbox_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false),
   ]);
@@ -23,16 +23,30 @@ export async function GET() {
   const replyRate = totalSent > 0 ? ((totalReplied / totalSent) * 100).toFixed(1) + '%' : '—';
   const bounceRate = totalSent > 0 ? ((totalBounced / totalSent) * 100).toFixed(1) + '%' : '—';
 
-  const campaignBreakdown = (campaigns.data || []).map(c => ({
-    id: c.id,
-    name: c.name,
-    status: c.status,
-    sent: c.total_sent,
-    opened: c.total_opened,
-    replied: c.total_replied,
-    open_rate: c.total_sent > 0 ? ((c.total_opened / c.total_sent) * 100).toFixed(1) + '%' : '—',
-    reply_rate: c.total_sent > 0 ? ((c.total_replied / c.total_sent) * 100).toFixed(1) + '%' : '—',
-  }));
+  // Real per-campaign counts from sent_emails (avoids stale total_sent column)
+  const bycamp: Record<string, { sent: number; opened: number; replied: number }> = {};
+  (sent.data || []).forEach((e: { campaign_id: string; opened_at: string | null; replied_at: string | null }) => {
+    if (!e.campaign_id) return;
+    const r = bycamp[e.campaign_id] || { sent: 0, opened: 0, replied: 0 };
+    r.sent++;
+    if (e.opened_at) r.opened++;
+    if (e.replied_at) r.replied++;
+    bycamp[e.campaign_id] = r;
+  });
+
+  const campaignBreakdown = (campaigns.data || []).map(c => {
+    const r = bycamp[c.id] || { sent: 0, opened: 0, replied: 0 };
+    return {
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      sent: r.sent,
+      opened: r.opened,
+      replied: r.replied,
+      open_rate: r.sent > 0 ? ((r.opened / r.sent) * 100).toFixed(1) + '%' : '—',
+      reply_rate: r.sent > 0 ? ((r.replied / r.sent) * 100).toFixed(1) + '%' : '—',
+    };
+  });
 
   return NextResponse.json({
     activeCampaigns,

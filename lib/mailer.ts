@@ -34,9 +34,9 @@ async function fetchAccessToken(refreshToken: string): Promise<{ token: string; 
 }
 
 async function getAccessToken(account: EmailAccount): Promise<string> {
-  const cacheKey = account.id || account.email;
+  // Include first 20 chars of refresh token in key: auto-invalidates cache when user reconnects
+  const cacheKey = `${account.id || account.email}:${(account.smtp_pass || '').slice(0, 20)}`;
   const cached = _tokenCache.get(cacheKey);
-  // Use cached token if it has more than 5 minutes left
   if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) {
     return cached.token;
   }
@@ -50,6 +50,11 @@ async function getAccessToken(account: EmailAccount): Promise<string> {
 export async function createTransportAsync(account: EmailAccount) {
   if (account.type === 'gmail-oauth') {
     const accessToken = await getAccessToken(account);
+    // Pass ONLY accessToken — no refresh credentials.
+    // We manage token refresh ourselves (getAccessToken above).
+    // Passing refreshToken+clientId to nodemailer causes it to treat the token
+    // as expired (no `expires` field set) and run its own refresh loop, which
+    // creates a second independent refresh cycle and causes intermittent auth failures.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -58,10 +63,7 @@ export async function createTransportAsync(account: EmailAccount) {
       auth: {
         type: 'OAuth2',
         user: account.smtp_user || account.email,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         accessToken,
-        refreshToken: account.smtp_pass,
       },
     } as any);
   }

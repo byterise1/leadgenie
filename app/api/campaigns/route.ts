@@ -26,9 +26,24 @@ export async function GET() {
     (lists || []).forEach((l: { id: string; name: string }) => { listMap[l.id] = { name: l.name }; });
   }
 
-  const enriched = (data || []).map(c => ({
+  // Real sent count per campaign from sent_emails (overrides stale total_sent column)
+  const campaignIds = (data || []).map((c: { id: string }) => c.id);
+  const sentPerCampaign: Record<string, number> = {};
+  if (campaignIds.length) {
+    const { data: sentRows } = await supabaseAdmin
+      .from('sent_emails')
+      .select('campaign_id')
+      .in('campaign_id', campaignIds)
+      .eq('user_id', user.id);
+    (sentRows || []).forEach((s: { campaign_id: string }) => {
+      sentPerCampaign[s.campaign_id] = (sentPerCampaign[s.campaign_id] || 0) + 1;
+    });
+  }
+
+  const enriched = (data || []).map((c: Record<string, unknown>) => ({
     ...c,
-    list_name: c.list_id ? (listMap[c.list_id]?.name ?? null) : null,
+    list_name: (c.list_id as string) ? (listMap[c.list_id as string]?.name ?? null) : null,
+    total_sent: sentPerCampaign[c.id as string] ?? c.total_sent ?? 0,
   }));
 
   return NextResponse.json(enriched);
