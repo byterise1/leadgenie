@@ -53,6 +53,21 @@ export async function POST(_req: NextRequest) {
 
     if (!sentEmails?.length) continue;
 
+    // System/bounce senders that should never count as replies
+    const SYSTEM_SENDER_PATTERNS = [
+      'mailer-daemon', 'postmaster', 'noreply', 'no-reply',
+      'bounce', 'delivery', 'auto-reply', 'autoreply',
+      'do-not-reply', 'donotreply', 'notifications@', 'notification@',
+    ];
+
+    function cleanSnippet(raw: string): string {
+      return raw
+        .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        .slice(0, 300);
+    }
+
     for (const sentEmail of sentEmails) {
       try {
         const thread = await gmailFetch(
@@ -62,10 +77,15 @@ export async function POST(_req: NextRequest) {
 
         if (!thread?.messages || thread.messages.length <= 1) continue;
 
-        // Find a message NOT from our sending account (i.e. a reply)
-        const reply = thread.messages.find((m: any) => {
-          const from = getHeader(m.payload?.headers, 'From');
-          return !from.toLowerCase().includes(account.email.toLowerCase());
+        // Skip message[0] (our sent email) — only look at subsequent messages for replies
+        const replyMessages = thread.messages.slice(1);
+
+        // Find a reply: must be from someone other than us and not a system/bounce sender
+        const reply = replyMessages.find((m: any) => {
+          const from = getHeader(m.payload?.headers, 'From').toLowerCase();
+          if (from.includes(account.email.toLowerCase())) return false;
+          if (SYSTEM_SENDER_PATTERNS.some(p => from.includes(p))) return false;
+          return true;
         });
 
         if (!reply) continue;
@@ -73,6 +93,13 @@ export async function POST(_req: NextRequest) {
         const fromHeader = getHeader(reply.payload?.headers, 'From');
         const dateHeader = getHeader(reply.payload?.headers, 'Date');
         const subjectHeader = getHeader(reply.payload?.headers, 'Subject') || sentEmail.subject;
+
+        // Require reply date to be strictly AFTER the sent email (guards against same-timestamp duplicates)
+        if (dateHeader) {
+          const sentTime = new Date(getHeader(thread.messages[0].payload?.headers, 'Date')).getTime();
+          const replyTime = new Date(dateHeader).getTime();
+          if (replyTime <= sentTime) continue;
+        }
 
         // Parse "Name <email>" or bare email
         const match = fromHeader.match(/^(.+?)\s*<(.+?)>$/);
@@ -96,7 +123,7 @@ export async function POST(_req: NextRequest) {
             lead_id: sentEmail.lead_id,
             account_id: account.id,
             subject: subjectHeader,
-            last_message: reply.snippet || '',
+            last_message: cleanSnippet(reply.snippet || ''),
             from_email: fromEmail,
             from_name: fromName,
             status: 'new',

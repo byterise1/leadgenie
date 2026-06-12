@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('inbox_threads')
-    .select('*, lead:leads(first_name,last_name,email,company)')
+    .select('*, lead:leads(first_name,last_name,email,company), campaign:campaigns(id,name)')
     .eq('user_id', user.id)
     .order('received_at', { ascending: false })
     .limit(100);

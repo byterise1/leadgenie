@@ -19,6 +19,10 @@ type Thread = {
     email: string;
     company: string | null;
   };
+  campaign?: {
+    id: string;
+    name: string;
+  };
 };
 
 export default function InboxPage() {
@@ -162,6 +166,11 @@ export default function InboxPage() {
                 <p className="text-[10px] text-gray-400 shrink-0">{new Date(thread.received_at).toLocaleDateString()}</p>
               </div>
               <p className="text-xs text-gray-600 truncate">{thread.subject}</p>
+              {thread.campaign && (
+                <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 truncate max-w-full">
+                  {thread.campaign.name}
+                </span>
+              )}
               {thread.last_message && <p className="text-[10px] text-gray-400 truncate mt-0.5">{thread.last_message}</p>}
               {!thread.read && <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"/>}
             </button>
@@ -174,10 +183,16 @@ export default function InboxPage() {
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="text-base font-bold text-gray-900">{selected.subject}</h2>
             <p className="text-xs text-gray-400 mt-1">
-              From: {selected.lead?.email || selected.from_email}
+              From: {selected.from_email || selected.lead?.email}
+              {selected.from_name && selected.from_name !== selected.from_email ? ` (${selected.from_name})` : ''}
               {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
               {' · '}{new Date(selected.received_at).toLocaleString()}
             </p>
+            {selected.campaign && (
+              <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mt-1">
+                Campaign: {selected.campaign.name}
+              </span>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-6">
             <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
