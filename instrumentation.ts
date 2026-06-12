@@ -1,3 +1,48 @@
+const TZ_MAP: Record<string, string> = {
+  'UTC': 'UTC',
+  'US/Eastern (EST)': 'America/New_York',
+  'US/Pacific (PST)': 'America/Los_Angeles',
+  'Europe/London (GMT)': 'Europe/London',
+  'Asia/Karachi (PKT)': 'Asia/Karachi',
+  'Asia/Dubai (GST)': 'Asia/Dubai',
+};
+
+function parseMins(s: unknown): number {
+  if (!s) return 9 * 60;
+  const str = String(s);
+  const m24 = str.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+  const m12 = str.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (m12) {
+    let h = parseInt(m12[1]);
+    const mins = parseInt(m12[2]);
+    if (m12[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+    if (m12[3].toUpperCase() === 'AM' && h === 12) h = 0;
+    return h * 60 + mins;
+  }
+  return 9 * 60;
+}
+
+// Given a target fire time, snap it forward into the next open sending window
+function adjustToWindow(targetMs: number, campaign: any): number {
+  const zone = TZ_MAP[campaign.timezone] || 'UTC';
+  const fromMins = parseMins(campaign.from_hour);
+  const windowMins = Math.max(60, parseMins(campaign.to_hour) - fromMins);
+  const windowEndMins = fromMins + windowMins;
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone, hour: 'numeric', minute: 'numeric', hour12: false,
+  }).formatToParts(new Date(targetMs));
+  const localH = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0') % 24;
+  const localM = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0');
+  const localMinutes = localH * 60 + localM;
+
+  if (localMinutes >= fromMins && localMinutes < windowEndMins) return targetMs;
+  if (localMinutes < fromMins) return targetMs + (fromMins - localMinutes) * 60 * 1000;
+  const minsUntilNext = (24 * 60 - localMinutes) + fromMins;
+  return targetMs + minsUntilNext * 60 * 1000;
+}
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
     const { Worker } = await import('bullmq');
@@ -251,7 +296,10 @@ export async function register() {
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
         // TEST MODE: 1 unit = 1 minute. Revert to 24*60*60*1000 for production (days).
         const DELAY_UNIT_MS = 60 * 1000;
-        const delayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
+        const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
+        const targetFireMs = Date.now() + rawDelayMs;
+        const adjustedFireMs = adjustToWindow(targetFireMs, campaign);
+        const delayMs = Math.max(0, adjustedFireMs - Date.now());
         await emailQueue.add('send', { campaignLeadId, stepNumber: nextStep }, { delay: delayMs });
       }
 
