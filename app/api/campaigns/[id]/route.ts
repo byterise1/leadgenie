@@ -18,17 +18,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Real counts from sent_emails — filter only by campaign_id (not user_id which may not exist)
-  const [sentRes, openedRes] = await Promise.all([
+  // Real counts from sent_emails — filter only by campaign_id
+  const [sentRes, openedRes, repliedRes, clickedRes] = await Promise.all([
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id),
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('opened_at', 'is', null),
+    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('replied_at', 'is', null),
+    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('clicked_at', 'is', null),
   ]);
 
-  // Use real count only when query succeeded (no error). 0 is valid — don't ?? back to stale data.
   const totalSent = sentRes.error ? data.total_sent : (sentRes.count ?? 0);
   const totalOpened = openedRes.error ? data.total_opened : (openedRes.count ?? 0);
+  const totalReplied = repliedRes.error ? data.total_replied : (repliedRes.count ?? 0);
+  const totalClicked = clickedRes.error ? 0 : (clickedRes.count ?? 0);
 
-  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened });
+  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

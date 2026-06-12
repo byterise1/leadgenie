@@ -105,7 +105,7 @@ function httpsPost(
   });
 }
 
-async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<void> {
+async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string }> {
   const accessToken = await getAccessToken(account);
 
   const boundary = `----=_Part_${Date.now()}`;
@@ -154,6 +154,13 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     (err as any).responseCode = code;
     throw err;
   }
+
+  try {
+    const body = JSON.parse(result.body) as { id: string; threadId: string };
+    return { threadId: body.threadId };
+  } catch {
+    return {};
+  }
 }
 
 // ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
@@ -187,14 +194,13 @@ function createSmtpTransport(account: EmailAccount) {
 
 // ─── Unified send (used by worker and test route) ─────────────────────────────
 
-export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<void> {
+export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string }> {
   if (account.type === 'gmail-oauth') {
-    // Use Gmail REST API — SMTP is blocked on Railway/GCP for Gmail
-    await sendViaGmailApi(account, opts);
-    return;
+    return sendViaGmailApi(account, opts);
   }
   const transport = createSmtpTransport(account);
   await transport.sendMail(opts);
+  return {};
 }
 
 // ─── Legacy exports kept for backward compat ─────────────────────────────────

@@ -3,13 +3,41 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// Known email scanner/proxy user-agents — don't count these as real opens
+const BOT_PATTERNS = [
+  'googleimageproxy',
+  'yahoomailproxy',
+  'bingpreview',
+  'linkedinbot',
+  'twitterbot',
+  'facebookexternalhit',
+  'preview',
+  'scanner',
+  'crawler',
+  'spider',
+  'bot/',
+  'wget/',
+  'curl/',
+  'python-requests',
+  'postmanruntime',
+];
+
+function isBot(ua: string): boolean {
+  const lower = ua.toLowerCase();
+  return BOT_PATTERNS.some(p => lower.includes(p));
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await supabaseAdmin
-    .from('sent_emails')
-    .update({ opened_at: new Date().toISOString() })
-    .eq('id', id)
-    .is('opened_at', null);
+  const ua = req.headers.get('user-agent') || '';
+
+  if (!isBot(ua)) {
+    await supabaseAdmin
+      .from('sent_emails')
+      .update({ opened_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('opened_at', null);
+  }
 
   return new NextResponse(GIF, {
     headers: {

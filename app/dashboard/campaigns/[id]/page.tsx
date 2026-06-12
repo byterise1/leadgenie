@@ -35,6 +35,7 @@ type Campaign = {
   total_sent: number;
   total_opened: number;
   total_replied: number;
+  total_clicked: number;
   daily_limit: number;
   from_hour: string;
   to_hour: string;
@@ -146,6 +147,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
   const openRate = campaign.total_sent > 0 ? ((campaign.total_opened / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
   const replyRate = campaign.total_sent > 0 ? ((campaign.total_replied / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
+  const clickRate = campaign.total_sent > 0 ? (((campaign.total_clicked || 0) / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
 
   const leadCounts = leads.reduce((acc, l) => {
     acc[l.status] = (acc[l.status] || 0) + 1;
@@ -203,10 +205,11 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {[
           { label: 'Emails Sent', value: String(campaign.total_sent) },
           { label: 'Open Rate', value: openRate },
+          { label: 'Click Rate', value: clickRate },
           { label: 'Reply Rate', value: replyRate },
           { label: 'Leads', value: String(leads.length) },
         ].map(s => (

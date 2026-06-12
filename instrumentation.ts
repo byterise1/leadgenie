@@ -136,18 +136,32 @@ export async function register() {
         ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" style="display:none" alt="">`
         : '';
 
-      const htmlBody = body.split('\n').map((l: string) =>
-        l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${l}</p>` : ''
-      ).join('');
+      const clickBase = sentEmail?.id ? `${SITE_URL}/api/track/click/${sentEmail.id}` : null;
+      const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+      const htmlBody = body.split('\n').map((l: string) => {
+        if (!l.trim()) return '';
+        const line = l.replace(urlRegex, (url) => {
+          if (url.includes('/api/track/') || url.includes('/api/unsubscribe/') || !clickBase) {
+            return `<a href="${url}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
+          }
+          return `<a href="${clickBase}?url=${encodeURIComponent(url)}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
+        });
+        return `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${line}</p>`;
+      }).join('');
 
       try {
-        await sendEmail(account, {
+        const { threadId } = await sendEmail(account, {
           from: account.email,
           to: lead.email,
           subject,
           text: body,
           html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
         });
+
+        // Store Gmail threadId for reply detection
+        if (sentEmail?.id && threadId) {
+          await supabase.from('sent_emails').update({ message_id: threadId }).eq('id', sentEmail.id);
+        }
       } catch (err: any) {
         if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
 

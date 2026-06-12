@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const filters = ['All', 'Interested', 'Not Interested', 'Out of Office', 'Do Not Contact'];
 
@@ -8,6 +8,8 @@ type Thread = {
   id: string;
   subject: string;
   last_message: string;
+  from_email: string;
+  from_name: string;
   status: string;
   read: boolean;
   received_at: string;
@@ -23,15 +25,44 @@ export default function InboxPage() {
   const [filter, setFilter] = useState('All');
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
   const [selected, setSelected] = useState<Thread | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const fetchThreads = useCallback((showLoader = false) => {
+    if (showLoader) setLoading(true);
     fetch(`/api/inbox?status=${encodeURIComponent(filter)}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setThreads(data); })
-      .finally(() => setLoading(false));
+      .finally(() => { if (showLoader) setLoading(false); });
   }, [filter]);
+
+  const syncInbox = useCallback(async (silent = false) => {
+    setSyncing(true);
+    if (!silent) setSyncMsg('');
+    try {
+      const res = await fetch('/api/inbox/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!silent) {
+        setSyncMsg(data.synced > 0 ? `${data.synced} new repl${data.synced === 1 ? 'y' : 'ies'} found` : 'Up to date');
+        setTimeout(() => setSyncMsg(''), 4000);
+      }
+      if (data.synced > 0) fetchThreads();
+    } catch {
+      if (!silent) { setSyncMsg('Sync failed'); setTimeout(() => setSyncMsg(''), 3000); }
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchThreads]);
+
+  // Auto-sync on mount, then poll every 60s
+  useEffect(() => {
+    fetchThreads(true);
+    syncInbox(true);
+    const pollInbox = setInterval(() => fetchThreads(), 10000);
+    const pollSync = setInterval(() => syncInbox(true), 60000);
+    return () => { clearInterval(pollInbox); clearInterval(pollSync); };
+  }, [fetchThreads, syncInbox]);
 
   const selectThread = async (thread: Thread) => {
     setSelected(thread);
@@ -63,11 +94,25 @@ export default function InboxPage() {
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-base font-bold text-gray-900">Unibox</h1>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span><span className="font-bold text-gray-700">{threads.length}</span> received</span>
-              <span className="w-px h-3 bg-gray-200"/>
-              <span><span className="font-bold text-gray-700">{unread}</span> unread</span>
+            <div className="flex items-center gap-2">
+              {syncMsg && <span className="text-[10px] text-emerald-600 font-semibold">{syncMsg}</span>}
+              <button
+                onClick={() => syncInbox(false)}
+                disabled={syncing}
+                title="Sync Gmail replies"
+                className="flex items-center gap-1 text-[10px] font-bold text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-40"
+              >
+                <svg className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                {syncing ? 'Syncing…' : 'Sync'}
+              </button>
             </div>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+            <span><span className="font-bold text-gray-700">{threads.length}</span> received</span>
+            <span className="w-px h-3 bg-gray-200"/>
+            <span><span className="font-bold text-gray-700">{unread}</span> unread</span>
           </div>
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -96,7 +141,14 @@ export default function InboxPage() {
                 <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/></svg>
               </div>
               <p className="text-sm font-semibold text-gray-600 mb-1">No replies yet</p>
-              <p className="text-xs text-gray-400 leading-relaxed">Replies from your campaigns will appear here.</p>
+              <p className="text-xs text-gray-400 leading-relaxed">Replies from your campaigns will appear here automatically.</p>
+              <button
+                onClick={() => syncInbox(false)}
+                disabled={syncing}
+                className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-40"
+              >
+                {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
             </div>
           ) : threads.map(thread => (
             <button key={thread.id} onClick={() => selectThread(thread)}
@@ -105,7 +157,7 @@ export default function InboxPage() {
                 <p className={`text-sm truncate ${!thread.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
                   {thread.lead
                     ? [thread.lead.first_name, thread.lead.last_name].filter(Boolean).join(' ') || thread.lead.email
-                    : '—'}
+                    : thread.from_name || thread.from_email || '—'}
                 </p>
                 <p className="text-[10px] text-gray-400 shrink-0">{new Date(thread.received_at).toLocaleDateString()}</p>
               </div>
@@ -122,7 +174,7 @@ export default function InboxPage() {
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="text-base font-bold text-gray-900">{selected.subject}</h2>
             <p className="text-xs text-gray-400 mt-1">
-              From: {selected.lead?.email}
+              From: {selected.lead?.email || selected.from_email}
               {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
               {' · '}{new Date(selected.received_at).toLocaleString()}
             </p>
