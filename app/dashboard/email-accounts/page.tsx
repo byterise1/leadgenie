@@ -545,7 +545,7 @@ export default function EmailAccountsPage() {
                   <p className="text-xs text-gray-400 mb-6">We only request permission to send email on your behalf.</p>
                   <div className="flex gap-2">
                     <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-                    <a href="/api/email-accounts/oauth/google"
+                    <a href="/api/email-accounts/oauth/google" target="_blank" rel="noopener noreferrer"
                       className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors text-center">
                       Connect with Google
                     </a>

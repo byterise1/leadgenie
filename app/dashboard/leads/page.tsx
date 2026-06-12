@@ -287,12 +287,20 @@ export default function LeadsPage() {
     fetchLists();
   };
 
-  const handleRemoveFromList = async () => {
+  const handleRemoveFromList = () => {
     if (!selectedList || !selected.size) return;
-    await fetch(`/api/lead-lists/${selectedList}/members`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_ids: [...selected] }) });
-    setLeads(p => p.filter(l => !selected.has(l.id)));
-    setSelected(new Set());
-    fetchLists();
+    const list = lists.find(l => l.id === selectedList);
+    setConfirmModal({
+      title: `Remove ${selected.size} lead${selected.size !== 1 ? 's' : ''} from list?`,
+      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be removed from "${list?.name ?? 'this list'}". The leads themselves won't be deleted.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await fetch(`/api/lead-lists/${selectedList}/members`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_ids: [...selected] }) });
+        setLeads(p => p.filter(l => !selected.has(l.id)));
+        setSelected(new Set());
+        fetchLists();
+      },
+    });
   };
 
   const createList = async () => {
@@ -302,11 +310,19 @@ export default function LeadsPage() {
     if (res.ok) { setLists(p => [...p, d]); setNewListName(''); setShowNewList(false); }
   };
 
-  const deleteList = async (id: string) => {
-    await fetch(`/api/lead-lists/${id}`, { method: 'DELETE' });
-    setLists(p => p.filter(l => l.id !== id));
-    if (selectedList === id) selectList(null);
+  const deleteList = (id: string) => {
+    const list = lists.find(l => l.id === id);
     setCtxMenu(null);
+    setConfirmModal({
+      title: 'Delete list?',
+      message: `"${list?.name ?? 'This list'}" will be permanently deleted. Leads inside it won't be deleted — just removed from this list.`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await fetch(`/api/lead-lists/${id}`, { method: 'DELETE' });
+        setLists(p => p.filter(l => l.id !== id));
+        if (selectedList === id) selectList(null);
+      },
+    });
   };
 
   const saveRename = async () => {
