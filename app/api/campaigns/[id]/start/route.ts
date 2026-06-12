@@ -51,6 +51,23 @@ function getTzOffsetMs(ianaZone: string): number {
   return tzDate - now;
 }
 
+// 0=Monday … 6=Sunday (matches active_days array from UI)
+function getActiveDayIndex(ms: number, zone: string): number {
+  const dayName = new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(ms));
+  const map: Record<string, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+  return map[dayName] ?? 0;
+}
+
+// Advance ms forward until it lands on an active day
+function nextActiveDay(ms: number, activeDays: boolean[], zone: string): number {
+  let t = ms;
+  for (let i = 0; i < 7; i++) {
+    if (activeDays[getActiveDayIndex(t, zone)]) return t;
+    t += 24 * 60 * 60 * 1000;
+  }
+  return ms; // fallback: all days disabled, return as-is
+}
+
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -107,7 +124,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   // ── Sending window ──
   const fromMins = parseTimeToMinutes(campaign.from_hour || '08:00');
   const toMins = parseTimeToMinutes(campaign.to_hour || '18:00');
-  const windowMins = Math.max(60, toMins - fromMins);
+  const windowMins = Math.max(5, toMins - fromMins); // min 5-minute window as safety floor
   const windowMs = windowMins * 60 * 1000;
 
   const dailyLimit = Math.max(1, campaign.daily_limit || 50);
@@ -115,6 +132,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const maxDelayMs = Math.max(minDelayMs + 1000, (campaign.max_delay_secs || 300) * 1000);
 
   const ianaZone = TZ_MAP[campaign.timezone] || 'UTC';
+  const activeDays: boolean[] = Array.isArray(campaign.active_days)
+    ? campaign.active_days
+    : [true, true, true, true, true, false, false]; // Mon-Fri default
+
   const offsetMs = getTzOffsetMs(ianaZone);
   const nowUtc = Date.now();
 
@@ -126,17 +147,22 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate(), fromH, fromMin) - offsetMs;
   const todayWindowEndUtc = todayWindowStartUtc + windowMs;
 
-  // If we're past today's window, start from tomorrow
+  // If we're past today's window, start from tomorrow; then snap to next active day
   let dayWindowStartUtc: number;
   if (nowUtc < todayWindowStartUtc) {
-    dayWindowStartUtc = todayWindowStartUtc;
+    dayWindowStartUtc = nextActiveDay(todayWindowStartUtc, activeDays, ianaZone);
   } else if (nowUtc < todayWindowEndUtc) {
-    dayWindowStartUtc = nowUtc; // Start from now (mid-window)
+    // Mid-window — only use today if it's an active day, else tomorrow
+    if (activeDays[getActiveDayIndex(nowUtc, ianaZone)]) {
+      dayWindowStartUtc = nowUtc;
+    } else {
+      dayWindowStartUtc = nextActiveDay(todayWindowStartUtc + 24 * 60 * 60 * 1000, activeDays, ianaZone);
+    }
   } else {
-    dayWindowStartUtc = todayWindowStartUtc + 24 * 60 * 60 * 1000;
+    dayWindowStartUtc = nextActiveDay(todayWindowStartUtc + 24 * 60 * 60 * 1000, activeDays, ianaZone);
   }
 
-  // ── Schedule with random delays, respecting daily limit and window ──
+  // ── Schedule with random delays, respecting daily limit, window, and active days ──
   const numAccounts = campaign.campaign_accounts.length;
   let cursor = dayWindowStartUtc;
   let dayStart = dayWindowStartUtc;
@@ -144,9 +170,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   let emailsThisDay = 0;
 
   const jobs = campaignLeads.map((cl, i) => {
-    // Roll to next day if we've hit the limit or passed the window
+    // Roll to next active day if we've hit the limit or passed the window
     if (emailsThisDay >= dailyLimit || cursor >= dayEnd) {
-      dayStart += 24 * 60 * 60 * 1000;
+      const nextDay = nextActiveDay(dayStart + 24 * 60 * 60 * 1000, activeDays, ianaZone);
+      dayStart = nextDay;
       dayEnd = dayStart + windowMs;
       cursor = dayStart;
       emailsThisDay = 0;

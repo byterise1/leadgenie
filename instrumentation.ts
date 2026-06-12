@@ -23,24 +23,57 @@ function parseMins(s: unknown): number {
   return 9 * 60;
 }
 
-// Given a target fire time, snap it forward into the next open sending window
+function getLocalMinutes(ms: number, zone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone, hour: 'numeric', minute: 'numeric', hour12: false,
+  }).formatToParts(new Date(ms));
+  const h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0') % 24;
+  const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0');
+  return h * 60 + m;
+}
+
+function getLocalDayIdx(ms: number, zone: string): number {
+  // 0=Monday … 6=Sunday (matches active_days array)
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(ms));
+  const map: Record<string, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+  return map[day] ?? 0;
+}
+
+// Given a target fire time, snap it forward into the next open sending window on an active day
 function adjustToWindow(targetMs: number, campaign: any): number {
   const zone = TZ_MAP[campaign.timezone] || 'UTC';
   const fromMins = parseMins(campaign.from_hour);
-  const windowMins = Math.max(60, parseMins(campaign.to_hour) - fromMins);
+  const windowMins = Math.max(5, parseMins(campaign.to_hour) - fromMins);
   const windowEndMins = fromMins + windowMins;
+  const activeDays: boolean[] = Array.isArray(campaign.active_days)
+    ? campaign.active_days
+    : [true, true, true, true, true, false, false];
 
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: zone, hour: 'numeric', minute: 'numeric', hour12: false,
-  }).formatToParts(new Date(targetMs));
-  const localH = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0') % 24;
-  const localM = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0');
-  const localMinutes = localH * 60 + localM;
+  let t = targetMs;
+  for (let guard = 0; guard < 8; guard++) {
+    const localMins = getLocalMinutes(t, zone);
+    const dayActive = activeDays[getLocalDayIdx(t, zone)];
 
-  if (localMinutes >= fromMins && localMinutes < windowEndMins) return targetMs;
-  if (localMinutes < fromMins) return targetMs + (fromMins - localMinutes) * 60 * 1000;
-  const minsUntilNext = (24 * 60 - localMinutes) + fromMins;
-  return targetMs + minsUntilNext * 60 * 1000;
+    if (!dayActive) {
+      // Skip to next day's window start
+      const minsUntilNext = (24 * 60 - localMins) + fromMins;
+      t += minsUntilNext * 60 * 1000;
+      continue;
+    }
+    if (localMins < fromMins) {
+      // Before window today — push to window start
+      t += (fromMins - localMins) * 60 * 1000;
+      break;
+    }
+    if (localMins < windowEndMins) {
+      // Already inside window
+      break;
+    }
+    // Past window — push to next day's window start
+    const minsUntilNext = (24 * 60 - localMins) + fromMins;
+    t += minsUntilNext * 60 * 1000;
+  }
+  return t;
 }
 
 export async function register() {
