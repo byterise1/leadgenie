@@ -50,7 +50,7 @@ export async function register() {
         .from('sent_emails')
         .select('*', { count: 'exact', head: true })
         .eq('account_id', account.id)
-        .gte('created_at', todayUTC.toISOString());
+        .gte('sent_at', todayUTC.toISOString());
 
       const accountDailyLimit = account.daily_limit ?? 50;
       if ((sentTodayCount || 0) >= accountDailyLimit) {
@@ -153,7 +153,9 @@ export async function register() {
         status: hasNextStep ? 'active' : 'completed',
       }).eq('id', campaignLeadId);
 
-      await supabase.rpc('increment_campaign_sent', { campaign_id: campaign.id });
+      // Direct increment — avoids needing a separate DB function
+      const { data: campRow } = await supabase.from('campaigns').select('total_sent').eq('id', campaign.id).single();
+      await supabase.from('campaigns').update({ total_sent: (campRow?.total_sent || 0) + 1 }).eq('id', campaign.id);
 
       if (hasNextStep) {
         const { emailQueue } = await import('./lib/queue');

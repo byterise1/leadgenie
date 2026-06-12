@@ -58,13 +58,16 @@ export default function NewCampaignPage() {
   const [templatePickerIdx, setTemplatePickerIdx] = useState<number | null>(null);
 
   // Step 2
+  const [instantStart, setInstantStart] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [fromTime, setFromTime] = useState('08:00');
   const [toTime, setToTime] = useState('18:00');
   const [activeDays, setActiveDays] = useState([true, true, true, true, true, false, false]);
-  const [timezone, setTimezone] = useState('UTC');
+  const [timezone, setTimezone] = useState('Asia/Karachi (PKT)');
   const [minDelayStr, setMinDelayStr] = useState('1');
   const [maxDelayStr, setMaxDelayStr] = useState('5');
+
+  const timeWindowValid = instantStart || fromTime < toTime;
 
   useEffect(() => {
     fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
@@ -305,27 +308,47 @@ export default function NewCampaignPage() {
         {/* ── Step 2: Schedule ── */}
         {step === 2 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white transition"/>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Window</label>
-              <p className="text-xs text-gray-400 mb-2 -mt-1">Emails are only sent within this time range in the selected timezone.</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'From', val: fromTime, set: setFromTime },
-                  { label: 'To', val: toTime, set: setToTime },
-                ].map(f => (
-                  <div key={f.label}>
-                    <p className="text-xs text-gray-400 mb-1">{f.label}</p>
-                    <input type="time" value={f.val} onChange={e => f.set(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-                  </div>
-                ))}
+
+            {/* Instant Start toggle */}
+            <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${instantStart ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+              <div>
+                <p className="text-sm font-bold text-gray-900">Instant Start</p>
+                <p className="text-xs text-gray-400 mt-0.5">Send immediately — no scheduled window or date</p>
               </div>
+              <Toggle on={instantStart} onToggle={() => setInstantStart(v => !v)}/>
             </div>
+
+            {!instantStart && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white transition"/>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Window</label>
+                  <p className="text-xs text-gray-400 mb-2 -mt-1">Emails are only sent within this time range in the selected timezone.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: 'From', val: fromTime, set: setFromTime },
+                      { label: 'To', val: toTime, set: setToTime },
+                    ].map(f => (
+                      <div key={f.label}>
+                        <p className="text-xs text-gray-400 mb-1">{f.label}</p>
+                        <input type="time" value={f.val} onChange={e => f.set(e.target.value)}
+                          className={`w-full border rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition ${!timeWindowValid ? 'border-red-300 focus:ring-red-400' : 'border-gray-200'}`}/>
+                      </div>
+                    ))}
+                  </div>
+                  {!timeWindowValid && (
+                    <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                      "From" time must be earlier than "To" time
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delay Between Emails</label>
@@ -454,8 +477,8 @@ export default function NewCampaignPage() {
                       name,
                       goal,
                       daily_limit: dailyLimit,
-                      from_hour: fromTime,
-                      to_hour: toTime,
+                      from_hour: instantStart ? '00:00' : fromTime,
+                      to_hour: instantStart ? '23:59' : toTime,
                       min_delay_secs: Math.max(10, parseInt(minDelayStr) || 1) * 60,
                       max_delay_secs: Math.max(30, parseInt(maxDelayStr) || 5) * 60,
                       active_days: activeDays,
@@ -493,7 +516,8 @@ export default function NewCampaignPage() {
           </button>
           {step < steps.length - 1 && (
             <button onClick={() => setStep(s => s + 1)}
-              className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
+              disabled={step === 2 && !timeWindowValid}
+              className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               Continue →
             </button>
           )}

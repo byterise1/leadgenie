@@ -39,9 +39,16 @@ function parseTimeToMinutes(timeStr: string | number | null | undefined): number
 }
 
 function getTzOffsetMs(ianaZone: string): number {
-  const now = new Date();
-  const tzStr = now.toLocaleString('en-US', { timeZone: ianaZone });
-  return new Date(tzStr).getTime() - now.getTime();
+  const now = Date.now();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ianaZone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(now));
+  const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value ?? '0');
+  const tzDate = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
+  return tzDate - now;
 }
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

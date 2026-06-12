@@ -22,7 +22,7 @@ export async function GET() {
     .from('sent_emails')
     .select('account_id')
     .eq('user_id', user.id)
-    .gte('created_at', todayUTC.toISOString());
+    .gte('sent_at', todayUTC.toISOString());
 
   const countMap: Record<string, number> = {};
   (sentRows || []).forEach((s: { account_id: string }) => {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   if (dup) {
     const todayUTC = new Date(); todayUTC.setUTCHours(0, 0, 0, 0);
     const { count } = await supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true })
-      .eq('account_id', dup.id).gte('created_at', todayUTC.toISOString());
+      .eq('account_id', dup.id).gte('sent_at', todayUTC.toISOString());
     const sentReal = count || 0;
     const limit = dup.daily_limit || 50;
     return NextResponse.json({ ...dup, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal), _already_existed: true });

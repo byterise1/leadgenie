@@ -28,6 +28,7 @@ export default function CampaignsPage() {
   const [tab, setTab] = useState('All');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/campaigns')
@@ -38,14 +39,25 @@ export default function CampaignsPage() {
 
   const filtered = tab === 'All' ? campaigns : campaigns.filter(c => c.status === tab.toLowerCase());
 
-  const toggleStatus = async (c: Campaign) => {
-    const next = c.status === 'active' ? 'paused' : 'active';
+  const toggleStatus = async (e: React.MouseEvent, c: Campaign) => {
+    e.preventDefault();
+    const next = c.status === 'active' ? 'paused' : c.status === 'paused' ? 'active' : c.status;
+    if (next === c.status) return;
     const res = await fetch(`/api/campaigns/${c.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next }),
     });
     if (res.ok) setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: next } : x));
+  };
+
+  const deleteCampaign = async (e: React.MouseEvent, c: Campaign) => {
+    e.preventDefault();
+    if (!confirm(`Delete "${c.name}"? This cannot be undone.`)) return;
+    setDeletingId(c.id);
+    const res = await fetch(`/api/campaigns/${c.id}`, { method: 'DELETE' });
+    if (res.ok) setCampaigns(prev => prev.filter(x => x.id !== c.id));
+    setDeletingId(null);
   };
 
   return (
@@ -76,17 +88,17 @@ export default function CampaignsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Campaign Name', 'Lead List', 'Status', 'Sent', 'Opened', 'Replied', 'Reply Rate', 'Created', ''].map(col => (
+                {['Campaign Name', 'Lead List', 'Status', 'Sent', 'Open Rate', 'Reply Rate', 'Created', ''].map(col => (
                   <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={8} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-20 text-center">
+                  <td colSpan={8} className="px-5 py-20 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
                         <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -100,16 +112,18 @@ export default function CampaignsPage() {
                   </td>
                 </tr>
               ) : filtered.map(c => {
-                const openRate = c.total_sent > 0 ? ((c.total_opened / c.total_sent) * 100).toFixed(0) + '%' : '—';
+                const openRate = c.total_sent > 0 ? ((c.total_opened / c.total_sent) * 100).toFixed(1) + '%' : '—';
                 const replyRate = c.total_sent > 0 ? ((c.total_replied / c.total_sent) * 100).toFixed(1) + '%' : '—';
                 return (
-                  <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                  <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors group">
                     <td className="px-5 py-4">
-                      <p className="text-sm font-semibold text-gray-900">{c.name}</p>
+                      <Link href={`/dashboard/campaigns/${c.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                        {c.name}
+                      </Link>
                     </td>
                     <td className="px-5 py-4">
                       {c.list_name ? (
-                        <Link href={`/dashboard/leads`}
+                        <Link href="/dashboard/leads" onClick={e => e.stopPropagation()}
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors max-w-[160px]">
                           <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                           <span className="truncate">{c.list_name}</span>
@@ -124,15 +138,26 @@ export default function CampaignsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_sent ?? 0}</td>
-                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{openRate}</td>
-                    <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_replied ?? 0}</td>
+                    <td className="px-5 py-4 text-sm font-semibold text-gray-900">{openRate}</td>
                     <td className="px-5 py-4 text-sm font-semibold text-gray-900">{replyRate}</td>
                     <td className="px-5 py-4 text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-4">
-                      <button onClick={() => toggleStatus(c)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${c.status === 'active' ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
-                        {c.status === 'active' ? 'Pause' : 'Resume'}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/dashboard/campaigns/${c.id}`}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200">
+                          View
+                        </Link>
+                        {(c.status === 'active' || c.status === 'paused') && (
+                          <button onClick={e => toggleStatus(e, c)}
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${c.status === 'active' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'}`}>
+                            {c.status === 'active' ? 'Pause' : 'Resume'}
+                          </button>
+                        )}
+                        <button onClick={e => deleteCampaign(e, c)} disabled={deletingId === c.id}
+                          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
