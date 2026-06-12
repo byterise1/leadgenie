@@ -493,9 +493,15 @@ export default function EmailAccountsPage() {
             confirmLabel="Remove Account"
             onCancel={() => setConfirmDeleteId(null)}
             onConfirm={async () => {
+              const deleteId = confirmDeleteId!;
               setConfirmDeleteId(null);
-              setAccounts(p => p.filter(a => a.id !== confirmDeleteId));
-              await fetch(`/api/email-accounts/${confirmDeleteId}`, { method: 'DELETE' });
+              const res = await fetch(`/api/email-accounts/${deleteId}`, { method: 'DELETE' });
+              if (res.ok) {
+                setAccounts(p => p.filter(a => a.id !== deleteId));
+              } else {
+                const d = await res.json().catch(() => ({}));
+                setToast(d.error || 'Delete failed — try again');
+              }
             }}
           />
         );

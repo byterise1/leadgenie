@@ -19,10 +19,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   if (!account) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Cascade: remove from all campaigns that use this account
+  // Cascade to every table that references this account
   await supabaseAdmin.from('campaign_accounts').delete().eq('account_id', id);
+  await supabaseAdmin.from('sent_emails').update({ account_id: null }).eq('account_id', id);
 
-  // Delete the account itself
   const { error } = await supabaseAdmin
     .from('email_accounts')
     .delete()
