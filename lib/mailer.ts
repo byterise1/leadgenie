@@ -16,21 +16,28 @@ export type EmailAccount = {
 const _tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 async function fetchAccessToken(refreshToken: string): Promise<{ token: string; expiresIn: number }> {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  });
-  const data = await res.json();
-  if (!data.access_token) {
-    throw new Error(`OAuth2 token refresh failed: ${data.error_description || data.error || 'unknown error'}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000); // 12s timeout
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+    const data = await res.json();
+    if (!data.access_token) {
+      throw new Error(`OAuth2 token refresh failed: ${data.error_description || data.error || 'unknown error'}`);
+    }
+    return { token: data.access_token, expiresIn: data.expires_in ?? 3600 };
+  } finally {
+    clearTimeout(timer);
   }
-  return { token: data.access_token, expiresIn: data.expires_in ?? 3600 };
 }
 
 async function getAccessToken(account: EmailAccount): Promise<string> {
@@ -58,8 +65,12 @@ export async function createTransportAsync(account: EmailAccount) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,        // 587+STARTTLS works on Railway; 465 resolves to IPv6 which Railway can't reach
+      secure: false,
+      family: 4,        // Force IPv4 — Railway does not support IPv6 outbound
+      connectionTimeout: 20000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
       auth: {
         type: 'OAuth2',
         user: account.smtp_user || account.email,
@@ -76,6 +87,10 @@ export function createTransport(account: EmailAccount) {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      family: 4,
+      connectionTimeout: 20000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
       auth: { user: account.smtp_user!, pass: account.smtp_pass! },
     });
   }
@@ -83,6 +98,10 @@ export function createTransport(account: EmailAccount) {
     host: account.smtp_host!,
     port: account.smtp_port ?? 587,
     secure: account.smtp_port === 465,
+    family: 4,
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
     auth: { user: account.smtp_user!, pass: account.smtp_pass! },
   });
 }
