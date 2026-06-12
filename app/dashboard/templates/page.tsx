@@ -191,6 +191,12 @@ function TemplateModal({
 
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const linkUrlRef = useRef<HTMLInputElement>(null);
+
+  const [linkDialog, setLinkDialog] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkNewTab, setLinkNewTab] = useState(true);
+  const [linkSel, setLinkSel] = useState<{ start: number; end: number; text: string }>({ start: 0, end: 0, text: '' });
 
   const insertVar = (v: string) => {
     const isSubject = activeField === 'subject';
@@ -202,6 +208,32 @@ function TemplateModal({
     const e = ref.selectionEnd ?? text.length;
     setter(text.slice(0, s) + v + text.slice(e));
     setTimeout(() => { ref.focus(); ref.setSelectionRange(s + v.length, s + v.length); }, 0);
+  };
+
+  const openLinkDialog = () => {
+    setActiveField('body');
+    const ref = bodyRef.current;
+    const s = ref?.selectionStart ?? body.length;
+    const e = ref?.selectionEnd ?? body.length;
+    setLinkSel({ start: s, end: e, text: body.slice(s, e) });
+    setLinkUrl('');
+    setLinkDialog(true);
+    setTimeout(() => linkUrlRef.current?.focus(), 30);
+  };
+
+  const insertLink = () => {
+    const url = linkUrl.trim();
+    if (!url) return;
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    const displayText = linkSel.text || fullUrl;
+    const target = linkNewTab ? ' target="_blank" rel="noopener noreferrer"' : '';
+    const tag = `<a href="${fullUrl}"${target}>${displayText}</a>`;
+    const next = body.slice(0, linkSel.start) + tag + body.slice(linkSel.end);
+    setBody(next);
+    setLinkDialog(false);
+    setLinkUrl('');
+    const pos = linkSel.start + tag.length;
+    setTimeout(() => { const r = bodyRef.current; if (r) { r.focus(); r.setSelectionRange(pos, pos); } }, 0);
   };
 
   const applyFormat = (open: string, close: string) => {
@@ -302,9 +334,9 @@ function TemplateModal({
                         <span style={f.label === 'B' ? { fontWeight: 900 } : f.label === 'I' ? { fontStyle: 'italic' } : { textDecoration: 'underline' }}>{f.label}</span>
                       </button>
                     ))}
-                    <button type="button" title="Link" onClick={() => { setActiveField('body'); applyFormat('<a href="URL">', '</a>'); }}
-                      className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all">
-                      <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <button type="button" title="Insert link" onClick={openLinkDialog}
+                      className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${linkDialog ? 'bg-blue-600 shadow-sm' : 'hover:bg-white hover:shadow-sm'}`}>
+                      <svg className={`w-3.5 h-3.5 ${linkDialog ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     </button>
                     <button type="button" title="Unordered list" onClick={() => { setActiveField('body'); applyFormat('<ul>\n  <li>', '</li>\n</ul>'); }}
                       className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all">
@@ -316,8 +348,29 @@ function TemplateModal({
                     </button>
                   </div>
                 </div>
+                {linkDialog && (
+                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+                    <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <input ref={linkUrlRef} value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') insertLink(); if (e.key === 'Escape') setLinkDialog(false); }}
+                      placeholder="https://example.com"
+                      className="flex-1 text-sm bg-transparent outline-none text-gray-700 placeholder:text-gray-400 min-w-0"/>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0 cursor-pointer select-none">
+                      <input type="checkbox" checked={linkNewTab} onChange={e => setLinkNewTab(e.target.checked)} className="w-3 h-3 accent-blue-600"/>
+                      New tab
+                    </label>
+                    <button type="button" onClick={insertLink} disabled={!linkUrl.trim()}
+                      className="text-xs font-bold bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition-colors shrink-0 disabled:opacity-40">
+                      Insert
+                    </button>
+                    <button type="button" onClick={() => setLinkDialog(false)}
+                      className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all shrink-0">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                )}
                 <textarea ref={bodyRef} value={body} onChange={e => setBody(e.target.value)}
-                  onFocus={() => setActiveField('body')}
+                  onFocus={() => { setActiveField('body'); setLinkDialog(false); }}
                   placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
                   rows={9}
                   className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none leading-relaxed font-mono"/>
