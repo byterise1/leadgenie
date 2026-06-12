@@ -1,4 +1,10 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
+
+// Node.js 18 changed default DNS order to prefer IPv6 (verbatim).
+// Railway does not support IPv6 outbound — smtp.gmail.com resolves to an IPv6
+// address and the connection fails with ENETUNREACH. Force IPv4 first globally.
+dns.setDefaultResultOrder('ipv4first');
 
 export type EmailAccount = {
   id?: string;
