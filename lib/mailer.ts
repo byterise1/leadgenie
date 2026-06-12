@@ -143,8 +143,6 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     },
   );
 
-  console.log(`[Gmail API] send ${result.status}, content-type: ${result.headers['content-type']}, body: ${result.body.slice(0, 300)}`);
-
   if (result.status < 200 || result.status >= 300) {
     let body: any = {};
     try { body = JSON.parse(result.body); } catch { /* non-JSON */ }
