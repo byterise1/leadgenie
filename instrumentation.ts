@@ -137,17 +137,37 @@ export async function register() {
         : '';
 
       const clickBase = sentEmail?.id ? `${SITE_URL}/api/track/click/${sentEmail.id}` : null;
-      const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
-      const htmlBody = body.split('\n').map((l: string) => {
-        if (!l.trim()) return '';
-        const line = l.replace(urlRegex, (url) => {
-          if (url.includes('/api/track/') || url.includes('/api/unsubscribe/') || !clickBase) {
-            return `<a href="${url}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
-          }
-          return `<a href="${clickBase}?url=${encodeURIComponent(url)}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
-        });
-        return `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px">${line}</p>`;
-      }).join('');
+
+      // Build HTML safely: treat lines with existing <a> tags differently from plain text
+      const BLOCK_RE = /^<(p|div|ul|ol|h[1-6]|table|blockquote|pre)\b/i;
+      const htmlLines = body.split('\n').map((l: string) => {
+        const t = l.trim();
+        if (!t) return '';
+
+        let processed: string;
+        if (/<a[\s>]/i.test(t)) {
+          // Line has existing <a> tags — only rewrite href values for click tracking, don't touch content
+          processed = clickBase
+            ? t.replace(/href="(https?:\/\/[^"]+)"/g, (_m: string, url: string) => {
+                if (url.includes('/api/track/') || url.includes('/api/unsubscribe/')) return `href="${url}"`;
+                return `href="${clickBase}?url=${encodeURIComponent(url)}"`;
+              })
+            : t;
+        } else {
+          // Plain text line — wrap bare URLs in <a> tags
+          processed = t.replace(/(https?:\/\/[^\s<>"]+)/g, (url: string) => {
+            if (!clickBase || url.includes('/api/track/') || url.includes('/api/unsubscribe/')) {
+              return `<a href="${url}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
+            }
+            return `<a href="${clickBase}?url=${encodeURIComponent(url)}" style="color:#2563eb;text-decoration:underline">${url}</a>`;
+          });
+        }
+
+        if (BLOCK_RE.test(processed)) return processed;
+        return `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px;color:#111">${processed}</p>`;
+      }).join('\n');
+
+      const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#111;max-width:600px;margin:0 auto;padding:24px">${htmlLines}${trackPixel}</body></html>`;
 
       try {
         const { threadId } = await sendEmail(account, {
@@ -155,7 +175,7 @@ export async function register() {
           to: lead.email,
           subject,
           text: body,
-          html: `<html><body>${htmlBody}${trackPixel}</body></html>`,
+          html: fullHtml,
         });
 
         // Store Gmail threadId for reply detection

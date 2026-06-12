@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest) {
     .select('*')
     .eq('user_id', user.id)
     .eq('type', 'gmail-oauth')
-    .eq('status', 'connected');
+    .neq('status', 'error');
 
   if (!accounts?.length) return NextResponse.json({ synced: 0 });
 
