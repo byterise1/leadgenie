@@ -83,6 +83,7 @@ export async function createTransportAsync(account: EmailAccount) {
 
 export function createTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
@@ -92,8 +93,9 @@ export function createTransport(account: EmailAccount) {
       greetingTimeout: 15000,
       socketTimeout: 30000,
       auth: { user: account.smtp_user!, pass: account.smtp_pass! },
-    });
+    } as any);
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
     host: account.smtp_host!,
     port: account.smtp_port ?? 587,
@@ -103,7 +105,7 @@ export function createTransport(account: EmailAccount) {
     greetingTimeout: 15000,
     socketTimeout: 30000,
     auth: { user: account.smtp_user!, pass: account.smtp_pass! },
-  });
+  } as any);
 }
 
 export function replaceVars(text: string, lead: Record<string, string | null>): string {
