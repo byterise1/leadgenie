@@ -135,7 +135,7 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
   const result = await httpsPost(
     'gmail.googleapis.com',
-    '/upload/gmail/v1/users/me/send?uploadType=media',
+    '/upload/gmail/v1/users/me/messages/send?uploadType=media',
     rawMessage,
     {
       Authorization: `Bearer ${accessToken}`,
