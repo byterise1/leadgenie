@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
 
 const CATEGORIES = ['Cold Outreach', 'Follow-up', 'Meeting Request', 'Break-up', 'Re-engagement'];
-const VARIABLES = ['{{first_name}}', '{{last_name}}', '{{company}}', '{{industry}}', '{{pain_point}}', '{{topic}}', '{{mutual_name}}'];
+const VARIABLES = ['{{first_name}}', '{{last_name}}', '{{company}}', '{{title}}', '{{email}}', '{{website}}', '{{unsubscribe_link}}'];
 
 const DEFAULT_UNSUB = 'To unsubscribe, click here: {{unsubscribe_link}}\n{{company_address}}';
 
@@ -29,9 +29,9 @@ const DEFAULT_TEMPLATES: Template[] = [
     subject: "Quick question about {{company}}'s growth",
     body: `Hi {{first_name}},
 
-I was looking at {{company}} and noticed most teams in {{industry}} struggle with {{pain_point}}.
+I was looking at {{company}} and noticed a few things we could help with.
 
-We helped similar companies solve this — they went from stuck to scaling in just 60 days.
+We helped similar companies go from stuck to scaling in just 60 days.
 
 Worth a 15-min call to see if we can do the same for you?
 
@@ -42,10 +42,10 @@ Worth a 15-min call to see if we can do the same for you?
   {
     id: 2, builtIn: true, category: 'Cold Outreach',
     name: 'The Compliment Hook',
-    subject: 'Loved your post on {{topic}}',
+    subject: 'Quick thought for {{company}}',
     body: `Hi {{first_name}},
 
-Saw your LinkedIn post about {{topic}} — really resonated with our team.
+I came across {{company}} and was impressed by what you're building.
 
 That made me think you'd appreciate what we're building — we [One-line value prop].
 
@@ -78,7 +78,7 @@ Happy to keep it to 10 minutes if that's easier.
     subject: 'Something useful for {{company}}',
     body: `Hi {{first_name}},
 
-I put together a quick breakdown of how companies like {{company}} are solving {{pain_point}}.
+I put together a quick breakdown of how companies like {{company}} are growing faster with less effort.
 
 [Link to resource / case study]
 
@@ -94,7 +94,7 @@ No strings attached — thought it might be useful.
     subject: '15 mins this week?',
     body: `Hi {{first_name}},
 
-I'll keep this short — I think we can help {{company}} with {{pain_point}}.
+I'll keep this short — I think we can help {{company}} get better results.
 
 We've done it for [Company A] and [Company B].
 
@@ -127,7 +127,7 @@ Either way, totally fine. Should I close your file?
     subject: 'Still relevant for {{company}}?',
     body: `Hi {{first_name}},
 
-We spoke a while back about {{topic}}. I wanted to check in — a lot has changed on our end.
+We connected a while back — I wanted to check in since a lot has changed on our end.
 
 We've improved [area] that specifically addresses what we discussed.
 
