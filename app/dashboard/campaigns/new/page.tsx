@@ -102,6 +102,14 @@ export default function NewCampaignPage() {
 
   const timeWindowValid = instantStart || fromTime < toTime;
 
+  const templateCategories = ['All', ...Array.from(new Set(MOCK_TEMPLATES.map(t => t.category)))];
+  const filteredTemplates = MOCK_TEMPLATES.filter(t => {
+    const matchCat = templateCategory === 'All' || t.category === templateCategory;
+    const q = templateSearch.toLowerCase();
+    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
   useEffect(() => {
     fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
     fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLeadLists(d); });
@@ -558,76 +566,66 @@ export default function NewCampaignPage() {
       </div>
 
       {/* Template picker modal */}
-      {templatePickerIdx !== null && (() => {
-        const categories = ['All', ...Array.from(new Set(MOCK_TEMPLATES.map(t => t.category)))];
-        const filtered = MOCK_TEMPLATES.filter(t => {
-          const matchCat = templateCategory === 'All' || t.category === templateCategory;
-          const q = templateSearch.toLowerCase();
-          const matchSearch = !q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q);
-          return matchCat && matchSearch;
-        });
-        return (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={e => { if (e.target === e.currentTarget) { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); } }}>
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                <h2 className="text-base font-bold text-gray-900">Choose a Template</h2>
-                <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
-                  className="text-gray-400 hover:text-gray-700 transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
-              {/* Search */}
-              <div className="px-4 pt-3 pb-2 shrink-0">
-                <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                  <input
-                    type="text"
-                    placeholder="Search templates…"
-                    value={templateSearch}
-                    onChange={e => setTemplateSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-                </div>
-              </div>
-              {/* Category tabs */}
-              <div className="flex gap-1 px-4 pb-3 shrink-0">
-                {categories.map(cat => (
-                  <button key={cat} onClick={() => setTemplateCategory(cat)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${templateCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              {/* List */}
-              <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-2 min-h-0">
-                {filtered.length === 0 ? (
-                  <p className="text-center text-sm text-gray-400 py-10">No templates match your search.</p>
-                ) : filtered.map(t => (
-                  <button key={t.id} onClick={() => { applyTemplate(templatePickerIdx, t.id); setTemplateSearch(''); setTemplateCategory('All'); }}
-                    className="w-full flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-bold text-gray-900">{t.name}</p>
-                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t.category}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate">Subject: {t.subject}</p>
-                    </div>
-                    <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-                  </button>
-                ))}
-              </div>
-              <div className="px-6 py-4 border-t border-gray-100 shrink-0">
-                <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
-                  className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+      {templatePickerIdx !== null && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); } }}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base font-bold text-gray-900">Choose a Template</h2>
+              <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
+                className="text-gray-400 hover:text-gray-700 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {/* Search */}
+            <div className="px-4 pt-3 pb-2 shrink-0">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input
+                  type="text"
+                  placeholder="Search templates…"
+                  value={templateSearch}
+                  onChange={e => setTemplateSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition"/>
               </div>
             </div>
+            {/* Category tabs */}
+            <div className="flex flex-wrap gap-1 px-4 pb-3 shrink-0">
+              {templateCategories.map(cat => (
+                <button key={cat} onClick={() => setTemplateCategory(cat)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${templateCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-2 min-h-0">
+              {filteredTemplates.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-10">No templates match your search.</p>
+              ) : filteredTemplates.map(t => (
+                <button key={t.id} onClick={() => { applyTemplate(templatePickerIdx, t.id); setTemplateSearch(''); setTemplateCategory('All'); }}
+                  className="w-full flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-bold text-gray-900">{t.name}</p>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t.category}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">Subject: {t.subject}</p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                </button>
+              ))}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 shrink-0">
+              <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
+                className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+            </div>
           </div>
-        );
-      })()}
+        </div>
       )}
     </main>
   );
