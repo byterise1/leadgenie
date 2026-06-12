@@ -95,6 +95,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 4000); };
 
+  const markComplete = async () => {
+    if (!campaign) return;
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    if (res.ok) { setCampaign(p => p ? { ...p, status: 'completed' } : p); showMsg('Campaign completed'); }
+  };
+
   const toggleStatus = async () => {
     if (!campaign) return;
     const next = campaign.status === 'active' ? 'paused' : campaign.status === 'paused' ? 'active' : null;
@@ -149,6 +158,9 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const replyRate = campaign.total_sent > 0 ? ((campaign.total_replied / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
   const clickRate = campaign.total_sent > 0 ? (((campaign.total_clicked || 0) / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
 
+  const TERMINAL_STATUSES = ['completed', 'bounced', 'unsubscribed', 'replied'];
+  const isEffectivelyComplete = leads.length > 0 && leads.every(l => TERMINAL_STATUSES.includes(l.status));
+
   const leadCounts = leads.reduce((acc, l) => {
     acc[l.status] = (acc[l.status] || 0) + 1;
     return acc;
@@ -184,7 +196,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {(campaign.status === 'active' || campaign.status === 'paused') && (
+          {isEffectivelyComplete && campaign.status !== 'completed' ? (
+            <button onClick={markComplete}
+              className="text-sm font-bold px-4 py-2 rounded-xl border bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 transition-colors">
+              Mark Complete
+            </button>
+          ) : (campaign.status === 'active' || campaign.status === 'paused') && (
             <button onClick={toggleStatus}
               className={`text-sm font-bold px-4 py-2 rounded-xl border transition-colors ${campaign.status === 'active' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'}`}>
               {campaign.status === 'active' ? 'Pause' : 'Resume'}

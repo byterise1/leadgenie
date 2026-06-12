@@ -186,6 +186,14 @@ export async function register() {
             supabase.from('campaign_leads').update({ status: 'bounced' }).eq('id', campaignLeadId),
           ]);
           console.log(`⛔ Bounced: ${lead.email} (${code})`);
+          const { count: pendingAfterBounce } = await supabase
+            .from('campaign_leads')
+            .select('id', { count: 'exact', head: true })
+            .eq('campaign_id', campaign.id)
+            .in('status', ['pending', 'active']);
+          if (pendingAfterBounce === 0) {
+            await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
+          }
           return;
         }
 
@@ -204,6 +212,19 @@ export async function register() {
       // Direct increment — avoids needing a separate DB function
       const { data: campRow } = await supabase.from('campaigns').select('total_sent').eq('id', campaign.id).single();
       await supabase.from('campaigns').update({ total_sent: (campRow?.total_sent || 0) + 1 }).eq('id', campaign.id);
+
+      // Auto-complete campaign when all leads are in a terminal state
+      if (!hasNextStep) {
+        const { count: pendingCount } = await supabase
+          .from('campaign_leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('campaign_id', campaign.id)
+          .in('status', ['pending', 'active']);
+        if (pendingCount === 0) {
+          await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
+          console.log(`✅ Campaign "${campaign.name}" auto-completed`);
+        }
+      }
 
       if (hasNextStep) {
         const { emailQueue } = await import('./lib/queue');
