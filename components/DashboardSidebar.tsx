@@ -88,8 +88,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   const signOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    window.location.href = '/login';
   };
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';

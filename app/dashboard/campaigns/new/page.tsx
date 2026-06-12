@@ -317,7 +317,8 @@ export default function NewCampaignPage() {
                         <span>Send after</span>
                         <select value={email.delay} onChange={e => updateEmail(idx, 'delay', Number(e.target.value))}
                           className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-2 focus:ring-blue-400">
-                          {[1,2,3,5,7,14].map(d => <option key={d} value={d}>{d} days</option>)}
+                          {/* TEST MODE: units are minutes. Change label to "days" and update instrumentation.ts for production */}
+                          {[1,2,3,5,10,15].map(d => <option key={d} value={d}>{d} min</option>)}
                         </select>
                       </div>
                     )}

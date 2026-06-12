@@ -160,7 +160,9 @@ export async function register() {
       if (hasNextStep) {
         const { emailQueue } = await import('./lib/queue');
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
-        const delayMs = (nextStepData.delay_days || 3) * 24 * 60 * 60 * 1000;
+        // TEST MODE: 1 unit = 1 minute. Revert to 24*60*60*1000 for production (days).
+        const DELAY_UNIT_MS = 60 * 1000;
+        const delayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
         await emailQueue.add('send', { campaignLeadId, stepNumber: nextStep }, { delay: delayMs });
       }
 
