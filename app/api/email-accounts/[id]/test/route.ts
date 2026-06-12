@@ -38,8 +38,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ success: true, sentTo: user.email });
   } catch (err: any) {
     const msg = err?.message || 'Unknown error';
-    // Mark as error if it's an auth failure
-    if (msg.includes('auth') || msg.includes('token') || msg.includes('credentials') || msg.includes('535') || msg.includes('534')) {
+    const code = err?.responseCode;
+    // Mark as error on auth failures or config issues (535 covers Gmail API not enabled too)
+    if (code === 535 || code === 401 || err?.code === 'EAUTH' ||
+        msg.includes('auth') || msg.includes('token') || msg.includes('credentials') || msg.includes('not enabled')) {
       await supabaseAdmin.from('email_accounts').update({ status: 'error' }).eq('id', id);
     }
     return NextResponse.json({ error: msg }, { status: 500 });

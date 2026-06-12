@@ -153,18 +153,16 @@ export async function register() {
 
         const code = err.responseCode as number | undefined;
 
-        // Auth failure (535 = SMTP auth failed, 401 = Gmail API unauthorized)
+        // Auth failure (535 = SMTP auth failed / Gmail API config error, 401 = Gmail API unauthorized)
         if (code === 535 || code === 401 || err.code === 'EAUTH') {
-          if (account.type === 'gmail-oauth') {
-            await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
-            await supabase.from('notifications').insert({
-              user_id: campaign.user_id,
-              message: `Gmail account ${account.email} needs to be re-authorised. Go to Email Accounts to reconnect.`,
-              type: 'error',
-            });
-            console.error(`🔐 Auth failure for ${account.email} — marked as error`);
-            return;
-          }
+          await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
+          await supabase.from('notifications').insert({
+            user_id: campaign.user_id,
+            message: `Sending account ${account.email} has an error: ${err.message}`,
+            type: 'error',
+          });
+          console.error(`🔐 Auth/config failure for ${account.email}: ${err.message}`);
+          return;
         }
 
         // Hard bounce (5xx delivery failure) — don't retry
