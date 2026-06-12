@@ -106,6 +106,25 @@ export default function NewCampaignPage() {
 
   const timeWindowValid = instantStart || fromTime < toTime;
 
+  const parsedMinDelay = Math.max(1, parseInt(minDelayStr) || 1);
+  const parsedMaxDelay = Math.max(parsedMinDelay + 1, parseInt(maxDelayStr) || 5);
+  const delayOrderValid = (parseInt(minDelayStr) || 1) < (parseInt(maxDelayStr) || 5);
+
+  // Schedule capacity helpers
+  const schedWindowMins = (() => {
+    if (instantStart) return 24 * 60;
+    if (!timeWindowValid) return 0;
+    const [fh, fm] = fromTime.split(':').map(Number);
+    const [th, tm] = toTime.split(':').map(Number);
+    return (th * 60 + tm) - (fh * 60 + fm);
+  })();
+  const avgDelayMins = (parsedMinDelay + parsedMaxDelay) / 2;
+  const emailsPerWindowPerAccount = schedWindowMins > 0 ? Math.max(1, Math.floor(schedWindowMins / avgDelayMins)) : 0;
+  const numSelectedAccounts = allAccounts ? realAccounts.length : selectedAccounts.length;
+  const emailsPerDay = Math.min(dailyLimit, emailsPerWindowPerAccount * Math.max(1, numSelectedAccounts));
+  const activeDayCount = activeDays.filter(Boolean).length;
+  const daysToComplete = emailsPerDay > 0 && listLeadCount > 0 ? Math.ceil(listLeadCount / emailsPerDay) : null;
+
   const validateStep = (s: number): string[] => {
     const errs: string[] = [];
     if (s === 0) {
@@ -478,6 +497,18 @@ export default function NewCampaignPage() {
                   </div>
                 ))}
               </div>
+              {!delayOrderValid && (
+                <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  Min delay must be less than max delay
+                </p>
+              )}
+              {!instantStart && schedWindowMins > 0 && schedWindowMins < parsedMinDelay && (
+                <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  Sending window ({schedWindowMins} min) is shorter than your min delay ({parsedMinDelay} min) — only 1 email will send per window
+                </p>
+              )}
               <p className="text-[11px] text-gray-400 mt-1.5">Recommended: 1–5 min for warm accounts, 3–10 min for cold.</p>
             </div>
             <div>
@@ -498,6 +529,52 @@ export default function NewCampaignPage() {
                 {['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'].map(tz => <option key={tz}>{tz}</option>)}
               </select>
             </div>
+
+            {/* ── Schedule Capacity Preview ── */}
+            {(schedWindowMins > 0 || instantStart) && (
+              <div className={`rounded-xl border p-4 space-y-3 ${
+                schedWindowMins > 0 && schedWindowMins < parsedMinDelay
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-blue-50 border-blue-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                  <span className="text-sm font-bold text-blue-800">Schedule Capacity</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Window</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                      {instantStart ? '24 hrs' : `${Math.floor(schedWindowMins / 60) > 0 ? `${Math.floor(schedWindowMins / 60)}h ` : ''}${schedWindowMins % 60 > 0 ? `${schedWindowMins % 60}m` : ''}`}
+                    </p>
+                    <p className="text-[10px] text-gray-400">{activeDayCount} day{activeDayCount !== 1 ? 's' : ''}/week</p>
+                  </div>
+                  <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Window</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount} email{emailsPerWindowPerAccount !== 1 ? 's' : ''}</p>
+                    <p className="text-[10px] text-gray-400">per account</p>
+                  </div>
+                  <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerDay} emails</p>
+                    <p className="text-[10px] text-gray-400">limit: {dailyLimit}/day</p>
+                  </div>
+                  <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                      {listLeadCount === 0 ? '—' : daysToComplete === null ? '∞' : `~${daysToComplete} day${daysToComplete !== 1 ? 's' : ''}`}
+                    </p>
+                    <p className="text-[10px] text-gray-400">{listLeadCount > 0 ? `${listLeadCount} leads` : 'no list yet'}</p>
+                  </div>
+                </div>
+                {listLeadCount > 0 && daysToComplete !== null && daysToComplete > 30 && (
+                  <p className="text-xs text-amber-700 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    Campaign will take {daysToComplete} days. Increase daily limit or shorten delay to finish sooner.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
