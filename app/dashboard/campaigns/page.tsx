@@ -15,6 +15,7 @@ type Campaign = {
   total_sent: number;
   total_opened: number;
   total_replied: number;
+  total_clicked: number;
   created_at: string;
 };
 
@@ -97,17 +98,17 @@ export default function CampaignsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Campaign Name', 'Lead List', 'Status', 'Sent', 'Open Rate', 'Reply Rate', 'Created', ''].map(col => (
+                {['Campaign Name', 'Lead List', 'Status', 'Sent', 'Open Rate', 'Click Rate', 'Reply Rate', 'Created', ''].map(col => (
                   <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={9} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-20 text-center">
+                  <td colSpan={9} className="px-5 py-20 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
                         <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -122,6 +123,7 @@ export default function CampaignsPage() {
                 </tr>
               ) : filtered.map(c => {
                 const openRate = c.total_sent > 0 ? ((c.total_opened / c.total_sent) * 100).toFixed(1) + '%' : '—';
+                const clickRate = c.total_sent > 0 ? (((c.total_clicked || 0) / c.total_sent) * 100).toFixed(1) + '%' : '—';
                 const replyRate = c.total_sent > 0 ? ((c.total_replied / c.total_sent) * 100).toFixed(1) + '%' : '—';
                 return (
                   <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors group">
@@ -148,6 +150,7 @@ export default function CampaignsPage() {
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700 font-medium">{c.total_sent ?? 0}</td>
                     <td className="px-5 py-4 text-sm font-semibold text-gray-900">{openRate}</td>
+                    <td className="px-5 py-4 text-sm font-semibold text-gray-900">{clickRate}</td>
                     <td className="px-5 py-4 text-sm font-semibold text-gray-900">{replyRate}</td>
                     <td className="px-5 py-4 text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-4">

@@ -26,24 +26,35 @@ export async function GET() {
     (lists || []).forEach((l: { id: string; name: string }) => { listMap[l.id] = { name: l.name }; });
   }
 
-  // Real sent count per campaign from sent_emails (overrides stale total_sent column)
+  // Real counts per campaign from sent_emails
   const campaignIds = (data || []).map((c: { id: string }) => c.id);
-  const sentPerCampaign: Record<string, number> = {};
+  const statsByCampaign: Record<string, { sent: number; opened: number; replied: number; clicked: number }> = {};
   if (campaignIds.length) {
     const { data: sentRows } = await supabaseAdmin
       .from('sent_emails')
-      .select('campaign_id')
+      .select('campaign_id,opened_at,replied_at,clicked_at')
       .in('campaign_id', campaignIds);
-    (sentRows || []).forEach((s: { campaign_id: string }) => {
-      sentPerCampaign[s.campaign_id] = (sentPerCampaign[s.campaign_id] || 0) + 1;
+    (sentRows || []).forEach((s: { campaign_id: string; opened_at: string | null; replied_at: string | null; clicked_at: string | null }) => {
+      const r = statsByCampaign[s.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
+      r.sent++;
+      if (s.opened_at) r.opened++;
+      if (s.replied_at) r.replied++;
+      if (s.clicked_at) r.clicked++;
+      statsByCampaign[s.campaign_id] = r;
     });
   }
 
-  const enriched = (data || []).map((c: Record<string, unknown>) => ({
-    ...c,
-    list_name: (c.list_id as string) ? (listMap[c.list_id as string]?.name ?? null) : null,
-    total_sent: sentPerCampaign[c.id as string] ?? c.total_sent ?? 0,
-  }));
+  const enriched = (data || []).map((c: Record<string, unknown>) => {
+    const s = statsByCampaign[c.id as string] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
+    return {
+      ...c,
+      list_name: (c.list_id as string) ? (listMap[c.list_id as string]?.name ?? null) : null,
+      total_sent: s.sent ?? c.total_sent ?? 0,
+      total_opened: s.opened,
+      total_replied: s.replied,
+      total_clicked: s.clicked,
+    };
+  });
 
   return NextResponse.json(enriched);
 }

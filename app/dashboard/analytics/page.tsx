@@ -8,6 +8,7 @@ type Stats = {
   activeCampaigns: number;
   totalSent: number;
   openRate: string;
+  clickRate: string;
   replyRate: string;
   bounceRate: string;
   totalLeads: number;
@@ -18,7 +19,9 @@ type Stats = {
     sent: number;
     opened: number;
     replied: number;
+    clicked: number;
     open_rate: string;
+    click_rate: string;
     reply_rate: string;
   }[];
 };
@@ -49,6 +52,7 @@ export default function AnalyticsPage() {
   const kpis = [
     { label: 'Emails Sent', value: stats ? String(stats.totalSent) : '—' },
     { label: 'Open Rate', value: stats?.openRate ?? '—' },
+    { label: 'Click Rate', value: stats?.clickRate ?? '—' },
     { label: 'Reply Rate', value: stats?.replyRate ?? '—' },
     { label: 'Bounce Rate', value: stats?.bounceRate ?? '—' },
   ];
@@ -77,7 +81,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {kpis.map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{k.label}</p>
@@ -98,7 +102,7 @@ export default function AnalyticsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Campaign', 'Status', 'Sent', 'Opened', 'Open Rate', 'Replied', 'Reply Rate'].map(col => (
+                {['Campaign', 'Status', 'Sent', 'Opened', 'Open Rate', 'Clicked', 'Click Rate', 'Replied', 'Reply Rate'].map(col => (
                   <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
@@ -106,7 +110,7 @@ export default function AnalyticsPage() {
             <tbody>
               {!stats || stats.campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-14 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-5 py-14 text-center text-sm text-gray-400">
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
@@ -124,6 +128,8 @@ export default function AnalyticsPage() {
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.sent}</td>
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.opened}</td>
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.open_rate}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.clicked ?? 0}</td>
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.click_rate ?? '—'}</td>
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.replied}</td>
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.reply_rate}</td>
                 </tr>

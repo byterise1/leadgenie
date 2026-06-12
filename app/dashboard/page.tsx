@@ -18,16 +18,20 @@ const stepColor: Record<string, { num: string }> = {
 };
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ activeCampaigns: 0, totalSent: 0, openRate: '—', replyRate: '—' });
+  const [stats, setStats] = useState({ activeCampaigns: 0, totalSent: 0, openRate: '—', clickRate: '—', replyRate: '—' });
 
   useEffect(() => {
-    fetch('/api/dashboard/stats').then(r => r.json()).then(d => { if (!d.error) setStats(d); });
+    const fetchStats = () => fetch('/api/dashboard/stats').then(r => r.json()).then(d => { if (!d.error) setStats(d); });
+    fetchStats();
+    const id = setInterval(fetchStats, 10000);
+    return () => clearInterval(id);
   }, []);
 
   const statCards = [
     { label: 'Active Campaigns', value: String(stats.activeCampaigns) },
     { label: 'Emails Sent', value: String(stats.totalSent) },
     { label: 'Avg Open Rate', value: stats.openRate },
+    { label: 'Avg Click Rate', value: stats.clickRate },
     { label: 'Avg Reply Rate', value: stats.replyRate },
   ];
 
@@ -45,7 +49,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
