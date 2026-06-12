@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import ConfirmModal from '@/components/ConfirmModal';
 
 type Account = {
   id: string;
@@ -226,6 +227,7 @@ export default function EmailAccountsPage() {
   const [limitDraft, setLimitDraft] = useState('');
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchAccounts = useCallback(() => {
     fetch('/api/email-accounts')
@@ -453,10 +455,7 @@ export default function EmailAccountsPage() {
                   className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50">
                   {testingId === acc.id ? '…' : 'Test'}
                 </button>
-                <button onClick={async () => {
-                  await fetch(`/api/email-accounts/${acc.id}`, { method: 'DELETE' });
-                  setAccounts(p => p.filter(a => a.id !== acc.id));
-                }}
+                <button onClick={() => setConfirmDeleteId(acc.id)}
                   className="text-gray-300 hover:text-red-400 transition-colors p-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
@@ -484,6 +483,23 @@ export default function EmailAccountsPage() {
           </button>
         </div>
       )}
+
+      {confirmDeleteId && (() => {
+        const acc = accounts.find(a => a.id === confirmDeleteId);
+        return (
+          <ConfirmModal
+            title="Remove email account?"
+            message={`${acc?.email ?? 'This account'} will be removed from all campaigns and permanently deleted. Emails already sent are kept for records.`}
+            confirmLabel="Remove Account"
+            onCancel={() => setConfirmDeleteId(null)}
+            onConfirm={async () => {
+              setConfirmDeleteId(null);
+              setAccounts(p => p.filter(a => a.id !== confirmDeleteId));
+              await fetch(`/api/email-accounts/${confirmDeleteId}`, { method: 'DELETE' });
+            }}
+          />
+        );
+      })()}
 
       {step && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setStep(null)}>

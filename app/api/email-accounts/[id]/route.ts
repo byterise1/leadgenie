@@ -9,11 +9,24 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
+  // Verify ownership before doing anything
+  const { data: account } = await supabaseAdmin
+    .from('email_accounts')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!account) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Cascade: remove from all campaigns that use this account
+  await supabaseAdmin.from('campaign_accounts').delete().eq('account_id', id);
+
+  // Delete the account itself
   const { error } = await supabaseAdmin
     .from('email_accounts')
     .delete()
-    .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
