@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import dns from 'dns';
+import https from 'https';
 
 // Node.js 18+ defaults to verbatim IPv6-first DNS. Railway has no IPv6 outbound.
 dns.setDefaultResultOrder('ipv4first');
@@ -65,16 +66,54 @@ export async function getAccessToken(account: EmailAccount): Promise<string> {
 // Railway runs on GCP; Google blocks GCP→smtp.gmail.com to prevent spam.
 // The Gmail REST API uses HTTPS (port 443) which is never blocked.
 
+// Use Node.js https module directly — bypasses Next.js fetch wrapper and undici quirks
+function httpsPost(
+  hostname: string,
+  path: string,
+  body: string | Buffer,
+  headers: Record<string, string | number>,
+  timeoutMs = 30000,
+): Promise<{ status: number; headers: Record<string, string>; body: string }> {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = typeof body === 'string' ? Buffer.from(body, 'utf8') : body;
+    const req = https.request(
+      {
+        hostname,
+        port: 443,
+        path,
+        method: 'POST',
+        headers: { ...headers, 'Content-Length': bodyBuf.length },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => {
+          const responseBody = Buffer.concat(chunks).toString('utf8');
+          resolve({
+            status: res.statusCode ?? 0,
+            headers: res.headers as Record<string, string>,
+            body: responseBody,
+          });
+        });
+      }
+    );
+    req.on('timeout', () => { req.destroy(); reject(new Error('Gmail API request timed out')); });
+    req.on('error', reject);
+    req.write(bodyBuf);
+    req.end();
+  });
+}
+
 async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<void> {
   const accessToken = await getAccessToken(account);
 
-  // Build RFC 2822 message as raw bytes — sent directly via media upload (no base64 needed)
   const boundary = `----=_Part_${Date.now()}`;
   const subject = opts.subject.match(/[^\x00-\x7F]/)
     ? `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`
     : opts.subject;
 
-  const mimeLines = [
+  const rawMessage = [
     `From: ${opts.from}`,
     `To: ${opts.to}`,
     `Subject: ${subject}`,
@@ -92,40 +131,30 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     opts.html || '',
     ``,
     `--${boundary}--`,
-  ];
-  const rawMessage = mimeLines.join('\r\n');
+  ].join('\r\n');
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    // Media upload: sends raw RFC 2822 bytes directly — avoids base64url encoding issues
-    const res = await fetch(
-      'https://gmail.googleapis.com/upload/gmail/v1/users/me/send?uploadType=media',
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'message/rfc822',
-        },
-        body: rawMessage,
-      }
-    );
-    if (!res.ok) {
-      const rawText = await res.text();
-      console.error(`[Gmail API] send ${res.status}:`, rawText.slice(0, 500));
-      let body: any = {};
-      try { body = JSON.parse(rawText); } catch { /* non-JSON */ }
-      const apiMsg = body?.error?.message || res.statusText;
-      const code = res.status === 401 || res.status === 403 ? 535
-        : res.status >= 400 && res.status < 500 ? 550
-        : res.status;
-      const err = new Error(`Gmail send failed (${res.status}): ${apiMsg}`);
-      (err as any).responseCode = code;
-      throw err;
-    }
-  } finally {
-    clearTimeout(timer);
+  const result = await httpsPost(
+    'gmail.googleapis.com',
+    '/upload/gmail/v1/users/me/send?uploadType=media',
+    rawMessage,
+    {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'message/rfc822',
+    },
+  );
+
+  console.log(`[Gmail API] send ${result.status}, content-type: ${result.headers['content-type']}, body: ${result.body.slice(0, 300)}`);
+
+  if (result.status < 200 || result.status >= 300) {
+    let body: any = {};
+    try { body = JSON.parse(result.body); } catch { /* non-JSON */ }
+    const apiMsg = body?.error?.message || `HTTP ${result.status}`;
+    const code = result.status === 401 || result.status === 403 ? 535
+      : result.status >= 400 && result.status < 500 ? 550
+      : result.status;
+    const err = new Error(`Gmail send failed (${result.status}): ${apiMsg}`);
+    (err as any).responseCode = code;
+    throw err;
   }
 }
 
