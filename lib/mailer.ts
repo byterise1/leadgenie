@@ -67,6 +67,20 @@ export async function getAccessToken(account: EmailAccount): Promise<string> {
 
 async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<void> {
   const accessToken = await getAccessToken(account);
+  console.log(`[Gmail API] token prefix: ${accessToken.slice(0, 10)}, account: ${account.email}`);
+
+  // Validate token against a lightweight profile endpoint first
+  const profileRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const profileText = await profileRes.text();
+  console.log(`[Gmail API] profile check ${profileRes.status}:`, profileText.slice(0, 200));
+  if (!profileRes.ok) {
+    const code = profileRes.status === 401 || profileRes.status === 403 ? 535 : 550;
+    const err = new Error(`Gmail API profile check failed (${profileRes.status}): ${profileText.slice(0, 200)}`);
+    (err as any).responseCode = code;
+    throw err;
+  }
 
   const boundary = `----=_Part_${Date.now()}`;
   const subjectEncoded = `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`;
@@ -99,7 +113,8 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
   try {
-    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/send', {
+    // Use www.googleapis.com base — avoids IPv6 issues with gmail.googleapis.com on some hosts
+    const res = await fetch('https://www.googleapis.com/gmail/v1/users/me/send', {
       method: 'POST',
       signal: controller.signal,
       headers: {
@@ -109,13 +124,15 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
       body: JSON.stringify({ raw: encoded }),
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      const apiMsg = (body as any)?.error?.message || res.statusText;
-      console.error(`[Gmail API] ${res.status} response:`, JSON.stringify(body));
+      const rawText = await res.text();
+      console.error(`[Gmail API] send ${res.status} raw:`, rawText.slice(0, 500));
+      let body: any = {};
+      try { body = JSON.parse(rawText); } catch { /* non-JSON body */ }
+      const apiMsg = body?.error?.message || res.statusText;
       let msg: string;
       let code: number;
       if (res.status === 404) {
-        msg = `Gmail API 404: ${apiMsg}. Check that Gmail API is enabled at console.cloud.google.com and try re-authorising the account.`;
+        msg = `Gmail API 404: ${apiMsg}. Check Railway logs for the full error response.`;
         code = 535;
       } else if (res.status === 401 || res.status === 403) {
         msg = `Gmail authentication failed (${res.status}): ${apiMsg}. Re-authorise the account in Email Accounts.`;
