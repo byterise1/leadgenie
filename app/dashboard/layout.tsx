@@ -52,9 +52,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
+    // Initial load
     fetchNotifications();
+    // Polling fallback every 30s (catches anything Realtime misses)
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+
+    // Supabase Realtime — instant push when a new notification row is inserted
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      channel = supabase
+        .channel(`notif-${uid}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+          (payload) => {
+            setNotifications(prev => {
+              // Avoid duplicates if polling already added it
+              if (prev.some(n => n.id === (payload.new as Notification).id)) return prev;
+              return [payload.new as Notification, ...prev];
+            });
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      clearInterval(interval);
+      if (channel) supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close dropdown when clicking outside
@@ -68,11 +97,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Background inbox sync — runs every 2 minutes from any dashboard page
+  // Background inbox sync — runs every 60s from any dashboard page
   useEffect(() => {
     const sync = () => fetch('/api/inbox/sync', { method: 'POST' }).catch(() => {});
     sync();
-    const id = setInterval(sync, 120000);
+    const id = setInterval(sync, 60000);
     return () => clearInterval(id);
   }, []);
 

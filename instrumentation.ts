@@ -201,6 +201,7 @@ export async function register() {
         account_id: account.id,
         step_number: stepNumber,
         subject,
+        sent_at: new Date().toISOString(),
       }).select('id').single();
 
       // Inject unsubscribe link into body

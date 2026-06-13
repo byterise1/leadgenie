@@ -37,13 +37,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Only count opens that fire more than 30s after sending.
     // Gmail pre-fetches images within 5-15s of delivery — this guard filters
     // that false positive without blocking genuine opens that come later.
+    // Also allow emails where sent_at is NULL (legacy rows before sent_at was added).
     const cutoff = new Date(Date.now() - 30000).toISOString();
     await supabaseAdmin
       .from('sent_emails')
       .update({ opened_at: new Date().toISOString() })
       .eq('id', id)
       .is('opened_at', null)
-      .lt('sent_at', cutoff);
+      .or(`sent_at.is.null,sent_at.lt.${cutoff}`);
   }
 
   return new NextResponse(GIF, {
