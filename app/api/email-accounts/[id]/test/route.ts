@@ -39,10 +39,18 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   } catch (err: any) {
     const msg = err?.message || 'Unknown error';
     const code = err?.responseCode;
-    // Mark as error on auth failures or config issues (535 covers Gmail API not enabled too)
-    if (code === 535 || code === 401 || err?.code === 'EAUTH' ||
+    const errCode = err?.code || '';
+
+    if (code === 535 || code === 401 || errCode === 'EAUTH' ||
         msg.includes('auth') || msg.includes('token') || msg.includes('credentials') || msg.includes('not enabled')) {
       await supabaseAdmin.from('email_accounts').update({ status: 'error' }).eq('id', id);
+      return NextResponse.json({ error: `Authentication failed — check your username and password.` }, { status: 500 });
+    }
+    if (errCode === 'ETIMEDOUT' || errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' ||
+        msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+      return NextResponse.json({
+        error: `Cannot reach ${account.smtp_host || 'SMTP server'} on port ${account.smtp_port || 587}. Check your SMTP host and port, or try port 465.`,
+      }, { status: 500 });
     }
     return NextResponse.json({ error: msg }, { status: 500 });
   }

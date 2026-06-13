@@ -32,7 +32,7 @@ const TYPE_COLORS: Record<Account['type'], string> = {
 
 type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
 
-function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void }) {
+function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void; connecting?: boolean }) {
   const [form, setForm] = useState({ email: '', host: '', port: '587', user: '', pass: '', imapHost: '', imapPort: '993' });
   const [showImap, setShowImap] = useState(false);
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -91,20 +91,22 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
 
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => {
+        <button disabled={!valid || connecting} onClick={() => {
           const extra: Record<string, string> = { smtp_host: form.host, smtp_port: form.port, smtp_user: form.user, smtp_pass: form.pass };
           if (showImap && form.imapHost) { extra.imap_host = form.imapHost; extra.imap_port = form.imapPort; }
           onConnect(form.email, extra);
         }}
-          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          Connect Account
+          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          {connecting ? (
+            <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Connecting…</>
+          ) : 'Connect Account'}
         </button>
       </div>
     </div>
   );
 }
 
-function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void }) {
+function ImapForm({ onBack, onConnect, connecting }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void; connecting?: boolean }) {
   const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', pass: '' });
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.email && form.imapHost && form.smtpHost && form.pass;
@@ -152,16 +154,18 @@ function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
       </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.email, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
-          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          Connect Account
+        <button disabled={!valid || connecting} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.email, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
+          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          {connecting ? (
+            <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Connecting…</>
+          ) : 'Connect Account'}
         </button>
       </div>
     </div>
   );
 }
 
-function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, pass: string) => void }) {
+function GmailAppForm({ onBack, onConnect, connecting }: { onBack: () => void; onConnect: (email: string, pass: string) => void; connecting?: boolean }) {
   const [email, setEmail] = useState('');
   const [appPass, setAppPass] = useState('');
   const valid = email && appPass.length >= 16;
@@ -188,9 +192,11 @@ function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (e
       ))}
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(email, appPass.replace(/\s/g, ''))}
-          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          Connect Account
+        <button disabled={!valid || connecting} onClick={() => onConnect(email, appPass.replace(/\s/g, ''))}
+          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          {connecting ? (
+            <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Connecting…</>
+          ) : 'Connect Account'}
         </button>
       </div>
     </div>
@@ -300,14 +306,18 @@ export default function EmailAccountsPage() {
 
   useEffect(() => { setAddError(''); }, [step]);
 
+  const [connecting, setConnecting] = useState(false);
+
   const addAccount = async (type: Account['type'], email: string, extra?: Record<string, string>) => {
     setAddError('');
+    setConnecting(true);
     const res = await fetch('/api/email-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, email, ...extra }),
     });
     const data = await res.json();
+    setConnecting(false);
     if (res.ok) {
       // If it already existed, add to list only if not already shown
       setAccounts(prev => prev.some(a => a.id === data.id) ? prev : [data, ...prev]);
@@ -594,15 +604,15 @@ export default function EmailAccountsPage() {
               )}
 
               {step === 'gmail-app' && (
-                <GmailAppForm onBack={() => setStep('choose')} onConnect={(email, pass) => addAccount('gmail-app', email, { smtp_user: email, smtp_pass: pass })} />
+                <GmailAppForm onBack={() => setStep('choose')} connecting={connecting} onConnect={(email, pass) => addAccount('gmail-app', email, { smtp_user: email, smtp_pass: pass })} />
               )}
 
               {step === 'imap' && (
-                <ImapForm onBack={() => setStep('choose')} onConnect={(email, extra) => addAccount('imap', email, extra)} />
+                <ImapForm onBack={() => setStep('choose')} connecting={connecting} onConnect={(email, extra) => addAccount('imap', email, extra)} />
               )}
 
               {step === 'smtp' && (
-                <SmtpForm onBack={() => setStep('choose')} onConnect={(email, extra) => addAccount('smtp', email, extra)} />
+                <SmtpForm onBack={() => setStep('choose')} connecting={connecting} onConnect={(email, extra) => addAccount('smtp', email, extra)} />
               )}
             </div>
           </div>
