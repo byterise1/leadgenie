@@ -4,9 +4,11 @@ type Props = {
   confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  secondLabel?: string;
+  onSecond?: () => void;
 };
 
-export default function ConfirmModal({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: Props) {
+export default function ConfirmModal({ title, message, confirmLabel = 'Delete', onConfirm, onCancel, secondLabel, onSecond }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel}/>
@@ -22,11 +24,17 @@ export default function ConfirmModal({ title, message, confirmLabel = 'Delete', 
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">{message}</p>
           </div>
         </div>
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end flex-wrap">
           <button onClick={onCancel}
             className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
             Cancel
           </button>
+          {secondLabel && onSecond && (
+            <button onClick={onSecond}
+              className="px-4 py-2 text-sm font-bold text-white bg-red-800 rounded-xl hover:bg-red-900 transition-colors">
+              {secondLabel}
+            </button>
+          )}
           <button onClick={onConfirm}
             className="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">
             {confirmLabel}

@@ -61,7 +61,7 @@ export default function LeadsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAddToList, setShowAddToList] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; confirmLabel?: string; onConfirm: () => void; secondLabel?: string; onSecond?: () => void } | null>(null);
 
   // List picker modal — shown before Add Lead or Import when no list is selected
   const [showPicker, setShowPicker] = useState(false);
@@ -316,18 +316,22 @@ export default function LeadsPage() {
     if (res.ok) { setLists(p => [...p, d]); setNewListName(''); setShowNewList(false); }
   };
 
-  const deleteList = (id: string) => {
+  const deleteList = (id: string, withLeads = false) => {
     const list = lists.find(l => l.id === id);
     setCtxMenu(null);
+    const doDelete = async (leads: boolean) => {
+      setConfirmModal(null);
+      await fetch(`/api/lead-lists/${id}${leads ? '?deleteLeads=true' : ''}`, { method: 'DELETE' });
+      setLists(p => p.filter(l => l.id !== id));
+      if (selectedList === id) selectList(null);
+    };
     setConfirmModal({
       title: 'Delete list?',
-      message: `"${list?.name ?? 'This list'}" will be permanently deleted. Leads inside it won't be deleted — just removed from this list.`,
-      onConfirm: async () => {
-        setConfirmModal(null);
-        await fetch(`/api/lead-lists/${id}`, { method: 'DELETE' });
-        setLists(p => p.filter(l => l.id !== id));
-        if (selectedList === id) selectList(null);
-      },
+      message: `"${list?.name ?? 'This list'}" — choose how to delete:`,
+      confirmLabel: 'Delete List Only',
+      onConfirm: () => doDelete(false),
+      secondLabel: 'Delete List + All Leads',
+      onSecond: () => doDelete(true),
     });
   };
 
@@ -721,8 +725,11 @@ export default function LeadsPage() {
         <ConfirmModal
           title={confirmModal.title}
           message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
+          secondLabel={confirmModal.secondLabel}
+          onSecond={confirmModal.onSecond}
         />
       )}
     </main>
