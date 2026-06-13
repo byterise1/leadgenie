@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import { Skeleton } from '@/components/Skeleton';
 
 type Lead = {
   id: string;
@@ -250,13 +251,12 @@ export default function LeadsPage() {
     setConfirmModal({
       title: 'Delete lead?',
       message: 'This lead will be permanently removed. This cannot be undone.',
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmModal(null);
-        await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
         setLeads(p => p.filter(l => l.id !== leadId));
         setSelected(p => { const n = new Set(p); n.delete(leadId); return n; });
         setTotalCount(c => Math.max(0, c - 1));
-        fetchLists();
+        fetch(`/api/leads/${leadId}`, { method: 'DELETE' }).then(() => fetchLists());
       },
     });
   };
@@ -464,7 +464,13 @@ export default function LeadsPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} className="px-5 py-16 text-center text-sm text-gray-400">Loading…</td></tr>
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-gray-100">
+                        {Array.from({ length: 8 }).map((_, j) => (
+                          <td key={j} className="px-4 py-3.5"><Skeleton className={`h-3 ${j === 0 ? 'w-5' : j === 1 ? 'w-24' : j === 2 ? 'w-32' : 'w-16'}`} /></td>
+                        ))}
+                      </tr>
+                    ))
                   ) : leads.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-5 py-20 text-center">

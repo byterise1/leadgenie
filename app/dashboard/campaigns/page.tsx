@@ -49,22 +49,27 @@ export default function CampaignsPage() {
         }
       }).finally(() => setLoading(false));
     fetchCampaigns();
-    const id = setInterval(fetchCampaigns, 10000);
+    const id = setInterval(fetchCampaigns, 30000);
     return () => clearInterval(id);
   }, []);
 
   const filtered = tab === 'All' ? campaigns : campaigns.filter(c => c.status === tab.toLowerCase());
 
-  const toggleStatus = async (e: React.MouseEvent, c: Campaign) => {
+  const toggleStatus = (e: React.MouseEvent, c: Campaign) => {
     e.preventDefault();
     const next = c.status === 'active' ? 'paused' : c.status === 'paused' ? 'active' : c.status;
     if (next === c.status) return;
-    const res = await fetch(`/api/campaigns/${c.id}`, {
+    // Optimistic update
+    setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: next } : x));
+    fetch(`/api/campaigns/${c.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next }),
+    }).then(res => {
+      if (!res.ok) setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: c.status } : x));
+    }).catch(() => {
+      setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: c.status } : x));
     });
-    if (res.ok) setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: next } : x));
   };
 
   const deleteCampaign = (e: React.MouseEvent, c: Campaign) => {

@@ -83,14 +83,18 @@ export default function InboxPage() {
     }
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    await fetch('/api/inbox', {
+  const updateStatus = (id: string, status: string) => {
+    // Optimistic — update UI instantly, sync in background
+    setThreads(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    setSelected(prev => prev?.id === id ? { ...prev, status } : prev);
+    fetch('/api/inbox', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
+    }).catch(() => {
+      // Rollback on failure
+      setThreads(prev => prev.map(t => t.id === id ? { ...t, status: t.status } : t));
     });
-    setThreads(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-    setSelected(prev => prev?.id === id ? { ...prev, status } : prev);
   };
 
   const unread = threads.filter(t => !t.read).length;

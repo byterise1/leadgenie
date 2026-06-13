@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SkeletonRow } from '@/components/Skeleton';
 
 type WarmupAccount = {
   id: string;
@@ -114,8 +115,8 @@ export default function WarmupPage() {
       {tab === 'accounts' && (
         <>
           {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-100 p-16 flex items-center justify-center">
-              <p className="text-sm text-gray-400">Loading accounts…</p>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}
             </div>
           ) : accounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-16 flex flex-col items-center text-center">

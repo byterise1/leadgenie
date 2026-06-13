@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
+import { Skeleton } from '@/components/Skeleton';
 
 type EmailStep = {
   id: string;
@@ -98,24 +99,26 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 4000); };
 
-  const markComplete = async () => {
+  const markComplete = () => {
     if (!campaign) return;
-    const res = await fetch(`/api/campaigns/${id}`, {
+    setCampaign(p => p ? { ...p, status: 'completed' } : p);
+    showMsg('Campaign completed');
+    fetch(`/api/campaigns/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'completed' }),
-    });
-    if (res.ok) { setCampaign(p => p ? { ...p, status: 'completed' } : p); showMsg('Campaign completed'); }
+    }).then(r => { if (!r.ok) setCampaign(p => p ? { ...p, status: campaign.status } : p); });
   };
 
-  const toggleStatus = async () => {
+  const toggleStatus = () => {
     if (!campaign) return;
     const next = campaign.status === 'active' ? 'paused' : campaign.status === 'paused' ? 'active' : null;
     if (!next) return;
-    const res = await fetch(`/api/campaigns/${id}`, {
+    setCampaign(p => p ? { ...p, status: next } : p);
+    showMsg(`Campaign ${next}`);
+    fetch(`/api/campaigns/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next }),
-    });
-    if (res.ok) { setCampaign(p => p ? { ...p, status: next } : p); showMsg(`Campaign ${next}`); }
+    }).then(r => { if (!r.ok) setCampaign(p => p ? { ...p, status: campaign.status } : p); });
   };
 
   const saveName = async () => {
@@ -145,8 +148,21 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   };
 
   if (loading) return (
-    <main className="flex-1 p-6 flex items-center justify-center">
-      <p className="text-sm text-gray-400">Loading…</p>
+    <main className="flex-1 p-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-7 w-52" />
+        <Skeleton className="h-6 w-16 rounded-full ml-2" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3"><Skeleton className="h-3 w-20" /><Skeleton className="h-7 w-14" /></div>)}
+      </div>
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+        </div>
+        <Skeleton className="h-48 rounded-2xl" />
+      </div>
     </main>
   );
 
