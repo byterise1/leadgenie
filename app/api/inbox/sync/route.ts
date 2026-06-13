@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAccessToken } from '@/lib/mailer';
+import { createNotification } from '@/lib/notifications';
 
 function getHeader(headers: { name: string; value: string }[] | undefined, name: string): string {
   return headers?.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
@@ -132,6 +133,17 @@ export async function POST(_req: NextRequest) {
             received_at: receivedAt,
           });
           totalSynced++;
+
+          // In-app notification (respects user's notif_new_reply pref)
+          const { data: prof } = await supabaseAdmin
+            .from('profiles').select('notif_new_reply').eq('id', user.id).maybeSingle();
+          if (prof?.notif_new_reply !== false) {
+            await createNotification(
+              user.id,
+              `New reply from ${fromName || fromEmail} on "${subjectHeader}"`,
+              'info',
+            );
+          }
         }
 
         // Mark the sent email as replied and stop further steps for this lead

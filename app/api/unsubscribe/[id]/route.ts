@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,6 +44,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         .eq('campaign_id', sentEmail.campaign_id)
         .eq('lead_id', sentEmail.lead_id),
     ]);
+
+    // Notify the campaign owner (if they have unsubscribe notifications enabled)
+    const { data: campaign } = await supabaseAdmin
+      .from('campaigns')
+      .select('user_id, name')
+      .eq('id', sentEmail.campaign_id)
+      .maybeSingle();
+
+    if (campaign?.user_id) {
+      const { data: prof } = await supabaseAdmin
+        .from('profiles').select('notif_unsubscribe').eq('id', campaign.user_id).maybeSingle();
+      if (prof?.notif_unsubscribe !== false) {
+        await createNotification(
+          campaign.user_id,
+          `${lead?.email || 'A lead'} unsubscribed from campaign "${campaign.name}"`,
+          'info',
+        );
+      }
+    }
   }
 
   const firstName = lead?.first_name?.trim() || '';

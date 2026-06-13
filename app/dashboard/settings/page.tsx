@@ -18,12 +18,15 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 const TIMEZONES = ['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'];
+const ALL_DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
+  // Profile fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
@@ -33,17 +36,23 @@ export default function SettingsPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
 
-  const NOTIF_KEY = 'lg_notif_prefs';
-  const defaultNotifs = { new_reply: true, campaign_complete: true, warmup_alert: false, lead_open: false, weekly_report: true, unsubscribe: false };
-  const [notifs, setNotifs] = useState(defaultNotifs);
+  // Sending defaults
+  const [fromName, setFromName] = useState('');
+  const [dailyLimit, setDailyLimit] = useState(50);
+  const [minDelay, setMinDelay] = useState(5);
+  const [fromHour, setFromHour] = useState('08:00');
+  const [toHour, setToHour] = useState('18:00');
+  const [activeDays, setActiveDays] = useState<Set<string>>(new Set(['Mo', 'Tu', 'We', 'Th', 'Fr']));
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(NOTIF_KEY);
-      if (saved) setNotifs({ ...defaultNotifs, ...JSON.parse(saved) });
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Notification prefs
+  const [notifs, setNotifs] = useState({
+    new_reply: true,
+    campaign_complete: true,
+    warmup_alert: false,
+    lead_open: false,
+    weekly_report: true,
+    unsubscribe: false,
+  });
 
   useEffect(() => {
     fetch('/api/profile')
@@ -56,28 +65,102 @@ export default function SettingsPage() {
           setWebsite(data.website || '');
           setTimezone(data.timezone || 'UTC');
           setAvatarUrl(data.avatar_url || '');
+
+          setFromName(data.default_from_name || '');
+          setDailyLimit(data.daily_limit ?? 50);
+          setMinDelay(data.min_delay ?? 5);
+          setFromHour(data.from_hour || '08:00');
+          setToHour(data.to_hour || '18:00');
+          if (Array.isArray(data.active_days) && data.active_days.length) {
+            setActiveDays(new Set(data.active_days));
+          }
+
+          setNotifs({
+            new_reply: data.notif_new_reply ?? true,
+            campaign_complete: data.notif_campaign_complete ?? true,
+            warmup_alert: data.notif_warmup_alert ?? false,
+            lead_open: data.notif_lead_open ?? false,
+            weekly_report: data.notif_weekly_report ?? true,
+            unsubscribe: data.notif_unsubscribe ?? false,
+          });
         }
+        setLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => setLoaded(true));
   }, []);
 
-  const saveProfile = async () => {
-    setSaving(true);
-    setSaveMsg('');
+  const showMsg = (msg: string) => {
+    setSaveMsg(msg);
+    setTimeout(() => setSaveMsg(''), 3000);
+  };
+
+  const patch = async (body: Record<string, unknown>) => {
     const res = await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ full_name: fullName, company, website, timezone }),
+      body: JSON.stringify(body),
     });
-    const data = await res.json();
-    if (res.ok) {
-      setSaveMsg('Saved successfully');
-    } else {
-      setSaveMsg(data.error || 'Save failed');
-    }
-    setSaving(false);
-    setTimeout(() => setSaveMsg(''), 3000);
+    return res.json();
   };
+
+  const saveProfile = async () => {
+    setSaving(true);
+    const data = await patch({ full_name: fullName, company, website, timezone });
+    if (data.error) showMsg(data.error);
+    else showMsg('Saved successfully');
+    setSaving(false);
+  };
+
+  const saveSending = async () => {
+    setSaving(true);
+    const data = await patch({
+      default_from_name: fromName,
+      daily_limit: dailyLimit,
+      min_delay: minDelay,
+      from_hour: fromHour,
+      to_hour: toHour,
+      active_days: Array.from(activeDays),
+    });
+    if (data.error) showMsg(data.error);
+    else showMsg('Saved successfully');
+    setSaving(false);
+  };
+
+  const toggleDay = (day: string) => {
+    setActiveDays(prev => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  };
+
+  const toggleNotif = async (key: keyof typeof notifs) => {
+    const next = { ...notifs, [key]: !notifs[key] };
+    setNotifs(next);
+    await patch({
+      notif_new_reply: next.new_reply,
+      notif_campaign_complete: next.campaign_complete,
+      notif_warmup_alert: next.warmup_alert,
+      notif_lead_open: next.lead_open,
+      notif_weekly_report: next.weekly_report,
+      notif_unsubscribe: next.unsubscribe,
+    });
+  };
+
+  if (!loaded) {
+    return (
+      <main className="flex-1 p-6">
+        <div className="h-8 w-40 bg-gray-100 rounded-xl animate-pulse mb-6"/>
+        <div className="flex gap-8">
+          <div className="w-52 space-y-1">
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse"/>)}
+          </div>
+          <div className="flex-1 max-w-xl h-80 bg-gray-100 rounded-2xl animate-pulse"/>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 p-6">
@@ -89,7 +172,7 @@ export default function SettingsPage() {
       <div className="flex gap-8">
         <nav className="w-52 shrink-0 space-y-0.5">
           {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            <button key={t.id} onClick={() => { setTab(t.id); setSaveMsg(''); }}
               className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 tab === t.id ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
               }`}>
@@ -101,6 +184,7 @@ export default function SettingsPage() {
 
         <div className="flex-1 max-w-xl">
 
+          {/* ── Profile ── */}
           {tab === 'profile' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <h2 className="text-base font-bold text-gray-900">Profile Information</h2>
@@ -126,8 +210,8 @@ export default function SettingsPage() {
                     fd.append('avatar', file);
                     const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd });
                     const d = await res.json();
-                    if (res.ok) { setAvatarUrl(d.avatar_url); setSaveMsg('Photo updated'); setTimeout(() => setSaveMsg(''), 3000); }
-                    else setSaveMsg(d.error || 'Upload failed');
+                    if (res.ok) { setAvatarUrl(d.avatar_url); showMsg('Photo updated'); }
+                    else showMsg(d.error || 'Upload failed');
                     setAvatarUploading(false);
                     e.target.value = '';
                   }}/>
@@ -156,7 +240,7 @@ export default function SettingsPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
                 <input type="email" value={email} disabled placeholder="you@company.com"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed"/>
-                <p className="text-xs text-gray-400 mt-1">Email cannot be changed here. Update via Supabase auth.</p>
+                <p className="text-xs text-gray-400 mt-1">Email cannot be changed here.</p>
               </div>
 
               <div>
@@ -180,7 +264,7 @@ export default function SettingsPage() {
               </div>
 
               {saveMsg && (
-                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg.includes('success') || saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                   {saveMsg}
                 </div>
               )}
@@ -192,6 +276,7 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* ── Sending Defaults ── */}
           {tab === 'sending' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <h2 className="text-base font-bold text-gray-900">Sending Defaults</h2>
@@ -199,81 +284,120 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Default "From" Name</label>
-                <input placeholder="John at Acme" type="text"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                <input
+                  type="text"
+                  value={fromName}
+                  onChange={e => setFromName(e.target.value)}
+                  placeholder="John at Acme"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Daily Email Limit</label>
-                  <input type="number" defaultValue={50} min={1} max={500}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  <input
+                    type="number"
+                    value={dailyLimit}
+                    onChange={e => setDailyLimit(Number(e.target.value))}
+                    min={1} max={500}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Min Delay (mins)</label>
-                  <input type="number" defaultValue={5} min={1}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  <input
+                    type="number"
+                    value={minDelay}
+                    onChange={e => setMinDelay(Number(e.target.value))}
+                    min={1}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sending Hours</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {[{ label: 'From', val: '08:00' }, { label: 'To', val: '18:00' }].map(t => (
-                    <div key={t.label}>
-                      <p className="text-xs text-gray-400 mb-1">{t.label}</p>
-                      <input type="time" defaultValue={t.val}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-                    </div>
-                  ))}
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">From</p>
+                    <input
+                      type="time"
+                      value={fromHour}
+                      onChange={e => setFromHour(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">To</p>
+                    <input
+                      type="time"
+                      value={toHour}
+                      onChange={e => setToHour(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">Active Days</p>
                 <div className="flex gap-2">
-                  {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d, i) => (
-                    <button key={d} className={`w-9 h-9 rounded-full text-xs font-bold border transition-all ${i < 5 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-400 border-gray-200 hover:border-blue-300'}`}>
+                  {ALL_DAYS.map(d => (
+                    <button
+                      key={d}
+                      onClick={() => toggleDay(d)}
+                      className={`w-9 h-9 rounded-full text-xs font-bold border transition-all ${
+                        activeDays.has(d)
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-400 border-gray-200 hover:border-blue-300'
+                      }`}>
                       {d}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
-                Save Defaults
+              {saveMsg && (
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                  {saveMsg}
+                </div>
+              )}
+
+              <button onClick={saveSending} disabled={saving}
+                className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save Defaults'}
               </button>
             </div>
           )}
 
+          {/* ── Notifications ── */}
           {tab === 'notifications' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-1">
-              <h2 className="text-base font-bold text-gray-900 mb-4">Notification Preferences</h2>
-              {[
+              <h2 className="text-base font-bold text-gray-900 mb-1">Notification Preferences</h2>
+              <p className="text-sm text-gray-400 mb-4">Toggling saves instantly. In-app bell alerts appear for enabled types.</p>
+              {([
                 { key: 'new_reply', label: 'New reply received', desc: 'When a prospect replies to any campaign' },
                 { key: 'campaign_complete', label: 'Campaign completed', desc: 'When a campaign finishes sending' },
                 { key: 'warmup_alert', label: 'Warmup health alert', desc: 'When warmup score drops below 80%' },
                 { key: 'lead_open', label: 'Lead opens email', desc: 'Real-time open tracking notification' },
                 { key: 'weekly_report', label: 'Weekly performance report', desc: 'Summary email every Monday morning' },
                 { key: 'unsubscribe', label: 'Unsubscribe received', desc: 'When a lead unsubscribes from your list' },
-              ].map(n => (
+              ] as { key: keyof typeof notifs; label: string; desc: string }[]).map(n => (
                 <div key={n.key} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{n.label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{n.desc}</p>
                   </div>
                   <Toggle
-                    on={notifs[n.key as keyof typeof notifs]}
-                    onToggle={() => setNotifs(p => {
-                      const next = { ...p, [n.key]: !p[n.key as keyof typeof p] };
-                      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)); } catch {}
-                      return next;
-                    })}
+                    on={notifs[n.key]}
+                    onToggle={() => toggleNotif(n.key)}
                   />
                 </div>
               ))}
             </div>
           )}
+
         </div>
       </div>
     </main>
