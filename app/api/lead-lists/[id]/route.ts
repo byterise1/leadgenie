@@ -30,30 +30,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  // Find leads exclusively in this list (not in any other list) and delete them
-  const { data: members } = await supabaseAdmin
-    .from('lead_list_members')
-    .select('lead_id')
-    .eq('list_id', id);
+  // Get all lead IDs for this user BEFORE deleting (so we know what to check after)
+  const { data: allUserLeads } = await supabaseAdmin
+    .from('leads')
+    .select('id')
+    .eq('user_id', user.id);
+  const allLeadIds = (allUserLeads || []).map((l: { id: string }) => l.id);
 
-  const leadIds = (members || []).map((m: { lead_id: string }) => m.lead_id);
-
-  if (leadIds.length) {
-    const { data: inOtherLists } = await supabaseAdmin
-      .from('lead_list_members')
-      .select('lead_id')
-      .in('lead_id', leadIds)
-      .neq('list_id', id);
-
-    const sharedSet = new Set((inOtherLists || []).map((m: { lead_id: string }) => m.lead_id));
-    const toDelete = leadIds.filter(lid => !sharedSet.has(lid));
-
-    if (toDelete.length) {
-      await supabaseAdmin.from('leads').delete().in('id', toDelete);
-    }
-  }
-
-  // Delete the list (cascade removes lead_list_members rows)
+  // Delete the list (cascade removes its lead_list_members rows automatically)
   const { error } = await supabaseAdmin
     .from('lead_lists')
     .delete()
@@ -61,5 +45,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     .eq('user_id', user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Now find which of the user's leads are still linked to any remaining list
+  if (allLeadIds.length) {
+    const { data: stillLinked } = await supabaseAdmin
+      .from('lead_list_members')
+      .select('lead_id')
+      .in('lead_id', allLeadIds);
+
+    const linkedSet = new Set((stillLinked || []).map((m: { lead_id: string }) => m.lead_id));
+    const orphanIds = allLeadIds.filter(lid => !linkedSet.has(lid));
+
+    if (orphanIds.length) {
+      await supabaseAdmin.from('leads').delete().in('id', orphanIds);
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
