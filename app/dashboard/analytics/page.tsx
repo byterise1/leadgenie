@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Skeleton } from '@/components/Skeleton';
 
 const ranges = ['7 days', '30 days', '90 days', 'All time'];
 
@@ -72,7 +73,7 @@ export default function AnalyticsPage() {
         {kpis.map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{k.label}</p>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>
+            {!stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>}
             <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data yet' : 'All campaigns'}</p>
           </div>
         ))}
@@ -92,7 +93,15 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {!stats || stats.campaigns.length === 0 ? (
+              {!stats ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    {Array.from({ length: 9 }).map((_, j) => (
+                      <td key={j} className="px-5 py-4"><Skeleton className={`h-3.5 ${j === 0 ? 'w-32' : 'w-12'}`} /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : stats.campaigns.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-14 text-center text-sm text-gray-400">
                     No campaign data yet. Launch a campaign to see analytics.

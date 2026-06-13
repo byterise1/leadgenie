@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { NavigationProgress } from '@/components/NavigationProgress';
 
 type Notification = {
   id: string;
@@ -106,6 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      <NavigationProgress />
       <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 md:ml-[220px] min-w-0 flex flex-col">

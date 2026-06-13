@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Skeleton } from '@/components/Skeleton';
 
 const filters = ['All', 'Interested', 'Not Interested', 'Out of Office', 'Do Not Contact'];
 
@@ -140,7 +141,18 @@ export default function InboxPage() {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-sm text-gray-400">Loading…</div>
+            <div className="space-y-0">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="px-4 py-3.5 border-b border-gray-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3.5 w-28" />
+                    <Skeleton className="h-2.5 w-10" />
+                  </div>
+                  <Skeleton className="h-2.5 w-full" />
+                  <Skeleton className="h-2.5 w-3/4" />
+                </div>
+              ))}
+            </div>
           ) : threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center flex-1 h-full">
               <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-3">

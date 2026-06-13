@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import { Skeleton } from '@/components/Skeleton';
 
 const tabs = ['All', 'Active', 'Paused', 'Completed', 'Draft'];
 
@@ -105,7 +106,13 @@ export default function CampaignsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-5 py-20 text-center text-sm text-gray-400">Loading…</td></tr>
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    {Array.from({ length: 9 }).map((_, j) => (
+                      <td key={j} className="px-5 py-4"><Skeleton className={`h-3.5 ${j === 0 ? 'w-32' : j === 1 ? 'w-14 rounded-full' : 'w-10'}`} /></td>
+                    ))}
+                  </tr>
+                ))
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-20 text-center">
