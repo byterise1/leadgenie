@@ -552,9 +552,9 @@ export default function NewCampaignPage() {
                     <p className="text-[10px] text-gray-400">{activeDayCount} day{activeDayCount !== 1 ? 's' : ''}/week</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Window</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Max / Window</p>
                     <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount} email{emailsPerWindowPerAccount !== 1 ? 's' : ''}</p>
-                    <p className="text-[10px] text-gray-400">per account</p>
+                    <p className="text-[10px] text-gray-400">capacity per account</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
@@ -623,9 +623,9 @@ export default function NewCampaignPage() {
                     <p className="text-[10px] text-gray-400">{activeDayCount} active day{activeDayCount !== 1 ? 's' : ''}/week</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Account</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount}/window</p>
-                    <p className="text-[10px] text-gray-400">avg {avgDelayMins.toFixed(1)} min gap</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Max / Window</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount}/account</p>
+                    <p className="text-[10px] text-gray-400">capacity, {avgDelayMins.toFixed(1)} min avg gap</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>

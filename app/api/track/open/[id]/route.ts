@@ -34,11 +34,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const ua = req.headers.get('user-agent') || '';
 
   if (!isBot(ua)) {
+    // Only count opens that fire more than 30s after sending.
+    // Gmail pre-fetches images within 5-15s of delivery — this guard filters
+    // that false positive without blocking genuine opens that come later.
+    const cutoff = new Date(Date.now() - 30000).toISOString();
     await supabaseAdmin
       .from('sent_emails')
       .update({ opened_at: new Date().toISOString() })
       .eq('id', id)
-      .is('opened_at', null);
+      .is('opened_at', null)
+      .lt('sent_at', cutoff);
   }
 
   return new NextResponse(GIF, {

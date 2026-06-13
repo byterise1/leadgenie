@@ -205,9 +205,12 @@ export async function register() {
       const unsubUrl = sentEmail?.id ? `${SITE_URL}/api/unsubscribe/${sentEmail.id}` : '#';
       let body = rawBody.replace(/\{\{unsubscribe_link\}\}/g, unsubUrl);
 
-      // Append unsubscribe footer if step has include_unsub flag
+      // Save body BEFORE appending plain-text footer (used for HTML conversion below)
+      const bodyForHtml = body;
+
+      // Append minimal plain-text footer for email clients that display text/plain
       if (step.include_unsub && sentEmail?.id) {
-        body += `\n\n---\nTo unsubscribe from future emails, click here: ${unsubUrl}`;
+        body += `\n\n--\nDon't want these emails? Unsubscribe: ${unsubUrl}`;
       }
 
       const trackPixel = sentEmail?.id
@@ -217,8 +220,8 @@ export async function register() {
       const clickBase = sentEmail?.id ? `${SITE_URL}/api/track/click/${sentEmail.id}` : null;
 
       // Build HTML safely: treat lines with existing <a> tags differently from plain text
-      const BLOCK_RE = /^<(p|div|ul|ol|h[1-6]|table|blockquote|pre)\b/i;
-      const htmlLines = body.split('\n').map((l: string) => {
+      const BLOCK_RE = /^<(p|div|ul|ol|h[1-6]|table|blockquote|pre|hr)\b/i;
+      const htmlLines = bodyForHtml.split('\n').map((l: string) => {
         const t = l.trim();
         if (!t) return '';
 
@@ -245,7 +248,12 @@ export async function register() {
         return `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px;color:#111">${processed}</p>`;
       }).join('\n');
 
-      const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#111;max-width:600px;margin:0 auto;padding:24px">${htmlLines}${trackPixel}</body></html>`;
+      // Clean HTML unsubscribe footer — personal tone, small/muted, not marketing-style
+      const unsubHtml = step.include_unsub && sentEmail?.id
+        ? `<p style="margin:20px 0 0 0;padding-top:12px;border-top:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:11px;color:#aaa;line-height:1.5">If you'd prefer not to hear from me, <a href="${unsubUrl}" style="color:#aaa;text-decoration:underline">unsubscribe here</a>.</p>`
+        : '';
+
+      const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#111;max-width:600px;margin:0 auto;padding:24px">${htmlLines}${unsubHtml}${trackPixel}</body></html>`;
 
       try {
         const { threadId } = await sendEmail(account, {
