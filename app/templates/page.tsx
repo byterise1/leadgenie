@@ -10,7 +10,7 @@ const templates = [
 
 Most {{job_title}}s at {{company_size}} SaaS companies are still spending 3+ hours a day on manual prospecting.
 
-We built LeadGenie to fix that — automated outreach that books qualified demos without an SDR.
+We built Lead Genie to fix that — automated outreach that books qualified demos without an SDR.
 
 Worth a 15-minute call this week?
 
@@ -64,7 +64,7 @@ Would you be open to a quick call this week?
 
 Just wanted to bump this to the top of your inbox in case it got buried.
 
-Still happy to share how {{similar_company}} used LeadGenie to book 30 meetings in 3 weeks.
+Still happy to share how {{similar_company}} used Lead Genie to book 30 meetings in 3 weeks.
 
 Worth a quick chat?
 
@@ -105,7 +105,7 @@ export default function TemplatesPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Templates</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Templates That Work</h1>
             <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
-              Proven cold email templates used by 30,000+ LeadGenie users.
+              Proven cold email templates used by 30,000+ Lead Genie users.
               Copy, customise, and launch in minutes.
             </p>
           </div>

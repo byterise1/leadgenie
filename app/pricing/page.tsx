@@ -260,7 +260,7 @@ export default function PricingPage() {
         <section className="hero-gradient py-20">
           <div className="container text-center">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to start booking meetings?</h2>
-            <p className="text-blue-100 text-base mb-8 max-w-md mx-auto">Join 30,000+ teams using LeadGenie to scale cold email outreach.</p>
+            <p className="text-blue-100 text-base mb-8 max-w-md mx-auto">Join 30,000+ teams using Lead Genie to scale cold email outreach.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
                 Start Free Trial

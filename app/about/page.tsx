@@ -14,7 +14,7 @@ export default function AboutPage() {
               Built for cold email teams<br />who want real results
             </h1>
             <p className="mt-6 text-gray-500 text-lg leading-relaxed max-w-2xl mx-auto">
-              LeadGenie was built by a team of outbound sales practitioners who were frustrated
+              Lead Genie was built by a team of outbound sales practitioners who were frustrated
               with tools that promised deliverability but couldn&apos;t deliver. We built the platform
               we always wanted — and opened it up to the world.
             </p>

@@ -155,4 +155,4 @@ emailWorker.on('completed', job => console.log(`Email job ${job.id} done`));
 emailWorker.on('failed', (job, err) => console.error(`Email job ${job?.id} failed:`, err.message));
 warmupWorker.on('failed', (job, err) => console.error(`Warmup job ${job?.id} failed:`, err.message));
 
-console.log('🚀 LeadGenie worker started');
+console.log('🚀 Lead Genie worker started');

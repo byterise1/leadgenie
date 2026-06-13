@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -126,11 +127,8 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
       <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
         <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0">
-          <Link href="/" className="flex items-center gap-2 font-extrabold text-[15px] text-gray-900">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs">
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            </span>
-            LeadGenie
+          <Link href="/">
+            <Logo size={26} textSize="text-[14px]" />
           </Link>
         </div>
 

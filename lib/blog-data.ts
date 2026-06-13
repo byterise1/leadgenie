@@ -26,7 +26,7 @@ Before you send a single email, your domain needs to be properly authenticated. 
 
 A brand-new sending account has zero reputation. Sending 500 cold emails on day one is a guaranteed way to land in spam.
 
-Email warmup gradually increases your sending volume while building positive engagement signals — opens, replies, marking emails as not spam. LeadGenie's warmup network does this automatically. Most domains reach a healthy inbox placement score within 3–4 weeks.
+Email warmup gradually increases your sending volume while building positive engagement signals — opens, replies, marking emails as not spam. Lead Genie's warmup network does this automatically. Most domains reach a healthy inbox placement score within 3–4 weeks.
 
 **Best practices:**
 - Warm up every new domain for at least 3 weeks before sending cold outreach
@@ -56,7 +56,7 @@ Email providers scan the content of your emails for spam signals.
 
 Use Google Postmaster Tools (free) to monitor your domain reputation with Gmail. Aim for a "High" reputation score.
 
-In LeadGenie's Analytics dashboard, track your open rates by account. If a specific account's open rate drops below 20%, pause it and check your warmup score.
+In Lead Genie's Analytics dashboard, track your open rates by account. If a specific account's open rate drops below 20%, pause it and check your warmup score.
 
 ## Common Deliverability Problems & Fixes
 
@@ -69,7 +69,7 @@ In LeadGenie's Analytics dashboard, track your open rates by account. If a speci
 
 ## Key Takeaway
 
-Cold email deliverability isn't magic — it's a system. Set up your authentication, warm up your domains, respect sending limits, and keep your content clean. Follow these steps and you'll consistently see 60%+ open rates in LeadGenie campaigns.`,
+Cold email deliverability isn't magic — it's a system. Set up your authentication, warm up your domains, respect sending limits, and keep your content clean. Follow these steps and you'll consistently see 60%+ open rates in Lead Genie campaigns.`,
   },
   {
     slug: 'cold-email-reply-rates',
@@ -143,7 +143,7 @@ Hi [First Name],
 
 Most VP Sales at [company size] SaaS companies are still spending 3+ hours/day on manual prospecting.
 
-We built LeadGenie to fix that — automated outreach that books qualified demos without adding an SDR.
+We built Lead Genie to fix that — automated outreach that books qualified demos without adding an SDR.
 
 We helped [Similar Company] go from 5 to 47 qualified demos in 30 days.
 
@@ -222,9 +222,9 @@ With a custom domain and a dedicated mail server (e.g., via Postmark, SendGrid, 
 - Recommended limit per domain: 300–500/day after full warmup
 - Always use inbox rotation across multiple domains for high-volume sending
 
-## How LeadGenie Handles Sending Limits
+## How Lead Genie Handles Sending Limits
 
-LeadGenie automatically:
+Lead Genie automatically:
 - Respects per-account daily limits you set
 - Rotates sending across multiple accounts so you can scale safely
 - Spreads emails throughout the day (no bulk sends at 9:00am sharp)
@@ -240,7 +240,7 @@ The only safe way to send more emails is to add more sending accounts — not to
 | 2,000 emails/day | 15–20 accounts |
 | 10,000 emails/day | 60–80 accounts |
 
-With LeadGenie, you can connect unlimited sending accounts and distribute your campaigns across all of them automatically.`,
+With Lead Genie, you can connect unlimited sending accounts and distribute your campaigns across all of them automatically.`,
   },
   {
     slug: 'cold-email-subject-lines',
@@ -253,7 +253,7 @@ With LeadGenie, you can connect unlimited sending accounts and distribute your c
 
 Your subject line has one job: get the email opened. Nothing else matters until that happens.
 
-After analysing over 10 million cold emails sent through the LeadGenie platform, we found that the highest-performing subject lines share five characteristics:
+After analysing over 10 million cold emails sent through the Lead Genie platform, we found that the highest-performing subject lines share five characteristics:
 
 1. **Short** — 3–7 words outperform longer subject lines by 21%
 2. **Specific** — Mentioning the prospect's company or name increases open rates by 34%
@@ -310,7 +310,7 @@ These patterns consistently underperform or trigger spam filters:
 
 ## A/B Testing Your Subject Lines
 
-Use LeadGenie's built-in A/B testing to test subject lines on real campaigns. Our recommendation:
+Use Lead Genie's built-in A/B testing to test subject lines on real campaigns. Our recommendation:
 
 - Test one variable at a time (question vs. statement)
 - Run each variant on at least 200 contacts before declaring a winner
@@ -329,7 +329,7 @@ If you can't explain what makes your subject line compelling in 3 seconds, rewri
     desc: 'Step-by-step guide to building a 5-step sequence with the right delays, angles, and follow-up logic.',
     content: `## Why Sequences Beat Single Emails
 
-Most people reply to the second, third, or fourth email — not the first. Data from LeadGenie campaigns shows that 68% of all replies come from follow-up emails, not the initial outreach.
+Most people reply to the second, third, or fourth email — not the first. Data from Lead Genie campaigns shows that 68% of all replies come from follow-up emails, not the initial outreach.
 
 A well-built sequence captures that 68%.
 
@@ -373,13 +373,13 @@ Example:
 | Email 4 | Day 12 | Patient but persistent |
 | Email 5 | Day 18 | Final attempt |
 
-## Setting Up Your Sequence in LeadGenie
+## Setting Up Your Sequence in Lead Genie
 
 1. Go to **Campaigns** → **New Campaign**
 2. Add your sending accounts (enable inbox rotation for sequences)
 3. Build your sequence steps with the delays above
 4. Add personalisation variables: \`{{first_name}}\`, \`{{company}}\`, \`{{job_title}}\`
-5. Set reply detection: LeadGenie automatically stops the sequence when a prospect replies
+5. Set reply detection: Lead Genie automatically stops the sequence when a prospect replies
 6. Launch with a test send to your own email first
 
 ## Common Mistakes to Avoid
@@ -407,7 +407,7 @@ When you create a new email account or a new domain, email providers (Gmail, Out
 
 During warmup, your account sends and receives emails within a trusted network of other accounts. These emails are automatically opened, replied to, and — critically — moved out of spam. This pattern of positive engagement signals tells Gmail and Outlook: *this is a legitimate account that people engage with.*
 
-LeadGenie's warmup network includes thousands of real email accounts that interact with each other automatically, 24/7, in the background.
+Lead Genie's warmup network includes thousands of real email accounts that interact with each other automatically, 24/7, in the background.
 
 ## How Long Does Warmup Take?
 
@@ -439,7 +439,7 @@ If you're sending 150 cold emails/day on a campaign, your warmup should be at le
 
 ## Signs Your Warmup Is Working
 
-- Inbox placement score rising week-on-week in your LeadGenie dashboard
+- Inbox placement score rising week-on-week in your Lead Genie dashboard
 - Open rates on your campaigns above 40%
 - Google Postmaster Tools showing "High" domain reputation
 - Low spam complaint rate (under 0.1%)
@@ -450,7 +450,7 @@ If you're sending 150 cold emails/day on a campaign, your warmup should be at le
 - Open rates suddenly dropped → check if your campaigns are exceeding daily limits
 - Warmup score going backwards → your account may have been flagged; pause campaigns, increase warmup volume
 
-## Getting Started with LeadGenie Warmup
+## Getting Started with Lead Genie Warmup
 
 1. Connect your email account in **Email Accounts** → **Add Account**
 2. Toggle **Warmup** to On

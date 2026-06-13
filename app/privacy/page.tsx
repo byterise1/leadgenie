@@ -15,7 +15,7 @@ export default function PrivacyPage() {
               Last updated: June 1, 2026 · Effective: June 1, 2026
             </p>
             <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
-              At LeadGenie, we take your privacy seriously. This policy explains what data we
+              At Lead Genie, we take your privacy seriously. This policy explains what data we
               collect, how we use it, and the controls you have over your information.
             </p>
           </div>
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
 • Account information: name, email address, company name, and password
 • Billing information: credit card details processed securely via Stripe (we never store card numbers)
 • Campaign data: email addresses you upload as prospects, email templates, and campaign settings
-• Usage data: how you interact with the LeadGenie platform, features used, and session data
+• Usage data: how you interact with the Lead Genie platform, features used, and session data
 • Communication data: support tickets and emails you send to our team
 
 We also automatically collect technical data such as IP address, browser type, device information, and cookies when you use our platform.`,
@@ -43,7 +43,7 @@ We also automatically collect technical data such as IP address, browser type, d
                   title: '2. How We Use Your Information',
                   content: `We use the information we collect to:
 
-• Provide, operate, and improve the LeadGenie platform
+• Provide, operate, and improve the Lead Genie platform
 • Process your payments and manage your subscription
 • Send transactional emails (receipts, password resets, account alerts)
 • Send product updates and newsletters (you may unsubscribe at any time)
@@ -55,9 +55,9 @@ We do not sell your personal data to third parties. We do not use your prospect 
                 },
                 {
                   title: '3. Your Email Campaigns & Prospect Data',
-                  content: `When you upload prospect lists and run email campaigns through LeadGenie, you are the data controller for that contact data. You are responsible for ensuring you have a lawful basis to contact those prospects and that your outreach complies with applicable laws (CAN-SPAM, GDPR, CASL, etc.).
+                  content: `When you upload prospect lists and run email campaigns through Lead Genie, you are the data controller for that contact data. You are responsible for ensuring you have a lawful basis to contact those prospects and that your outreach complies with applicable laws (CAN-SPAM, GDPR, CASL, etc.).
 
-LeadGenie acts as a data processor for your prospect data. We process this data solely to deliver your campaigns and provide the service. We do not access, read, or use your prospect data for any other purpose.
+Lead Genie acts as a data processor for your prospect data. We process this data solely to deliver your campaigns and provide the service. We do not access, read, or use your prospect data for any other purpose.
 
 We strongly require that all users comply with anti-spam laws. Sending unsolicited bulk email is strictly prohibited and will result in immediate account suspension.`,
                 },
@@ -67,7 +67,7 @@ We strongly require that all users comply with anti-spam laws. Sending unsolicit
 
 • Service providers: We use trusted third parties to help operate our platform (e.g., Stripe for payments, AWS for hosting, Postmark for transactional email). These partners are contractually bound to protect your data.
 • Integrations: If you connect third-party tools (HubSpot, Salesforce, Zapier, etc.), data is shared with those services per your instructions.
-• Legal requirements: We may disclose data if required by law, court order, or to protect the rights and safety of LeadGenie and its users.
+• Legal requirements: We may disclose data if required by law, court order, or to protect the rights and safety of Lead Genie and its users.
 • Business transfers: In the event of a merger or acquisition, your data may be transferred as part of that transaction.
 
 We never sell personal data to advertisers or data brokers.`,
@@ -109,17 +109,17 @@ You may request immediate deletion of your account and associated data at any ti
                 },
                 {
                   title: '9. International Transfers',
-                  content: `LeadGenie is headquartered in the United States. If you are located in the EU, UK, or another region with data transfer restrictions, your data may be transferred to and processed in the United States. We rely on Standard Contractual Clauses (SCCs) approved by the European Commission for such transfers.`,
+                  content: `Lead Genie is headquartered in the United States. If you are located in the EU, UK, or another region with data transfer restrictions, your data may be transferred to and processed in the United States. We rely on Standard Contractual Clauses (SCCs) approved by the European Commission for such transfers.`,
                 },
                 {
                   title: '10. Changes to This Policy',
-                  content: `We may update this Privacy Policy from time to time. We will notify you of material changes via email or a prominent notice on the platform at least 14 days before the change takes effect. Your continued use of LeadGenie after the effective date constitutes acceptance of the updated policy.`,
+                  content: `We may update this Privacy Policy from time to time. We will notify you of material changes via email or a prominent notice on the platform at least 14 days before the change takes effect. Your continued use of Lead Genie after the effective date constitutes acceptance of the updated policy.`,
                 },
                 {
                   title: '11. Contact Us',
                   content: `If you have questions about this Privacy Policy or how we handle your data, please contact:
 
-LeadGenie, Inc.
+Lead Genie, Inc.
 Email: privacy@leadgenie.io
 Support: help@leadgenie.io
 

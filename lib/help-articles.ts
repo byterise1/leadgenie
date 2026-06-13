@@ -19,16 +19,16 @@ export const helpSections: HelpSection[] = [
     subtitle: 'Set up your account and launch your first campaign in under 10 minutes.',
     articles: [
       {
-        q: 'Creating your LeadGenie account',
+        q: 'Creating your Lead Genie account',
         a: `Go to leadgenie.ai → click "Start Free Trial" → sign up with Google or email.\n\nOnce inside, you'll land on the Overview dashboard. Your account is on the Free plan with 3 campaign slots, up to 500 leads, and 1 connected email account.`,
       },
       {
         q: 'Connecting Gmail or Outlook',
-        a: `Go to **Email Accounts** in the sidebar → click **"+ Add Account"** → choose Gmail OAuth (recommended for best deliverability).\n\nYou'll be redirected to Google to authorize LeadGenie. Once approved, your account appears with a green "Active" badge.\n\nFor Outlook or any other provider, choose Custom SMTP — enter your host, port, username and password.`,
+        a: `Go to **Email Accounts** in the sidebar → click **"+ Add Account"** → choose Gmail OAuth (recommended for best deliverability).\n\nYou'll be redirected to Google to authorize Lead Genie. Once approved, your account appears with a green "Active" badge.\n\nFor Outlook or any other provider, choose Custom SMTP — enter your host, port, username and password.`,
       },
       {
         q: 'Setting up email warmup',
-        a: `Before sending cold campaigns, warm up your inbox for 2–3 weeks.\n\nGo to **Warmup** → toggle warmup ON for your account. LeadGenie automatically sends small batches of real-looking emails that get opened and replied to, building your sender reputation.\n\nYou'll see your Health Score increase daily. Aim for 80+ before launching your first campaign.`,
+        a: `Before sending cold campaigns, warm up your inbox for 2–3 weeks.\n\nGo to **Warmup** → toggle warmup ON for your account. Lead Genie automatically sends small batches of real-looking emails that get opened and replied to, building your sender reputation.\n\nYou'll see your Health Score increase daily. Aim for 80+ before launching your first campaign.`,
       },
       {
         q: 'Uploading your first prospect list',
@@ -56,7 +56,7 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'A/B testing subject lines',
-        a: `Currently, LeadGenie doesn't have built-in A/B testing.\n\nBest practice: create two separate campaigns with different subject lines and split your lead list. Compare open rates in Analytics after 3–5 days.`,
+        a: `Currently, Lead Genie doesn't have built-in A/B testing.\n\nBest practice: create two separate campaigns with different subject lines and split your lead list. Compare open rates in Analytics after 3–5 days.`,
       },
       {
         q: 'Adding personalisation variables',
@@ -76,7 +76,7 @@ export const helpSections: HelpSection[] = [
     articles: [
       {
         q: 'How email warmup works',
-        a: `When you send cold emails from a fresh inbox, spam filters are suspicious — they've never seen volume from this address before.\n\nWarmup fixes this by gradually sending real-looking emails between real inboxes. These emails get opened and marked "Not Spam", signalling to Gmail, Outlook, and others that this is a trustworthy sender.\n\nLeadGenie automates this entirely — no manual action needed once enabled.`,
+        a: `When you send cold emails from a fresh inbox, spam filters are suspicious — they've never seen volume from this address before.\n\nWarmup fixes this by gradually sending real-looking emails between real inboxes. These emails get opened and marked "Not Spam", signalling to Gmail, Outlook, and others that this is a trustworthy sender.\n\nLead Genie automates this entirely — no manual action needed once enabled.`,
       },
       {
         q: 'Reading your warmup score',
@@ -140,7 +140,7 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'Click tracking explained',
-        a: `Every link in your emails is automatically wrapped with a tracking URL. When a recipient clicks it, LeadGenie records a click event.\n\n**Note**: Security scanners sometimes click all links in an email to check for malware. This can inflate click rates. Focus on reply rate as your primary signal.`,
+        a: `Every link in your emails is automatically wrapped with a tracking URL. When a recipient clicks it, Lead Genie records a click event.\n\n**Note**: Security scanners sometimes click all links in an email to check for malware. This can inflate click rates. Focus on reply rate as your primary signal.`,
       },
       {
         q: 'Exporting campaign reports',
@@ -148,7 +148,7 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'How are opens tracked?',
-        a: `A tiny invisible 1×1 pixel image is inserted at the bottom of each email. When the recipient's email client loads images, the pixel fires and we record an open.\n\nGmail loads images through its own servers about 5–15 seconds after delivery (to protect user privacy). LeadGenie filters these out by only counting opens that happen **30+ seconds after send time**, ensuring you only see real human opens.`,
+        a: `A tiny invisible 1×1 pixel image is inserted at the bottom of each email. When the recipient's email client loads images, the pixel fires and we record an open.\n\nGmail loads images through its own servers about 5–15 seconds after delivery (to protect user privacy). Lead Genie filters these out by only counting opens that happen **30+ seconds after send time**, ensuring you only see real human opens.`,
       },
     ],
   },

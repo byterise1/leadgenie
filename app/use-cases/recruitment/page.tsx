@@ -14,7 +14,7 @@ export default function RecruitmentPage() {
               Reach Passive Candidates<br />Before Anyone Else
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              The best candidates aren't applying. LeadGenie helps recruiters run personalised
+              The best candidates aren't applying. Lead Genie helps recruiters run personalised
               outreach at scale to fill roles faster without relying on job boards.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -91,7 +91,7 @@ export default function RecruitmentPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We used to spend hours on LinkedIn finding candidates. Now LeadGenie does it automatically and we spend our time on actual interviews. Our placement rate is up 40%.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We used to spend hours on LinkedIn finding candidates. Now Lead Genie does it automatically and we spend our time on actual interviews. Our placement rate is up 40%.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=5" alt="Sarah Reynolds" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">

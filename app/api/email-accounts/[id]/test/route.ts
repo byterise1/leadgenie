@@ -23,12 +23,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     await sendEmail(account, {
       from: account.email,
       to: user.email!,
-      subject: 'LeadGenie — Test Email',
-      text: `Your sending account ${account.email} is connected and working correctly.\n\nSent from LeadGenie.`,
+      subject: 'Lead Genie — Test Email',
+      text: `Your sending account ${account.email} is connected and working correctly.\n\nSent from Lead Genie.`,
       html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111;max-width:480px">
-        <p style="margin:0 0 12px 0"><strong>Test email from LeadGenie</strong></p>
+        <p style="margin:0 0 12px 0"><strong>Test email from Lead Genie</strong></p>
         <p style="margin:0 0 12px 0">Your sending account <strong>${account.email}</strong> is connected and working correctly.</p>
-        <p style="margin:0;color:#888;font-size:12px">Sent via LeadGenie campaign platform.</p>
+        <p style="margin:0;color:#888;font-size:12px">Sent via Lead Genie campaign platform.</p>
       </div>`,
     });
 

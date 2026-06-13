@@ -14,7 +14,7 @@ export default function ConsultingPage() {
               Fill Your Calendar With<br />Qualified Discovery Calls
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              Consultants and advisory firms use LeadGenie to automate outreach to their ideal
+              Consultants and advisory firms use Lead Genie to automate outreach to their ideal
               clients — so they spend less time prospecting and more time delivering results.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -77,7 +77,7 @@ export default function ConsultingPage() {
                 { icon:'✉️', title:'Authority-building Outreach',  desc:'Share insights, research, or frameworks in your cold emails to position yourself as an expert before the first call.' },
                 { icon:'🔄', title:'Long-cycle Follow-ups',        desc:'Nurture cold prospects with multi-month sequences. Stay top-of-mind until they\'re ready to buy.' },
                 { icon:'📊', title:'Proposal Pipeline Tracking',   desc:'Track which outreach leads to discovery calls, proposals sent, and contracts signed.' },
-                { icon:'🤖', title:'AI-personalised First Lines',  desc:'LeadGenie AI references each prospect\'s recent work, press mentions, or LinkedIn activity in every opening line.' },
+                { icon:'🤖', title:'AI-personalised First Lines',  desc:'Lead Genie AI references each prospect\'s recent work, press mentions, or LinkedIn activity in every opening line.' },
               ].map(f=>(
                 <div key={f.title} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
                   <span className="text-3xl">{f.icon}</span>
@@ -91,7 +91,7 @@ export default function ConsultingPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now LeadGenie does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now Lead Genie does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=12" alt="David Marsh" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">

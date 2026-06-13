@@ -54,7 +54,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[420px]">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
-            <p className="text-sm text-gray-500">Sign in to your LeadGenie account</p>
+            <p className="text-sm text-gray-500">Sign in to your Lead Genie account</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">

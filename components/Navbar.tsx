@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -205,11 +206,8 @@ export function Navbar() {
       <div className="container flex items-center justify-between h-[64px]">
 
         {/* Logo */}
-        <Link href="/" onClick={close} className="flex items-center gap-2 font-extrabold text-[17px] text-gray-900 shrink-0 group">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm group-hover:bg-blue-700 transition-colors">
-            <Ic.Lightning c="w-4 h-4" />
-          </span>
-          LeadGenie
+        <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0">
+          <Logo size={32} textSize="text-[17px]" />
         </Link>
 
         {/* Desktop nav */}
@@ -318,7 +316,7 @@ export function Navbar() {
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-4 leading-relaxed">
-                  Join <strong className="text-gray-600">8,500+</strong> teams using LeadGenie to book more meetings.
+                  Join <strong className="text-gray-600">8,500+</strong> teams using Lead Genie to book more meetings.
                 </p>
               </div>
             </div>

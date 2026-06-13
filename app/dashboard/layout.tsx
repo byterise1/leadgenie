@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { NavigationProgress } from '@/components/NavigationProgress';
+import { Logo } from '@/components/Logo';
 
 type Notification = {
   id: string;
@@ -122,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
           </button>
-          <span className="md:hidden font-bold text-gray-900">LeadGenie</span>
+          <span className="md:hidden"><Logo size={24} textSize="text-[14px]" /></span>
 
           <div className="flex-1"/>
 

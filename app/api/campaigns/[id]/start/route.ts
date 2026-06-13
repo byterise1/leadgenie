@@ -98,18 +98,22 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (campaign.list_id) {
     const { data: members } = await supabaseAdmin
       .from('lead_list_members')
-      .select('lead_id')
+      .select('lead_id, lead:leads(status)')
       .eq('list_id', campaign.list_id);
 
     if (members?.length) {
-      const enrollRows = members.map((m: { lead_id: string }) => ({
-        campaign_id: id,
-        lead_id: m.lead_id,
-        status: 'pending',
-      }));
-      await supabaseAdmin
-        .from('campaign_leads')
-        .upsert(enrollRows, { onConflict: 'campaign_id,lead_id', ignoreDuplicates: true });
+      const enrollRows = members
+        .filter((m: any) => m.lead?.status !== 'unsubscribed')
+        .map((m: any) => ({
+          campaign_id: id,
+          lead_id: m.lead_id,
+          status: 'pending',
+        }));
+      if (enrollRows.length) {
+        await supabaseAdmin
+          .from('campaign_leads')
+          .upsert(enrollRows, { onConflict: 'campaign_id,lead_id', ignoreDuplicates: true });
+      }
     }
   }
 

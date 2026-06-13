@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { helpSections, toSlug } from '@/lib/help-articles';
 
 export const metadata = {
-  title: 'Help Center — LeadGenie',
-  description: 'Browse guides and tutorials for every part of LeadGenie.',
+  title: 'Help Center — Lead Genie',
+  description: 'Browse guides and tutorials for every part of Lead Genie.',
 };
 
 export default function HelpPage() {
@@ -18,7 +18,7 @@ export default function HelpPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Help Center</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">How can we help?</h1>
             <p className="mt-4 text-gray-500 text-base max-w-lg mx-auto leading-relaxed">
-              Browse guides and tutorials for every part of LeadGenie. Can&apos;t find what you need?{' '}
+              Browse guides and tutorials for every part of Lead Genie. Can&apos;t find what you need?{' '}
               <Link href="/contact" className="text-blue-600 hover:underline">Contact support →</Link>
             </p>
           </div>

@@ -109,6 +109,7 @@ export async function register() {
         .single();
 
       if (!cl || cl.status === 'replied' || cl.status === 'unsubscribed' || cl.status === 'bounced') return;
+      if (cl.lead?.status === 'unsubscribed') return;
 
       const campaign = cl.campaign;
       const step = campaign.email_steps.find((s: any) => s.step_number === stepNumber);

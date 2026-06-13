@@ -15,7 +15,7 @@ export default function TermsPage() {
               Last updated: June 1, 2026 · Effective: June 1, 2026
             </p>
             <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
-              Please read these Terms carefully before using LeadGenie. By accessing or using
+              Please read these Terms carefully before using Lead Genie. By accessing or using
               our platform, you agree to be bound by these Terms.
             </p>
           </div>
@@ -29,13 +29,13 @@ export default function TermsPage() {
               {[
                 {
                   title: '1. Acceptance of Terms',
-                  content: `By creating a LeadGenie account or using any part of our service, you agree to these Terms of Service and our Privacy Policy. If you are using LeadGenie on behalf of a company or organisation, you represent that you have authority to bind that entity to these Terms.
+                  content: `By creating a Lead Genie account or using any part of our service, you agree to these Terms of Service and our Privacy Policy. If you are using Lead Genie on behalf of a company or organisation, you represent that you have authority to bind that entity to these Terms.
 
-If you do not agree to these Terms, do not use the LeadGenie platform.`,
+If you do not agree to these Terms, do not use the Lead Genie platform.`,
                 },
                 {
                   title: '2. Description of Service',
-                  content: `LeadGenie is a cloud-based cold email outreach platform that provides tools for:
+                  content: `Lead Genie is a cloud-based cold email outreach platform that provides tools for:
 
 • Connecting and managing email sending accounts (Gmail, Outlook, SMTP)
 • Warming up email domains to improve deliverability
@@ -49,7 +49,7 @@ We reserve the right to modify, suspend, or discontinue any part of the service 
                 },
                 {
                   title: '3. Account Registration',
-                  content: `To use LeadGenie, you must create an account with a valid email address and password. You are responsible for:
+                  content: `To use Lead Genie, you must create an account with a valid email address and password. You are responsible for:
 
 • Maintaining the confidentiality of your account credentials
 • All activity that occurs under your account
@@ -59,23 +59,23 @@ You must be at least 18 years old to create an account. Accounts are non-transfe
                 },
                 {
                   title: '4. Acceptable Use Policy',
-                  content: `LeadGenie is a legitimate outreach tool for professional business communication. By using our platform, you agree NOT to:
+                  content: `Lead Genie is a legitimate outreach tool for professional business communication. By using our platform, you agree NOT to:
 
 • Send spam, unsolicited bulk email, or any communication that violates CAN-SPAM, GDPR, CASL, or other applicable anti-spam laws
 • Use purchased, scraped, or harvested email lists without recipients' consent
 • Send emails that are false, misleading, or deceptive
-• Use LeadGenie for phishing, malware distribution, or any illegal activity
+• Use Lead Genie for phishing, malware distribution, or any illegal activity
 • Impersonate any person or organisation
 • Send unsolicited commercial emails to recipients who have opted out
 • Exceed sending limits in ways intended to circumvent our rate limiting
 
 Violation of this Acceptable Use Policy will result in immediate account suspension and potential legal action. We cooperate with law enforcement authorities.
 
-You are solely responsible for ensuring your use of LeadGenie complies with all applicable laws in your jurisdiction.`,
+You are solely responsible for ensuring your use of Lead Genie complies with all applicable laws in your jurisdiction.`,
                 },
                 {
                   title: '5. Subscriptions & Payment',
-                  content: `LeadGenie offers monthly and annual subscription plans. By subscribing, you authorise us to charge your payment method on a recurring basis.
+                  content: `Lead Genie offers monthly and annual subscription plans. By subscribing, you authorise us to charge your payment method on a recurring basis.
 
 • Payments are processed securely by Stripe
 • Prices are listed on our Pricing page and exclude applicable taxes
@@ -97,15 +97,15 @@ To request a refund or for billing disputes, contact billing@leadgenie.io.`,
                 },
                 {
                   title: '7. Intellectual Property',
-                  content: `LeadGenie owns all rights to the platform, including software, UI design, trademarks, and documentation. You may not copy, modify, distribute, or create derivative works without our written permission.
+                  content: `Lead Genie owns all rights to the platform, including software, UI design, trademarks, and documentation. You may not copy, modify, distribute, or create derivative works without our written permission.
 
-Your data belongs to you. You own your prospect lists, email templates, and campaign content. By uploading data to LeadGenie, you grant us a limited licence to process it solely to provide the service.`,
+Your data belongs to you. You own your prospect lists, email templates, and campaign content. By uploading data to Lead Genie, you grant us a limited licence to process it solely to provide the service.`,
                 },
                 {
                   title: '8. Limitation of Liability',
                   content: `TO THE MAXIMUM EXTENT PERMITTED BY LAW:
 
-LeadGenie is provided "as is" without warranties of any kind. We do not guarantee that the service will be uninterrupted, error-free, or that emails will be delivered.
+Lead Genie is provided "as is" without warranties of any kind. We do not guarantee that the service will be uninterrupted, error-free, or that emails will be delivered.
 
 IN NO EVENT SHALL LEADGENIE BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS OR DATA, ARISING FROM YOUR USE OF THE PLATFORM.
 
@@ -113,7 +113,7 @@ OUR TOTAL LIABILITY TO YOU FOR ANY CLAIMS ARISING FROM THESE TERMS SHALL NOT EXC
                 },
                 {
                   title: '9. Indemnification',
-                  content: `You agree to indemnify and hold harmless LeadGenie, its directors, employees, and agents from any claims, damages, or expenses (including legal fees) arising from:
+                  content: `You agree to indemnify and hold harmless Lead Genie, its directors, employees, and agents from any claims, damages, or expenses (including legal fees) arising from:
 
 • Your use of the platform in violation of these Terms
 • Your violation of any applicable law or third-party rights
@@ -140,7 +140,7 @@ For users in the European Union, nothing in these Terms affects your statutory c
                   title: '13. Contact',
                   content: `For questions about these Terms, contact:
 
-LeadGenie, Inc.
+Lead Genie, Inc.
 Email: legal@leadgenie.io
 Support: help@leadgenie.io`,
                 },

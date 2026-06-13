@@ -234,15 +234,15 @@ const BRANDS: Brand[] = [
    TESTIMONIALS DATA
 ════════════════════════════════════════════════════════════ */
 const testimonials = [
-  { quote: "LeadGenie completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains — zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
+  { quote: "Lead Genie completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains — zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
   { quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — 5-step sequence running in under 20 minutes. Managing replies in the Unibox is effortless.", name: 'Briken Bufi', role: 'CEO, Aella Creative Force', company: 'Aella', avatarIdx: 1 },
-  { quote: "I've tried Instantly, Lemlist, and Mailshake. LeadGenie beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
+  { quote: "I've tried Instantly, Lemlist, and Mailshake. Lead Genie beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
   { quote: "The AI warmup is a total game changer. We went from landing in spam 40% of the time to virtually zero. Deliverability scores are the best they've ever been across 30 sending accounts.", name: 'David Park', role: 'Head of Growth, Ripple Labs', company: 'Ripple', avatarIdx: 5 },
-  { quote: "I manage 8 client accounts from one dashboard. LeadGenie saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
-  { quote: "Switched from Apollo + Lemlist combo. LeadGenie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
+  { quote: "I manage 8 client accounts from one dashboard. Lead Genie saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
+  { quote: "Switched from Apollo + Lemlist combo. Lead Genie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
   { quote: "Finally a platform that handles everything in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+. Unbelievable ROI.", name: 'Tom Brady', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2 },
-  { quote: "LeadGenie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
-  { quote: "We run a 12-person SDR team. LeadGenie scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
+  { quote: "Lead Genie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
+  { quote: "We run a 12-person SDR team. Lead Genie scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
 ];
 
 type AIResult =
@@ -391,13 +391,13 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[600px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
               {error && <div className="flex items-center gap-3 px-5 py-4"><span className="text-red-500 shrink-0"><IcWarning c="w-5 h-5" /></span><p className="text-sm text-red-600 font-medium">{error}</p></div>}
-              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">LeadGenie AI is thinking...</p></div>}
+              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Lead Genie AI is thinking...</p></div>}
               {result?.type === 'answer' && <>
-                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">LeadGenie AI</p></div>
+                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Lead Genie AI</p></div>
                 <div className="px-5 py-4"><p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p></div>
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-400">Want to see it in action?</p>
-                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try LeadGenie Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
+                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Lead Genie Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
                 </div>
               </>}
               {result?.type === 'email' && <>
@@ -727,7 +727,7 @@ export default function HomePage() {
                 Every Reply. One Smart Inbox.
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
-                Stop switching between 20 different email accounts. LeadGenie&apos;s Unibox pulls every
+                Stop switching between 20 different email accounts. Lead Genie&apos;s Unibox pulls every
                 reply into one place — filter by campaign, label by intent, assign to teammates,
                 and close deals faster.
               </p>
@@ -881,7 +881,7 @@ export default function HomePage() {
               Automate Every Follow-Up
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-              Set your triggers once — LeadGenie automatically handles follow-ups, tags leads by
+              Set your triggers once — Lead Genie automatically handles follow-ups, tags leads by
               intent, and routes hot prospects to your team. No missed opportunities, ever.
             </p>
             <Link href="/signup"
@@ -892,9 +892,9 @@ export default function HomePage() {
           </motion.div>
           <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, LeadGenie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
-              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, LeadGenie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
-              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, LeadGenie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
+              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Lead Genie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
+              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Lead Genie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
+              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Lead Genie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
             ].map((wf, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}

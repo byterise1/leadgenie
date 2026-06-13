@@ -35,7 +35,7 @@ export default function AgencyPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#3b82f6' }}>500+</p>
-                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Agencies Trust LeadGenie</p>
+                  <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">Agencies Trust Lead Genie</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
@@ -95,7 +95,7 @@ export default function AgencyPage() {
         {/* Testimonial */}
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;LeadGenie is the backbone of our agency. We manage 40+ client campaigns from one dashboard, and our average client sees 20%+ reply rates within the first month. Nothing else comes close.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Lead Genie is the backbone of our agency. We manage 40+ client campaigns from one dashboard, and our average client sees 20%+ reply rates within the first month. Nothing else comes close.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=47" alt="Mike Ellis" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">

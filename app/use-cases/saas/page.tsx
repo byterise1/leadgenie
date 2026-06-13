@@ -14,7 +14,7 @@ export default function SaaSPage() {
               Drive SaaS Signups &amp;<br />Demos With Cold Email
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              Reach your ideal users before they find your competitors. LeadGenie helps SaaS
+              Reach your ideal users before they find your competitors. Lead Genie helps SaaS
               companies build a predictable outbound pipeline at any stage.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -91,7 +91,7 @@ export default function SaaSPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Our open rates jumped from 28% to 61% after switching to LeadGenie. The AI personalisation is genuinely impressive — it sounds human on every email.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Our open rates jumped from 28% to 61% after switching to Lead Genie. The AI personalisation is genuinely impressive — it sounds human on every email.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=3" alt="Alex Baldovin" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">

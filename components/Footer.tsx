@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 function IcLightning() {
   return (
@@ -95,11 +96,8 @@ export function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 font-extrabold text-lg text-white mb-4 group">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 group-hover:bg-blue-500 transition-colors">
-                <IcLightning />
-              </span>
-              LeadGenie
+            <Link href="/" className="inline-flex mb-4">
+              <Logo size={32} textSize="text-lg" textColor="text-white" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs mb-6">
               The cold email outreach platform built for modern sales teams. Send smarter,
@@ -198,7 +196,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-600 order-2 sm:order-1">
-            © 2026 LeadGenie, Inc. All rights reserved. Built for cold email professionals.
+            © 2026 Lead Genie, Inc. All rights reserved. Built for cold email professionals.
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 order-1 sm:order-2">
             {legal.map((item, i) => (

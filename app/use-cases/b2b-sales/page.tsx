@@ -14,7 +14,7 @@ export default function B2BSalesPage() {
               Fill Your Pipeline With<br />Qualified Meetings
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              Stop relying on inbound alone. LeadGenie automates your outbound so your sales team
+              Stop relying on inbound alone. Lead Genie automates your outbound so your sales team
               spends time closing — not prospecting.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -74,7 +74,7 @@ export default function B2BSalesPage() {
               {[
                 { icon:'🎯', title:'ICP Targeting',            desc:'Build prospect lists by job title, company size, industry, revenue, and 50+ other filters.' },
                 { icon:'✉️', title:'AI Personalisation',       desc:'AI writes a personalised first line for every prospect using their LinkedIn and company data.' },
-                { icon:'🔄', title:'Automated Follow-ups',     desc:'Set it and forget it. LeadGenie sends follow-ups at the right time and stops when someone replies.' },
+                { icon:'🔄', title:'Automated Follow-ups',     desc:'Set it and forget it. Lead Genie sends follow-ups at the right time and stops when someone replies.' },
                 { icon:'📥', title:'Unified Inbox',            desc:'All replies from all accounts in one place. Label them Interested, Not Now, or Do Not Contact.' },
                 { icon:'📊', title:'Pipeline Reporting',       desc:'Track open, click, reply, and meeting rates. See exactly which campaigns drive real pipeline.' },
                 { icon:'🔗', title:'CRM Sync',                 desc:'Automatically push interested replies and booked meetings to HubSpot or Salesforce.' },
