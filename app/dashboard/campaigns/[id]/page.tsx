@@ -347,7 +347,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                 <p className="text-sm font-semibold text-gray-900 truncate">{step.subject || '(no subject)'}</p>
                 {i > 0 && step.delay_days > 0 && (
-                  <span className="text-[10px] text-gray-400 shrink-0">+{step.delay_days}d delay</span>
+                  <span className="text-[10px] text-gray-400 shrink-0">+{step.delay_days} min</span>
                 )}
               </div>
               <p className="text-xs text-gray-400 pl-9 line-clamp-2">{step.body}</p>
@@ -379,7 +379,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{cl.lead?.email}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{cl.lead?.company || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{cl.current_step + 1}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {cl.current_step === 0
+                        ? '–'
+                        : cl.current_step >= campaign.email_steps.length
+                        ? <span className="text-emerald-600 font-semibold text-xs">Done</span>
+                        : `${cl.current_step} / ${campaign.email_steps.length}`}
+                    </td>
                     <td className="px-4 py-3 text-xs capitalize font-medium ${LEAD_STATUS_COLORS[cl.status] || 'text-gray-400'}">
                       <span className={LEAD_STATUS_COLORS[cl.status] || 'text-gray-400'}>{cl.status}</span>
                     </td>
