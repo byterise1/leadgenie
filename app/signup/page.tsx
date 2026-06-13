@@ -50,8 +50,9 @@ export default function SignupPage() {
       return;
     }
 
-    // user === null: email already exists (Supabase returns no error to prevent enumeration)
-    if (!data.user) {
+    // Email already exists — Supabase returns a fake user with identities:[] to prevent enumeration
+    // Must check identities length, not just data.user (which is non-null in this case)
+    if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
       setError('An account with this email already exists. Sign in instead.');
       return;
     }
