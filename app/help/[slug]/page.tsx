@@ -10,9 +10,10 @@ export function generateStaticParams() {
   );
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   for (const section of helpSections) {
-    const article = section.articles.find(a => toSlug(a.q) === params.slug);
+    const article = section.articles.find(a => toSlug(a.q) === slug);
     if (article) {
       return {
         title: `${article.q} — LeadGenie Help`,
@@ -47,12 +48,13 @@ function renderBody(text: string) {
   });
 }
 
-export default function HelpArticlePage({ params }: { params: { slug: string } }) {
+export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   let foundSection = null;
   let foundArticle = null;
 
   for (const section of helpSections) {
-    const article = section.articles.find(a => toSlug(a.q) === params.slug);
+    const article = section.articles.find(a => toSlug(a.q) === slug);
     if (article) {
       foundSection = section;
       foundArticle = article;
