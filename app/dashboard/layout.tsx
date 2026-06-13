@@ -24,15 +24,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch('/api/billing/usage')
-      .then(r => r.json())
-      .then(data => {
-        if (!data.error) {
-          setCredits(data.credits_total ?? 100);
-          setUsedCredits(data.credits_used ?? 0);
-        }
-      })
-      .catch(() => {});
+    const fetchCredits = () => {
+      fetch('/api/billing/usage')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.error) {
+            setCredits(data.credits_total ?? 100);
+            setUsedCredits(data.credits_used ?? 0);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchCredits();
+    const id = setInterval(fetchCredits, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const fetchNotifications = () => {

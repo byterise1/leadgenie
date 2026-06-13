@@ -91,15 +91,20 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   }, []);
 
   useEffect(() => {
-    fetch('/api/billing/usage')
-      .then(r => r.json())
-      .then(d => {
-        if (!d.error) {
-          setCreditsUsed(d.credits_used ?? 0);
-          setCreditsTotal(d.credits_total ?? 100);
-        }
-      })
-      .catch(() => {});
+    const fetchCredits = () => {
+      fetch('/api/billing/usage')
+        .then(r => r.json())
+        .then(d => {
+          if (!d.error) {
+            setCreditsUsed(d.credits_used ?? 0);
+            setCreditsTotal(d.credits_total ?? 100);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchCredits();
+    const id = setInterval(fetchCredits, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const signOut = async () => {
@@ -168,7 +173,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
               <div className="h-full bg-white/80 rounded-full transition-all"
                 style={{ width: `${Math.min(100, Math.round((creditsUsed / creditsTotal) * 100))}%` }}/>
             </div>
-            <p className="text-[10px] text-blue-200 mb-3">{creditsUsed} / {creditsTotal} AI credits used</p>
+            <p className="text-[10px] text-blue-200 mb-3">{creditsUsed} / {creditsTotal} emails sent</p>
             <Link href="/pricing" className="block text-center text-[11px] font-bold bg-white text-blue-700 rounded-lg py-1.5 hover:bg-blue-50 transition-colors">
               Upgrade →
             </Link>
