@@ -109,7 +109,7 @@ export async function register() {
       link?: string,
     ) {
       const { data: prof } = await db.from('profiles').select(pref).eq('id', userId).maybeSingle();
-      if (prof?.[pref] === false) return;
+      if ((prof as Record<string, unknown> | null)?.[pref] === false) return;
       const payload: Record<string, unknown> = { user_id: userId, message, type };
       if (link) payload.link = link;
       const { error } = await db.from('notifications').insert(payload);
