@@ -30,6 +30,41 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
+  // Verify this list belongs to the user
+  const { data: list } = await supabaseAdmin
+    .from('lead_lists')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+  if (!list) return NextResponse.json({ error: 'List not found' }, { status: 404 });
+
+  // Find all leads in this list
+  const { data: members } = await supabaseAdmin
+    .from('lead_list_members')
+    .select('lead_id')
+    .eq('list_id', id);
+
+  const leadIds = (members || []).map((m: { lead_id: string }) => m.lead_id);
+
+  if (leadIds.length) {
+    // Find which of those leads exist in OTHER lists too
+    const { data: inOtherLists } = await supabaseAdmin
+      .from('lead_list_members')
+      .select('lead_id')
+      .in('lead_id', leadIds)
+      .neq('list_id', id);
+
+    const sharedSet = new Set((inOtherLists || []).map((m: { lead_id: string }) => m.lead_id));
+    const toDelete = leadIds.filter(lid => !sharedSet.has(lid));
+
+    // Permanently delete leads that are only in this list
+    if (toDelete.length) {
+      await supabaseAdmin.from('leads').delete().in('id', toDelete);
+    }
+  }
+
+  // Delete the list itself (cascade removes lead_list_members rows)
   const { error } = await supabaseAdmin
     .from('lead_lists')
     .delete()
