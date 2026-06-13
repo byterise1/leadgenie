@@ -543,6 +543,9 @@ function UseModal({ template, onClose, onDuplicate }: { template: Template; onCl
 }
 
 function toTemplate(row: Record<string, unknown>): Template {
+  const sourceBuiltin = row.source_builtin_id != null
+    ? DEFAULT_TEMPLATES.find(t => t.id === (row.source_builtin_id as number))
+    : null;
   return {
     id: row.id as string,
     dbId: row.id as string,
@@ -553,9 +556,9 @@ function toTemplate(row: Record<string, unknown>): Template {
     body: row.body as string,
     unsubText: (row.unsub_text as string) ?? DEFAULT_UNSUB,
     builtIn: false,
-    openRate: '—',
-    replyRate: '—',
-    uses: 0,
+    openRate: sourceBuiltin?.openRate ?? '—',
+    replyRate: sourceBuiltin?.replyRate ?? '—',
+    uses: sourceBuiltin?.uses ?? 0,
   };
 }
 
