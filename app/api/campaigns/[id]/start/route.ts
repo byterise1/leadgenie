@@ -87,6 +87,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Add at least one sending account first' }, { status: 400 });
   }
 
+  // Verify email steps exist
+  const { data: emailSteps } = await supabaseAdmin
+    .from('email_steps').select('id').eq('campaign_id', id).limit(1);
+  if (!emailSteps?.length) {
+    return NextResponse.json({ error: 'This campaign has no email steps. Please delete it and create a new one.' }, { status: 400 });
+  }
+
   // Auto-enroll leads from the linked list (upsert so re-launching is safe)
   if (campaign.list_id) {
     const { data: members } = await supabaseAdmin

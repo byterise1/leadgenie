@@ -104,26 +104,34 @@ export async function POST(req: NextRequest) {
 
   if (campErr) return NextResponse.json({ error: campErr.message }, { status: 500 });
 
-  // Insert email steps
-  const stepRows = steps.map((s: any, i: number) => ({
+  // Insert email steps — always insert without template_id first (safe, no migration dependency)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const baseStepRows = steps.map((s: any, i: number) => ({
     campaign_id: campaign.id,
     step_number: i,
     subject: s.subject,
     body: s.body,
     delay_days: s.delay || 0,
     include_unsub: s.includeUnsub || false,
-    template_id: s.templateId || null,
   }));
 
-  const { error: stepsErr } = await supabaseAdmin.from('email_steps').insert(stepRows);
+  const { data: insertedSteps, error: stepsErr } = await supabaseAdmin
+    .from('email_steps').insert(baseStepRows).select('id, step_number');
+
   if (stepsErr) {
-    // If template_id column doesn't exist yet (migration pending), retry without it
-    const baseRows = stepRows.map(({ template_id, ...rest }: any) => rest);
-    const { error: retryErr } = await supabaseAdmin.from('email_steps').insert(baseRows);
-    if (retryErr) {
-      // Clean up orphaned campaign
-      await supabaseAdmin.from('campaigns').delete().eq('id', campaign.id);
-      return NextResponse.json({ error: 'Failed to save email steps: ' + retryErr.message }, { status: 500 });
+    console.error('email_steps insert error:', stepsErr.message);
+    await supabaseAdmin.from('campaigns').delete().eq('id', campaign.id);
+    return NextResponse.json({ error: 'Failed to save email steps: ' + stepsErr.message }, { status: 500 });
+  }
+
+  // Best-effort: write template_id if migration has been run and ID is a valid UUID
+  if (insertedSteps?.length) {
+    for (const row of insertedSteps) {
+      const src = steps[row.step_number as number];
+      const tid = src?.templateId;
+      if (tid && UUID_RE.test(tid)) {
+        await supabaseAdmin.from('email_steps').update({ template_id: tid }).eq('id', row.id);
+      }
     }
   }
 
