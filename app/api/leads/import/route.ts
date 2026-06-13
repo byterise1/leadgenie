@@ -94,45 +94,26 @@ export async function POST(req: NextRequest) {
 
   const emails = leads.map(l => l.email);
 
-  // Chunk into 100 to avoid URL length limits on .in() queries
-  const existingSet = new Set<string>();
-  for (let i = 0; i < emails.length; i += 100) {
-    const chunk = emails.slice(i, i + 100);
-    const { data } = await supabaseAdmin
-      .from('leads')
-      .select('email')
-      .eq('user_id', user.id)
-      .in('email', chunk);
-    (data || []).forEach((r: { email: string }) => existingSet.add(r.email));
-  }
-
-  const duplicatesInFile = emails.length - new Set(emails).size;
-  const duplicatesInDB = leads.filter(l => existingSet.has(l.email)).length;
-
-  // Deduplicate within the file too, then filter out DB duplicates — plain insert only new
+  // Deduplicate within the file itself
   const seenInFile = new Set<string>();
-  const newLeads = leads.filter(l => {
-    if (seenInFile.has(l.email) || existingSet.has(l.email)) return false;
+  const uniqueLeads = leads.filter(l => {
+    if (seenInFile.has(l.email)) return false;
     seenInFile.add(l.email);
     return true;
   });
+  const duplicatesInFile = leads.length - uniqueLeads.length;
 
-  if (!newLeads.length) {
-    return NextResponse.json({
-      imported: 0,
-      total_in_file: leads.length,
-      duplicates_in_file: duplicatesInFile,
-      already_in_db: duplicatesInDB,
-      enrolled: 0,
-    });
-  }
-
-  const { data: inserted, error } = await supabaseAdmin
+  // Upsert: DB unique constraint (user_id, email) handles all duplicate detection.
+  // ignoreDuplicates=true skips existing rows silently — no error thrown.
+  const { data: upserted, error } = await supabaseAdmin
     .from('leads')
-    .insert(newLeads)
+    .upsert(uniqueLeads, { onConflict: 'user_id,email', ignoreDuplicates: true })
     .select('id');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const inserted = upserted || [];
+  const duplicatesInDB = uniqueLeads.length - inserted.length;
 
   // Add imported leads to the chosen list
   if (list_id && inserted?.length) {
@@ -155,12 +136,12 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    imported: inserted?.length ?? 0,
+    imported: inserted.length,
     total_in_file: totalRows,
     invalid,
     duplicates_in_file: duplicatesInFile,
     already_in_db: duplicatesInDB,
     list_id: list_id || null,
-    enrolled: campaign_id ? (inserted?.length ?? 0) : 0,
+    enrolled: campaign_id ? inserted.length : 0,
   });
 }
