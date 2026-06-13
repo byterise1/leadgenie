@@ -378,5 +378,186 @@ export async function register() {
     }, { connection, concurrency: 5 });
 
     console.log('✅ Email worker started');
+
+    // ── Server-side inbox sync (runs every 90s on Railway, no browser needed) ──
+    const { Queue, Worker: SyncWorker } = await import('bullmq');
+    const { getAccessToken, fetchImapReplies: imapFetch } = await import('./lib/mailer').then(async m => ({
+      getAccessToken: m.getAccessToken,
+      fetchImapReplies: (await import('./lib/imap-reader')).fetchImapReplies,
+    }));
+
+    const syncQueue = new Queue('inbox-sync', { connection });
+    await syncQueue.upsertJobScheduler('sync-all-users', { every: 90_000 }, { name: 'sync', data: {} });
+
+    const SYSTEM_PATTERNS = [
+      'mailer-daemon', 'postmaster', 'noreply', 'no-reply', 'bounce',
+      'delivery', 'auto-reply', 'autoreply', 'do-not-reply', 'donotreply',
+      'notifications@', 'notification@',
+    ];
+
+    function cleanSnip(raw: string): string {
+      return raw
+        .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+    }
+
+    async function gmailGet(path: string, token: string) {
+      const res = await fetch(`https://gmail.googleapis.com${path}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    }
+
+    function hdr(headers: { name: string; value: string }[] | undefined, name: string) {
+      return headers?.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    }
+
+    new SyncWorker('inbox-sync', async () => {
+      // Fetch all connected, non-error accounts across all users
+      const { data: accounts } = await supabase
+        .from('email_accounts')
+        .select('*')
+        .neq('status', 'error');
+
+      if (!accounts?.length) return;
+
+      for (const account of accounts) {
+        try {
+          if (account.type === 'gmail-oauth') {
+            // ── Gmail OAuth path ─────────────────────────────────────────────
+            let token: string;
+            try { token = await getAccessToken(account); } catch { continue; }
+
+            const { data: sentEmails } = await supabase
+              .from('sent_emails')
+              .select('id, message_id, lead_id, campaign_id, subject')
+              .eq('account_id', account.id)
+              .not('message_id', 'is', null)
+              .is('replied_at', null)
+              .limit(30);
+
+            for (const sent of (sentEmails || [])) {
+              try {
+                const thread = await gmailGet(
+                  `/gmail/v1/users/me/threads/${sent.message_id}?format=metadata&metadataHeaders=From,Subject,Date`,
+                  token,
+                );
+                if (!thread?.messages || thread.messages.length <= 1) continue;
+
+                const reply = thread.messages.slice(1).find((m: any) => {
+                  const from = hdr(m.payload?.headers, 'From').toLowerCase();
+                  if (from.includes(account.email.toLowerCase())) return false;
+                  return !SYSTEM_PATTERNS.some(p => from.includes(p));
+                });
+                if (!reply) continue;
+
+                const fromHeader = hdr(reply.payload?.headers, 'From');
+                const dateHeader = hdr(reply.payload?.headers, 'Date');
+                const subjectHeader = hdr(reply.payload?.headers, 'Subject') || sent.subject;
+
+                if (dateHeader) {
+                  const sentTime = new Date(hdr(thread.messages[0].payload?.headers, 'Date')).getTime();
+                  if (new Date(dateHeader).getTime() <= sentTime) continue;
+                }
+
+                const match = fromHeader.match(/^(.+?)\s*<(.+?)>$/);
+                const fromName = (match ? match[1].replace(/"/g, '').trim() : fromHeader) || '';
+                const fromEmail = (match ? match[2].trim() : fromHeader) || '';
+                const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
+
+                const { data: existing } = await supabase
+                  .from('inbox_threads').select('id')
+                  .eq('user_id', account.user_id)
+                  .eq('lead_id', sent.lead_id)
+                  .eq('campaign_id', sent.campaign_id)
+                  .maybeSingle();
+
+                if (!existing) {
+                  await supabase.from('inbox_threads').insert({
+                    user_id: account.user_id, campaign_id: sent.campaign_id,
+                    lead_id: sent.lead_id, account_id: account.id,
+                    subject: subjectHeader, last_message: cleanSnip(reply.snippet || ''),
+                    from_email: fromEmail, from_name: fromName,
+                    status: 'new', read: false, received_at: receivedAt,
+                  });
+                  await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
+                    `New reply from ${fromName || fromEmail} — "${subjectHeader}"`,
+                    'info', '/dashboard/inbox');
+                }
+
+                await supabase.from('sent_emails').update({ replied_at: receivedAt }).eq('id', sent.id);
+                if (sent.lead_id && sent.campaign_id) {
+                  await supabase.from('campaign_leads').update({ status: 'replied' })
+                    .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
+                }
+              } catch { /* skip single thread error */ }
+            }
+
+          } else if (account.imap_host) {
+            // ── IMAP path (Titan, Zoho, Yahoo, App Password, Custom SMTP) ────
+            const { data: sentEmails } = await supabase
+              .from('sent_emails')
+              .select('id, message_id, lead_id, campaign_id, subject')
+              .eq('account_id', account.id)
+              .not('message_id', 'is', null)
+              .is('replied_at', null)
+              .limit(50);
+
+            if (!sentEmails?.length) continue;
+
+            const replies = await imapFetch(
+              {
+                imap_host: account.imap_host,
+                imap_port: account.imap_port || 993,
+                smtp_user: account.smtp_user || account.email,
+                smtp_pass: account.smtp_pass,
+                email: account.email,
+              },
+              sentEmails.map((s: any) => s.message_id),
+            );
+
+            for (const reply of replies) {
+              if (SYSTEM_PATTERNS.some(p => reply.fromEmail.toLowerCase().includes(p))) continue;
+              const sent = sentEmails.find((s: any) => s.message_id === reply.inReplyTo);
+              if (!sent) continue;
+
+              const { data: existing } = await supabase
+                .from('inbox_threads').select('id')
+                .eq('user_id', account.user_id)
+                .eq('lead_id', sent.lead_id)
+                .eq('campaign_id', sent.campaign_id)
+                .maybeSingle();
+
+              if (!existing) {
+                await supabase.from('inbox_threads').insert({
+                  user_id: account.user_id, campaign_id: sent.campaign_id,
+                  lead_id: sent.lead_id, account_id: account.id,
+                  subject: reply.subject || sent.subject,
+                  last_message: `Reply from ${reply.fromEmail}`,
+                  from_email: reply.fromEmail, from_name: reply.fromName,
+                  status: 'new', read: false, received_at: reply.receivedAt,
+                });
+                await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
+                  `New reply from ${reply.fromName || reply.fromEmail} — "${reply.subject || sent.subject}"`,
+                  'info', '/dashboard/inbox');
+              }
+
+              await supabase.from('sent_emails').update({ replied_at: reply.receivedAt }).eq('id', sent.id);
+              if (sent.lead_id && sent.campaign_id) {
+                await supabase.from('campaign_leads').update({ status: 'replied' })
+                  .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`[sync-worker] error for ${account.email}:`, (err as Error).message);
+        }
+      }
+    }, { connection, concurrency: 1 });
+
+    console.log('✅ Inbox sync worker started (every 90s)');
   }
 }
