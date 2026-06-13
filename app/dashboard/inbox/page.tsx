@@ -183,38 +183,41 @@ export default function InboxPage() {
       {selected ? (
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-base font-bold text-gray-900">{selected.subject}</h2>
-            <p className="text-xs text-gray-400 mt-1">
-              From: {selected.from_email || selected.lead?.email}
-              {selected.from_name && selected.from_name !== selected.from_email ? ` (${selected.from_name})` : ''}
-              {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
-              {' · '}{new Date(selected.received_at).toLocaleString()}
-            </p>
-            {selected.campaign && (
-              <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mt-1">
-                Campaign: {selected.campaign.name}
-              </span>
-            )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-bold text-gray-900 truncate">{selected.subject}</h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  From: {selected.from_email || selected.lead?.email}
+                  {selected.from_name && selected.from_name !== selected.from_email ? ` (${selected.from_name})` : ''}
+                  {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
+                  {' · '}{new Date(selected.received_at).toLocaleString()}
+                </p>
+                {selected.campaign && (
+                  <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mt-1">
+                    Campaign: {selected.campaign.name}
+                  </span>
+                )}
+              </div>
+              {/* Status tags — top right for quick access */}
+              <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                {[
+                  { key: 'interested', label: '✓ Interested', active: 'bg-emerald-500 text-white border-emerald-500', inactive: 'border-gray-200 text-gray-500 hover:border-emerald-400 hover:text-emerald-600' },
+                  { key: 'not_interested', label: 'Not Interested', active: 'bg-gray-700 text-white border-gray-700', inactive: 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700' },
+                  { key: 'out_of_office', label: 'Out of Office', active: 'bg-amber-500 text-white border-amber-500', inactive: 'border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600' },
+                  { key: 'do_not_contact', label: '🚫 DNC', active: 'bg-red-500 text-white border-red-500', inactive: 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-600' },
+                ].map(s => (
+                  <button key={s.key} onClick={() => updateStatus(selected.id, s.key)}
+                    title={s.label}
+                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all ${selected.status === s.key ? s.active : s.inactive}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-6">
             <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
               {selected.last_message || 'No message content.'}
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Mark as</p>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { key: 'interested', label: 'Interested' },
-                { key: 'not_interested', label: 'Not Interested' },
-                { key: 'out_of_office', label: 'Out of Office' },
-                { key: 'do_not_contact', label: 'Do Not Contact' },
-              ].map(s => (
-                <button key={s.key} onClick={() => updateStatus(selected.id, s.key)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${selected.status === s.key ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}>
-                  {s.label}
-                </button>
-              ))}
             </div>
           </div>
         </div>

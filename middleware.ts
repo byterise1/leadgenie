@@ -33,14 +33,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Root "/" — send logged-in users straight to dashboard
-  if (request.nextUrl.pathname === '/' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup', '/'],
+  matcher: ['/dashboard/:path*', '/login', '/signup'],
 };

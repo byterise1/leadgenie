@@ -5,151 +5,197 @@ import Link from 'next/link';
 
 const sections = [
   {
-    id: 'quickstart',
-    title: 'Quick Start',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
-      </svg>
-    ),
+    id: 'getting-started',
+    emoji: '🚀',
+    title: 'Getting Started',
+    subtitle: 'Set up your account and launch your first campaign in under 10 minutes.',
     articles: [
       {
-        q: 'How do I get started with LeadGenie?',
-        a: `Getting started takes 3 steps:\n\n1. **Connect your email account** — Go to Email Accounts → click "Connect Gmail". Authorize LeadGenie to send emails on your behalf. You can connect multiple accounts for higher volume.\n\n2. **Add your leads** — Go to Leads → create a list → upload a CSV file with columns: First Name, Last Name, Email, Company (optional). Or add leads one by one manually.\n\n3. **Create a campaign** — Go to Campaigns → New Campaign → pick your leads list, write your email steps, set your schedule, and launch.`,
+        q: 'Creating your LeadGenie account',
+        a: `Go to leadgenie.ai → click "Start Free Trial" → sign up with Google or email.\n\nOnce inside, you'll land on the Overview dashboard. Your account is on the Free plan with 3 campaign slots, up to 500 leads, and 1 connected email account.`,
       },
       {
-        q: 'What is warmup and do I need it?',
-        a: `Warmup gradually builds your email account's sending reputation before you run campaigns. Without warmup, sending hundreds of cold emails from a fresh inbox risks landing in spam.\n\nWe recommend warming up new accounts for at least 2–3 weeks before launching campaigns. Go to Warmup → enable it for your account. It sends small batches of real-looking emails that get opened and replied to automatically, building your sender score.`,
+        q: 'Connecting Gmail or Outlook',
+        a: `Go to **Email Accounts** in the sidebar → click **"+ Add Account"** → choose Gmail OAuth (recommended for best deliverability).\n\nYou'll be redirected to Google to authorize LeadGenie. Once approved, your account appears with a green "Active" badge.\n\nFor Outlook or any other provider, choose Custom SMTP — enter your host, port, username and password.`,
+      },
+      {
+        q: 'Setting up email warmup',
+        a: `Before sending cold campaigns, warm up your inbox for 2–3 weeks.\n\nGo to **Warmup** → toggle warmup ON for your account. LeadGenie automatically sends small batches of real-looking emails that get opened and replied to, building your sender reputation.\n\nYou'll see your Health Score increase daily. Aim for 80+ before launching your first campaign.`,
+      },
+      {
+        q: 'Uploading your first prospect list',
+        a: `Go to **Leads** → click **"+ New List"** → give it a name (e.g., "SaaS Founders June") → click **Upload File**.\n\nPrepare a CSV with these columns:\n- Email (required)\n- First Name\n- Last Name\n- Company\n- Website\n\nThe importer removes duplicate emails automatically. You'll see a summary of how many were imported vs. skipped.`,
+      },
+      {
+        q: 'Launching your first campaign',
+        a: `Go to **Campaigns** → **New Campaign**.\n\n**Step 1 — Leads**: Choose the list you uploaded.\n**Step 2 — Schedule**: Set your sending window (e.g., 9 AM–5 PM), active days (Mon–Fri), and min/max delay between emails.\n**Step 3 — Review**: Confirm settings and click **Launch**.\n\nYour campaign will start sending during the next active window.`,
       },
     ],
   },
   {
     id: 'campaigns',
+    emoji: '📧',
     title: 'Campaigns',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-      </svg>
-    ),
+    subtitle: 'Everything about building, launching, and optimising your cold email campaigns.',
     articles: [
       {
-        q: 'How do multi-step campaigns (follow-ups) work?',
-        a: `A campaign can have multiple email steps. Step 1 is the first cold email. Steps 2, 3, etc. are follow-ups sent only to leads who haven't replied.\n\nWhen setting up steps:\n- Set a **delay** between steps (e.g., "3 days after step 1")\n- If a lead replies at any step, they are removed from the sequence automatically — no more emails sent to them\n- Use {{first_name}}, {{company}}, {{website}} variables to personalize each email`,
+        q: 'Creating a multi-step sequence',
+        a: `In the campaign builder, click **"+ Add Step"** to add follow-up emails.\n\n- Step 1: Your initial cold email\n- Step 2+: Follow-ups, sent only to leads who haven't replied\n\nSet a delay between steps (e.g., "3 days after previous step"). If a lead replies at any step, they stop receiving emails automatically.`,
       },
       {
-        q: 'What do the schedule settings mean?',
-        a: `**Sending window**: The hours of the day emails go out (e.g., 9 AM – 5 PM). Emails are sent during this window only.\n\n**Active days**: Which days of the week to send (e.g., Mon–Fri). Emails scheduled for inactive days are pushed to the next active day.\n\n**Min / Max delay**: A random delay between each email, picked between these two values. This makes sending look natural, not robotic.\n\n**Daily limit**: Max emails per day across all accounts. Useful to stay within safe sending limits.\n\nThe **Completes In** estimate on the Review step shows how many days until all leads receive all steps at your current settings.`,
+        q: 'Setting sending schedules',
+        a: `**Sending window**: Hours of day to send (e.g., 9 AM–5 PM in your timezone).\n**Active days**: Days of the week (e.g., Mon–Fri only).\n**Min / Max delay**: Random gap between each email send. This makes sending look natural to spam filters.\n**Daily limit**: Max emails per day across all connected accounts.\n\nThe **Completes In** estimate shows how many days until all leads get all steps.`,
       },
       {
-        q: 'Why did my campaign stop before reaching all leads?',
-        a: `Campaigns stop sending to a lead when:\n- The lead replied (automatically removed from sequence)\n- The lead unsubscribed (clicked the unsubscribe link)\n- The lead's status was set to "Do Not Contact" in Unibox\n\nThe campaign itself pauses if you click Pause on the campaign page, or if your email account is disconnected.`,
+        q: 'A/B testing subject lines',
+        a: `Currently, LeadGenie doesn't have built-in A/B testing.\n\nBest practice: create two separate campaigns with different subject lines and split your lead list. Compare open rates in Analytics after 3–5 days.`,
       },
       {
-        q: 'Can I use personalization variables?',
-        a: `Yes. In the email body and subject line, use double-curly-brace variables:\n\n- {{first_name}} — lead's first name\n- {{last_name}} — lead's last name\n- {{email}} — lead's email address\n- {{company}} — lead's company\n- {{website}} — lead's website\n\nIf a variable is missing from the lead's data, it is left blank. Make sure your CSV has those columns filled in.`,
+        q: 'Adding personalisation variables',
+        a: `Use double curly braces in your email body and subject:\n\n- {{first_name}} — lead's first name\n- {{last_name}} — lead's last name\n- {{email}} — lead's email address\n- {{company}} — lead's company\n- {{website}} — lead's website\n\nIf the field is empty for a lead, the variable is left blank. Fill in your CSV columns to avoid blank personalisations.`,
+      },
+      {
+        q: 'Pausing and resuming campaigns',
+        a: `Open any campaign → click the **Pause** button at the top right.\n\nEmails already queued will not be sent while paused. Click **Resume** to continue from where it left off.\n\nLeads who received emails while the campaign was active will receive their next follow-up on schedule after you resume.`,
       },
     ],
   },
   {
-    id: 'leads',
-    title: 'Leads',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-      </svg>
-    ),
+    id: 'warmup',
+    emoji: '🔥',
+    title: 'Email Warmup',
+    subtitle: 'Understanding warmup, monitoring your score, and troubleshooting deliverability.',
     articles: [
       {
-        q: 'How do I import leads from a CSV?',
-        a: `Go to Leads → select or create a list → click "Upload File".\n\nYour CSV should have headers in the first row. Supported column names:\n- **Email** (required) — email, Email, email_address\n- **First Name** — first_name, firstName, First Name\n- **Last Name** — last_name, lastName, Last Name\n- **Company** — company, Company, company_name\n- **Website** — website, Website\n\nThe importer detects duplicates both within your file and against leads already in your account. Duplicate emails are skipped automatically.`,
+        q: 'How email warmup works',
+        a: `When you send cold emails from a fresh inbox, spam filters are suspicious — they've never seen volume from this address before.\n\nWarmup fixes this by gradually sending real-looking emails between real inboxes. These emails get opened and marked "Not Spam", signalling to Gmail, Outlook, and others that this is a trustworthy sender.\n\nLeadGenie automates this entirely — no manual action needed once enabled.`,
       },
       {
-        q: 'What does the lead status mean?',
-        a: `Each lead has a status:\n\n- **Active** — in a campaign sequence, will receive follow-ups\n- **Replied** — lead replied, removed from sequence\n- **Unsubscribed** — clicked unsubscribe, will never receive emails again\n- **Bounced** — email could not be delivered\n- **Do Not Contact** — manually marked in Unibox, excluded from all campaigns`,
+        q: 'Reading your warmup score',
+        a: `Your **Health Score** (0–100) is shown on the Email Accounts page.\n\n- **80–100**: Ready to run campaigns at full volume\n- **60–79**: Warming up, limit campaign volume to 20–30 emails/day\n- **Below 60**: Not ready — continue warming, do not run cold campaigns yet\n\nThe score updates daily based on inbox placement rates.`,
+      },
+      {
+        q: 'Warmup best practices',
+        a: `- Enable warmup before you connect an account to any campaign\n- Run warmup for at least 14 days before your first cold send\n- Start campaigns at low volume (20–30 emails/day) even after warmup is complete\n- Don't turn off warmup while running campaigns — it should always run in the background\n- Use a real domain, not a free Gmail/Yahoo address, for best results`,
+      },
+      {
+        q: 'How long does warmup take?',
+        a: `Typically **2–4 weeks** to reach a Health Score of 80+.\n\nBrand-new domains with no email history take longer. Domains that have sent emails before (even if not cold outreach) warm up faster.\n\nYou'll see the score climb daily on the Email Accounts page.`,
+      },
+      {
+        q: 'Troubleshooting spam placement',
+        a: `If emails are landing in spam:\n\n1. **Check your Health Score** — if below 70, pause campaigns and keep warming\n2. **Check your content** — avoid spam trigger words: Free!, Guaranteed!, Unsubscribe, Click here\n3. **Add SPF/DKIM records** to your domain's DNS\n4. **Lower volume** — reduce daily limit and increase min delay\n5. **Avoid too many links or images** — plain text emails land in inbox more reliably`,
       },
     ],
   },
   {
-    id: 'inbox',
-    title: 'Unibox (Inbox)',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/>
-      </svg>
-    ),
+    id: 'unibox',
+    emoji: '📥',
+    title: 'Unibox',
+    subtitle: 'Managing all your replies from one place and labelling prospects.',
     articles: [
       {
-        q: 'How does Unibox work?',
-        a: `Unibox collects all replies from your connected Gmail accounts into one place. It syncs in the background every 2 minutes — you don't need to keep the Unibox tab open.\n\nReplies are matched to the lead and campaign they belong to, so you always know the context of each conversation.`,
+        q: 'Navigating the Unibox',
+        a: `Go to **Unibox** in the sidebar.\n\nThe left panel shows all replies from your campaigns, newest first. Unread threads are shown in bold with a blue dot.\n\nClick any thread to open it in the right panel and read the full message. Opening a thread marks it as read and instantly updates the unread count badge in the sidebar.`,
       },
       {
-        q: 'What do the filter tags (Interested, Not Interested, etc.) do?',
-        a: `When you open a reply, you can "Mark as" one of these statuses:\n\n- **Interested** — lead wants to know more, great for follow-up pipeline\n- **Not Interested** — lead declined, use to stop wasting time\n- **Out of Office** — auto-reply, revisit later\n- **Do Not Contact** — removes lead from all future campaigns permanently\n\nOnce tagged, use the filter dropdown at the top of the thread list to see only Interested replies, for example. This helps you manage a large inbox without missing hot leads.`,
+        q: 'Labelling replies by intent',
+        a: `Open a thread → scroll to the bottom of the right panel → click one of the **"Mark as"** buttons:\n\n- **Interested** — lead wants to know more (hot lead, follow up manually)\n- **Not Interested** — lead declined\n- **Out of Office** — auto-reply, revisit after they're back\n- **Do Not Contact** — removes lead from all future campaigns permanently\n\nOnce labelled, use the **filter dropdown** at the top of the thread list to see only leads of that type (e.g., all "Interested" replies).`,
+      },
+      {
+        q: 'Filtering by campaign or account',
+        a: `Use the filter dropdown at the top of the thread list to show:\n- **All** — every reply\n- **Interested** — hot leads ready for follow-up\n- **Not Interested** — declined leads\n- **Out of Office** — temporary out-of-office replies\n- **Do Not Contact** — leads who must not be emailed again\n\nEach thread shows the campaign it came from as a blue badge under the sender's name.`,
+      },
+      {
+        q: 'Replying from the Unibox',
+        a: `Currently, Unibox is read-only — you can read and label replies, but must reply directly from Gmail or your email client.\n\nThis keeps your reply in the same email thread and ensures proper deliverability. We're working on adding native reply functionality.`,
+      },
+      {
+        q: 'Syncing new replies',
+        a: `Replies sync automatically every 2 minutes in the background — you don't need to stay on the Unibox page.\n\nTo sync immediately, click the **Sync** button at the top right of the Unibox. A message will confirm how many new replies were found.`,
       },
     ],
   },
   {
     id: 'analytics',
+    emoji: '📊',
     title: 'Analytics',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
-      </svg>
-    ),
+    subtitle: 'Interpreting your metrics, tracking opens and clicks, and improving performance.',
     articles: [
       {
-        q: 'What do Open Rate, Click Rate, and Reply Rate mean?',
-        a: `**Open Rate** — percentage of sent emails that were opened. LeadGenie tracks this using a tiny invisible tracking pixel. Gmail pre-fetches images within seconds of delivery, so we only count opens that happen 30+ seconds after sending to avoid false positives.\n\n**Click Rate** — percentage of recipients who clicked a link in your email.\n\n**Reply Rate** — percentage of leads who replied. This is the most important metric for cold email. A reply rate above 5% is excellent.`,
+        q: 'Understanding your dashboard',
+        a: `The **Analytics** page shows:\n\n- **Emails Sent** — total across all campaigns\n- **Open Rate** — % of recipients who opened (tracked via a 1×1 pixel)\n- **Click Rate** — % who clicked a link\n- **Reply Rate** — % who replied (most important metric)\n- **Bounce Rate** — % of undeliverable addresses\n\nThe table below shows per-campaign breakdown. Active campaigns sort to the top.`,
       },
       {
-        q: 'Why does my open rate look high or low?',
-        a: `Open tracking can be affected by:\n\n- **Security scanners** — some corporate email servers pre-scan emails and click all links/images. This can inflate open rates.\n- **Gmail image proxy** — Gmail loads tracking pixels through its own servers to protect privacy. We filter out known bot patterns.\n- **Plain-text emails** — if a recipient's email client doesn't load images, opens won't be tracked.\n\nReply rate is a more reliable signal than open rate for cold email performance.`,
+        q: 'Open rate vs. reply rate',
+        a: `**Open rate** tells you if your subject line works. A good cold email open rate is 40–70%.\n\n**Reply rate** tells you if your email body and offer work. A good cold reply rate is 3–8%. Above 10% is excellent.\n\nFocus on reply rate — it's the true measure of campaign effectiveness. Open rate can be inflated by email security scanners.`,
+      },
+      {
+        q: 'Click tracking explained',
+        a: `Every link in your emails is automatically wrapped with a tracking URL. When a recipient clicks it, LeadGenie records a click event.\n\n**Note**: Security scanners sometimes click all links in an email to check for malware. This can inflate click rates. Focus on reply rate as your primary signal.`,
+      },
+      {
+        q: 'Exporting campaign reports',
+        a: `Export is not yet available directly from the app. To get your data:\n\n1. Go to your Supabase dashboard\n2. Open the sent_emails or campaign_leads table\n3. Use the CSV download option\n\nNative export to CSV will be added in a future update.`,
+      },
+      {
+        q: 'How are opens tracked?',
+        a: `A tiny invisible 1×1 pixel image is inserted at the bottom of each email. When the recipient's email client loads images, the pixel fires and we record an open.\n\nGmail loads images through its own servers about 5–15 seconds after delivery (to protect user privacy). LeadGenie filters these out by only counting opens that happen **30+ seconds after send time**, ensuring you only see real human opens.`,
       },
     ],
   },
   {
-    id: 'deliverability',
-    title: 'Deliverability',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-    ),
+    id: 'billing',
+    emoji: '💳',
+    title: 'Billing & Plans',
+    subtitle: 'Managing your subscription, upgrading, and understanding your credits.',
     articles: [
       {
-        q: 'How do I avoid landing in spam?',
-        a: `The main factors that affect deliverability:\n\n1. **Warm up your inbox first** — never send cold campaigns from a brand-new email address without warming up for 2–3 weeks\n2. **Keep daily volume low** — start at 20–30 emails/day and increase gradually over weeks\n3. **Use random delays** — our Min/Max delay randomizes send timing so it doesn't look like a mass blast\n4. **Write naturally** — avoid spam trigger words (Free!, Guaranteed!, Click here!), don't use too many links or images\n5. **Include unsubscribe link** — enable it per email step. This is required by law (CAN-SPAM, GDPR) and improves deliverability\n6. **Use a custom domain** — sending from a branded domain (you@yourcompany.com) builds better reputation than Gmail/Yahoo personal accounts`,
+        q: 'What are the available plans?',
+        a: `**Free** — 3 campaigns, 500 leads, 1 email account, 1,000 emails/month\n**Pro** — Unlimited campaigns, unlimited leads, unlimited accounts, 50,000 emails/month\n**Agency** — Everything in Pro + 200,000 emails/month + priority support\n\nGo to **Billing** in the sidebar to see current usage and upgrade.`,
       },
       {
-        q: 'What is SPF, DKIM, DMARC and do I need them?',
-        a: `These are email authentication records that prove your emails are legitimate:\n\n- **SPF** — tells receivers which servers are allowed to send on behalf of your domain\n- **DKIM** — adds a cryptographic signature to each email, proving it wasn't tampered\n- **DMARC** — tells receivers what to do with emails that fail SPF/DKIM\n\nIf you're sending from Gmail, Google handles DKIM automatically. For custom domains, set these up in your domain's DNS settings. Without them, emails are much more likely to land in spam.`,
+        q: 'What are AI credits?',
+        a: `AI credits are used when you generate emails with the AI on the homepage or in the campaign builder.\n\nSending emails does **not** consume AI credits. You can send thousands of emails without using a single credit.\n\nFree accounts get 100 AI credits. Credits reset monthly on Pro and Agency plans. The credit usage shows in the sidebar and header.`,
+      },
+      {
+        q: 'Upgrading or downgrading your plan',
+        a: `Go to **Billing** → click **Upgrade**.\n\nYour current usage and limits are shown on the billing page. Upgrading takes effect immediately. Downgrading takes effect at the end of your billing cycle.`,
+      },
+      {
+        q: 'Adding team members',
+        a: `Team member management is coming in a future update.\n\nCurrently each account is single-user. Contact support if you need a multi-seat setup and we'll help manually.`,
+      },
+      {
+        q: 'Refund policy',
+        a: `Refunds are available within 7 days of purchase if you haven't used your account significantly.\n\nContact support at the email below with your account email and reason. We typically respond within 24 hours on business days.`,
       },
     ],
   },
 ];
 
 export default function HelpPage() {
-  const [activeSection, setActiveSection] = useState('quickstart');
+  const [activeSection, setActiveSection] = useState('getting-started');
   const [openArticle, setOpenArticle] = useState<string | null>(null);
 
   const current = sections.find(s => s.id === activeSection);
 
   const renderBody = (text: string) => {
     return text.split('\n').map((line, i) => {
-      if (!line.trim()) return <br key={i}/>;
-      const parts = line.split(/(\*\*[^*]+\*\*)/g).map((part, j) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={j} className="text-gray-900">{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
-      if (line.match(/^\d+\./)) {
-        return <p key={i} className="mb-1 pl-2">{parts}</p>;
+      if (!line.trim()) return <br key={i} />;
+      const renderInline = (raw: string) =>
+        raw.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+          part.startsWith('**') && part.endsWith('**')
+            ? <strong key={j} className="text-gray-900 font-semibold">{part.slice(2, -2)}</strong>
+            : part
+        );
+      if (/^\d+\./.test(line)) {
+        return <p key={i} className="mb-1 pl-2">{renderInline(line)}</p>;
       }
       if (line.startsWith('- ')) {
-        return <p key={i} className="mb-1 pl-4 text-gray-600 before:content-['·'] before:mr-2 before:text-gray-400">{parts}</p>;
+        return <p key={i} className="mb-1 pl-3 text-gray-600"><span className="text-gray-400 mr-2">·</span>{renderInline(line.slice(2))}</p>;
       }
-      return <p key={i} className="mb-1">{parts}</p>;
+      return <p key={i} className="mb-1">{renderInline(line)}</p>;
     });
   };
 
@@ -173,7 +219,7 @@ export default function HelpPage() {
               className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeSection === s.id ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
               }`}>
-              <span className={activeSection === s.id ? 'text-blue-600' : 'text-gray-400'}>{s.icon}</span>
+              <span className="text-base leading-none">{s.emoji}</span>
               {s.title}
             </button>
           ))}
@@ -181,11 +227,16 @@ export default function HelpPage() {
 
         {/* Articles */}
         <div className="flex-1 max-w-2xl">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-              <span className="text-blue-600">{current?.icon}</span>
-              <h2 className="text-base font-bold text-gray-900">{current?.title}</h2>
+          {/* Section header */}
+          <div className="mb-4 px-1">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-2xl">{current?.emoji}</span>
+              <h2 className="text-lg font-bold text-gray-900">{current?.title}</h2>
             </div>
+            <p className="text-sm text-gray-400 pl-10">{current?.subtitle}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="divide-y divide-gray-100">
               {current?.articles.map((article, idx) => {
                 const key = `${activeSection}-${idx}`;
@@ -202,8 +253,10 @@ export default function HelpPage() {
                       </svg>
                     </button>
                     {isOpen && (
-                      <div className="px-6 pb-5 text-sm text-gray-600 leading-relaxed space-y-0.5 bg-gray-50/50">
-                        {renderBody(article.a)}
+                      <div className="px-6 pb-5 text-sm text-gray-600 leading-relaxed bg-gray-50/50 border-t border-gray-100">
+                        <div className="pt-3 space-y-0.5">
+                          {renderBody(article.a)}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -212,7 +265,8 @@ export default function HelpPage() {
             </div>
           </div>
 
-          <div className="mt-4 bg-blue-50 border border-blue-100 rounded-2xl px-6 py-4 flex items-center gap-4">
+          {/* Contact support CTA */}
+          <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl px-6 py-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
@@ -220,10 +274,14 @@ export default function HelpPage() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold text-gray-900">Still need help?</p>
-              <p className="text-xs text-gray-500 mt-0.5">Can't find what you're looking for? Reach out and we'll help.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Our support team responds within a few hours on business days.</p>
             </div>
-            <a href="mailto:support@leadgenie.ai" className="text-xs font-bold text-blue-600 hover:text-blue-700 whitespace-nowrap transition-colors">
-              Contact support →
+            <a
+              href="mailto:Claudecodebyterise@gmail.com?subject=LeadGenie Support"
+              className="shrink-0 inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              Contact Support
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </a>
           </div>
         </div>
