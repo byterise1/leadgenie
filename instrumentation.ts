@@ -99,6 +99,23 @@ export async function register() {
 
     const SITE_URL = process.env.SITE_URL || 'https://leadgenie-production.up.railway.app';
 
+    // Helper: create in-app notification only if user has the pref enabled
+    async function notifyIfEnabled(
+      db: typeof supabase,
+      userId: string,
+      pref: string,
+      message: string,
+      type: 'info' | 'warning' | 'error' = 'info',
+      link?: string,
+    ) {
+      const { data: prof } = await db.from('profiles').select(pref).eq('id', userId).maybeSingle();
+      if (prof?.[pref] === false) return;
+      const payload: Record<string, unknown> = { user_id: userId, message, type };
+      if (link) payload.link = link;
+      const { error } = await db.from('notifications').insert(payload);
+      if (error) console.error('[notification] insert failed:', error.message);
+    }
+
     new Worker('email-sending', async (job) => {
       const { campaignLeadId, stepNumber } = job.data;
 
@@ -304,6 +321,8 @@ export async function register() {
             .in('status', ['pending', 'active']);
           if (pendingAfterBounce === 0) {
             await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
+            await notifyIfEnabled(supabase, campaign.user_id, 'notif_campaign_complete',
+              `Campaign "${campaign.name}" has completed sending.`, 'info', `/dashboard/campaigns/${campaign.id}`);
           }
           return;
         }
@@ -338,6 +357,8 @@ export async function register() {
         if (pendingCount === 0) {
           await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
           console.log(`✅ Campaign "${campaign.name}" auto-completed`);
+          await notifyIfEnabled(supabase, campaign.user_id, 'notif_campaign_complete',
+            `Campaign "${campaign.name}" has completed sending.`, 'info', `/dashboard/campaigns/${campaign.id}`);
         }
       }
 

@@ -50,8 +50,7 @@ export default function SettingsPage() {
     campaign_complete: true,
     warmup_alert: false,
     lead_open: false,
-    weekly_report: true,
-    unsubscribe: false,
+    unsubscribe: true,
   });
 
   useEffect(() => {
@@ -80,8 +79,7 @@ export default function SettingsPage() {
             campaign_complete: data.notif_campaign_complete ?? true,
             warmup_alert: data.notif_warmup_alert ?? false,
             lead_open: data.notif_lead_open ?? false,
-            weekly_report: data.notif_weekly_report ?? true,
-            unsubscribe: data.notif_unsubscribe ?? false,
+            unsubscribe: data.notif_unsubscribe ?? true,
           });
         }
         setLoaded(true);
@@ -143,7 +141,6 @@ export default function SettingsPage() {
       notif_campaign_complete: next.campaign_complete,
       notif_warmup_alert: next.warmup_alert,
       notif_lead_open: next.lead_open,
-      notif_weekly_report: next.weekly_report,
       notif_unsubscribe: next.unsubscribe,
     });
   };
@@ -377,12 +374,11 @@ export default function SettingsPage() {
               <h2 className="text-base font-bold text-gray-900 mb-1">Notification Preferences</h2>
               <p className="text-sm text-gray-400 mb-4">Toggling saves instantly. In-app bell alerts appear for enabled types.</p>
               {([
-                { key: 'new_reply', label: 'New reply received', desc: 'When a prospect replies to any campaign' },
-                { key: 'campaign_complete', label: 'Campaign completed', desc: 'When a campaign finishes sending' },
-                { key: 'warmup_alert', label: 'Warmup health alert', desc: 'When warmup score drops below 80%' },
-                { key: 'lead_open', label: 'Lead opens email', desc: 'Real-time open tracking notification' },
-                { key: 'weekly_report', label: 'Weekly performance report', desc: 'Summary email every Monday morning' },
-                { key: 'unsubscribe', label: 'Unsubscribe received', desc: 'When a lead unsubscribes from your list' },
+                { key: 'new_reply', label: 'New reply received', desc: 'When a prospect replies to any campaign email' },
+                { key: 'campaign_complete', label: 'Campaign completed', desc: 'When all leads in a campaign have been emailed' },
+                { key: 'lead_open', label: 'Lead opens email', desc: 'Each time a prospect opens one of your emails' },
+                { key: 'unsubscribe', label: 'Unsubscribe received', desc: 'When a lead clicks unsubscribe in your email' },
+                { key: 'warmup_alert', label: 'Warmup health alert', desc: 'When a sending account warmup score drops (coming soon)' },
               ] as { key: keyof typeof notifs; label: string; desc: string }[]).map(n => (
                 <div key={n.key} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
                   <div>
