@@ -49,7 +49,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     if (errCode === 'ETIMEDOUT' || errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' ||
         msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
       return NextResponse.json({
-        error: `Cannot reach ${account.smtp_host || 'SMTP server'} on port ${account.smtp_port || 587}. Check your SMTP host and port, or try port 465.`,
+        error: `Cannot reach ${account.smtp_host || 'SMTP server'}:${account.smtp_port || 587} — the provider is likely blocking connections from cloud servers. Use Brevo or Mailgun as a relay, or switch to Gmail OAuth.`,
       }, { status: 500 });
     }
     return NextResponse.json({ error: msg }, { status: 500 });
