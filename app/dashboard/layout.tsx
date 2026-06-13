@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
           </button>
-          <span className="md:hidden"><Logo size={24} textSize="text-[14px]" /></span>
+          <span className="md:hidden"><Logo size={32} textSize="text-[15px]" /></span>
 
           <div className="flex-1"/>
 

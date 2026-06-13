@@ -207,7 +207,7 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" onClick={close} className="flex items-center gap-2 shrink-0">
-          <Logo size={32} textSize="text-[17px]" />
+          <Logo size={42} textSize="text-[19px]" />
         </Link>
 
         {/* Desktop nav */}
