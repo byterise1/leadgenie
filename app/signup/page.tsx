@@ -46,7 +46,12 @@ export default function SignupPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      const msg = error.message.toLowerCase();
+      if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('exceeded')) {
+        setError('Too many attempts. Please wait a few minutes and try again, or sign up with Google.');
+      } else {
+        setError(error.message);
+      }
       return;
     }
 
