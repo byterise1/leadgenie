@@ -511,7 +511,7 @@ function UseModal({ template, onClose, onDuplicate }: { template: Template; onCl
         <p className="text-sm text-gray-400 mb-5">Where do you want to use <span className="font-semibold text-gray-700">"{template.name}"</span>?</p>
         <div className="space-y-2 mb-5">
           <button onClick={() => {
-              localStorage.setItem('prefill_template', JSON.stringify({ subject: template.subject, body: template.body, unsubText: template.unsubText }));
+              localStorage.setItem('prefill_template', JSON.stringify({ subject: template.subject, body: template.body, unsubText: template.unsubText, templateId: template.dbId || null }));
               router.push('/dashboard/campaigns/new');
             }}
             className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
@@ -556,9 +556,9 @@ function toTemplate(row: Record<string, unknown>): Template {
     body: row.body as string,
     unsubText: (row.unsub_text as string) ?? DEFAULT_UNSUB,
     builtIn: false,
-    openRate: sourceBuiltin?.openRate ?? '—',
-    replyRate: sourceBuiltin?.replyRate ?? '—',
-    uses: sourceBuiltin?.uses ?? 0,
+    openRate: (row.open_rate as string | null) ?? sourceBuiltin?.openRate ?? '—',
+    replyRate: (row.reply_rate as string | null) ?? sourceBuiltin?.replyRate ?? '—',
+    uses: ((row.uses as number) > 0 ? (row.uses as number) : null) ?? sourceBuiltin?.uses ?? 0,
   };
 }
 

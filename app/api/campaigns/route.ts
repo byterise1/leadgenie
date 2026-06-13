@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
     body: s.body,
     delay_days: s.delay || 0,
     include_unsub: s.includeUnsub || false,
+    template_id: s.templateId || null,
   }));
 
   await supabaseAdmin.from('email_steps').insert(stepRows);

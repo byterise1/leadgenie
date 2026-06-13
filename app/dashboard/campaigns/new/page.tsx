@@ -169,7 +169,7 @@ export default function NewCampaignPage() {
       const prefill = localStorage.getItem('prefill_template');
       if (prefill) {
         const t = JSON.parse(prefill);
-        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: null, includeUnsub: false }]);
+        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: t.templateId || null, includeUnsub: false }]);
         localStorage.removeItem('prefill_template');
       }
     } catch {}
@@ -710,7 +710,7 @@ export default function NewCampaignPage() {
                       timezone,
                       start_date: startDate || null,
                       list_id: selectedListId || null,
-                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub })),
+                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId })),
                       account_ids: accountIds,
                     }),
                   });
