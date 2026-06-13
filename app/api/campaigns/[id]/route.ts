@@ -18,11 +18,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Real counts from sent_emails — filter only by campaign_id
+  // Real counts from sent_emails (opens, clicks) and campaign_leads (replies — per-lead, deduped)
   const [sentRes, openedRes, repliedRes, clickedRes] = await Promise.all([
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id),
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('opened_at', 'is', null),
-    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('replied_at', 'is', null),
+    supabaseAdmin.from('campaign_leads').select('id', { count: 'exact', head: true }).eq('campaign_id', id).eq('status', 'replied'),
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('clicked_at', 'is', null),
   ]);
 

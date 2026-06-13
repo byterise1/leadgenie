@@ -15,31 +15,45 @@ export async function GET() {
 
   // Filter sent_emails by campaign_id (never by user_id — that column may not exist or may be wrong)
   const campaignIds = (campaigns.data || []).map(c => c.id);
-  const sent = campaignIds.length
-    ? await supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,replied_at,clicked_at,bounced').in('campaign_id', campaignIds)
-    : { data: [] };
+  const [sent, repliedLeadsRes] = campaignIds.length
+    ? await Promise.all([
+        supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,clicked_at,bounced').in('campaign_id', campaignIds),
+        supabaseAdmin.from('campaign_leads').select('campaign_id').in('campaign_id', campaignIds).eq('status', 'replied'),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  // Per-campaign reply count from campaign_leads (per-lead, deduped — avoids double-counting multi-step replies)
+  const repliedByCamp: Record<string, number> = {};
+  ((repliedLeadsRes as { data: { campaign_id: string }[] | null }).data || []).forEach((r: { campaign_id: string }) => {
+    repliedByCamp[r.campaign_id] = (repliedByCamp[r.campaign_id] || 0) + 1;
+  });
 
   const activeCampaigns = campaigns.data?.filter(c => c.status === 'active').length ?? 0;
-  const totalSent = sent.data?.length ?? 0;
-  const totalOpened = sent.data?.filter((e: any) => e.opened_at).length ?? 0;
-  const totalReplied = sent.data?.filter((e: any) => e.replied_at).length ?? 0;
-  const totalClicked = sent.data?.filter((e: any) => e.clicked_at).length ?? 0;
-  const totalBounced = sent.data?.filter((e: any) => e.bounced).length ?? 0;
+  const totalSent = (sent as { data: any[] | null }).data?.length ?? 0;
+  const totalOpened = (sent as { data: any[] | null }).data?.filter((e: any) => e.opened_at).length ?? 0;
+  const totalReplied = Object.values(repliedByCamp).reduce((s, v) => s + v, 0);
+  const totalClicked = (sent as { data: any[] | null }).data?.filter((e: any) => e.clicked_at).length ?? 0;
+  const totalBounced = (sent as { data: any[] | null }).data?.filter((e: any) => e.bounced).length ?? 0;
   const openRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) + '%' : '—';
   const replyRate = totalSent > 0 ? ((totalReplied / totalSent) * 100).toFixed(1) + '%' : '—';
   const clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) + '%' : '—';
   const bounceRate = totalSent > 0 ? ((totalBounced / totalSent) * 100).toFixed(1) + '%' : '—';
 
-  // Real per-campaign counts from sent_emails (avoids stale total_sent column)
+  // Real per-campaign counts
   const bycamp: Record<string, { sent: number; opened: number; replied: number; clicked: number }> = {};
-  (sent.data || []).forEach((e: { campaign_id: string; opened_at: string | null; replied_at: string | null; clicked_at: string | null }) => {
+  ((sent as { data: any[] | null }).data || []).forEach((e: { campaign_id: string; opened_at: string | null; clicked_at: string | null }) => {
     if (!e.campaign_id) return;
     const r = bycamp[e.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
     r.sent++;
     if (e.opened_at) r.opened++;
-    if (e.replied_at) r.replied++;
     if (e.clicked_at) r.clicked++;
     bycamp[e.campaign_id] = r;
+  });
+  // Merge per-lead reply counts
+  Object.entries(repliedByCamp).forEach(([campId, count]) => {
+    const r = bycamp[campId] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
+    r.replied = count;
+    bycamp[campId] = r;
   });
 
   const campaignBreakdown = (campaigns.data || []).map(c => {

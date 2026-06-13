@@ -26,21 +26,25 @@ export async function GET() {
     (lists || []).forEach((l: { id: string; name: string }) => { listMap[l.id] = { name: l.name }; });
   }
 
-  // Real counts per campaign from sent_emails
+  // Real counts per campaign from sent_emails (opens, clicks) and campaign_leads (replies — per-lead, deduped)
   const campaignIds = (data || []).map((c: { id: string }) => c.id);
   const statsByCampaign: Record<string, { sent: number; opened: number; replied: number; clicked: number }> = {};
   if (campaignIds.length) {
-    const { data: sentRows } = await supabaseAdmin
-      .from('sent_emails')
-      .select('campaign_id,opened_at,replied_at,clicked_at')
-      .in('campaign_id', campaignIds);
-    (sentRows || []).forEach((s: { campaign_id: string; opened_at: string | null; replied_at: string | null; clicked_at: string | null }) => {
+    const [sentRows, repliedRows] = await Promise.all([
+      supabaseAdmin.from('sent_emails').select('campaign_id,opened_at,clicked_at').in('campaign_id', campaignIds),
+      supabaseAdmin.from('campaign_leads').select('campaign_id').in('campaign_id', campaignIds).eq('status', 'replied'),
+    ]);
+    (sentRows.data || []).forEach((s: { campaign_id: string; opened_at: string | null; clicked_at: string | null }) => {
       const r = statsByCampaign[s.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
       r.sent++;
       if (s.opened_at) r.opened++;
-      if (s.replied_at) r.replied++;
       if (s.clicked_at) r.clicked++;
       statsByCampaign[s.campaign_id] = r;
+    });
+    (repliedRows.data || []).forEach((r: { campaign_id: string }) => {
+      const s = statsByCampaign[r.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
+      s.replied++;
+      statsByCampaign[r.campaign_id] = s;
     });
   }
 

@@ -3,25 +3,18 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
-// Known email scanner/proxy user-agents — don't count these as real opens
+// Only block obvious non-email-client bots (search crawlers, HTTP tools)
+// Do NOT block email client proxies (googleimageproxy, yahoo mail proxy) —
+// that would prevent all Gmail/Yahoo opens from ever being counted.
 const BOT_PATTERNS = [
-  'googleimageproxy',
-  'via ggpht',
-  'ggpht.com',
-  'google-apps-script',
-  'feedfetcher-google',
   'googlebot',
-  'yahoo mail proxy',
-  'yahoomailproxy',
   'bingpreview',
   'linkedinbot',
   'twitterbot',
   'facebookexternalhit',
-  'preview',
-  'scanner',
+  'bot/',
   'crawler',
   'spider',
-  'bot/',
   'wget/',
   'curl/',
   'python-requests',
@@ -40,8 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const ua = req.headers.get('user-agent') || '';
 
-  // Blank UA = almost always a server-side pre-fetch (Gmail CDN, scanners)
-  if (ua && !isBot(ua)) {
+  if (!isBot(ua)) {
     await supabaseAdmin
       .from('sent_emails')
       .update({ opened_at: new Date().toISOString() })

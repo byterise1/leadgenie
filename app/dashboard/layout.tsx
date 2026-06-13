@@ -57,6 +57,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Background inbox sync — runs every 2 minutes from any dashboard page
+  useEffect(() => {
+    const sync = () => fetch('/api/inbox/sync', { method: 'POST' }).catch(() => {});
+    sync();
+    const id = setInterval(sync, 120000);
+    return () => clearInterval(id);
+  }, []);
+
   const markAllRead = () => {
     fetch('/api/notifications', {
       method: 'PATCH',

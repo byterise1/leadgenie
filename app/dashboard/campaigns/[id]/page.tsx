@@ -40,6 +40,9 @@ type Campaign = {
   from_hour: string;
   to_hour: string;
   timezone: string;
+  min_delay_secs?: number | null;
+  max_delay_secs?: number | null;
+  active_days?: boolean[];
   list_id: string | null;
   created_at: string;
   email_steps: EmailStep[];
@@ -158,6 +161,22 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const replyRate = campaign.total_sent > 0 ? ((campaign.total_replied / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
   const clickRate = campaign.total_sent > 0 ? (((campaign.total_clicked || 0) / campaign.total_sent) * 100).toFixed(1) + '%' : '—';
 
+  // Completion estimate
+  const parseTimeToMins = (s: string) => {
+    if (!s) return 0;
+    const [h, m] = s.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const schedWindowMins = Math.max(0, parseTimeToMins(campaign.to_hour) - parseTimeToMins(campaign.from_hour));
+  const minDelaySecs = campaign.min_delay_secs || 60;
+  const maxDelaySecs = campaign.max_delay_secs || 300;
+  const avgDelayMins = (minDelaySecs + maxDelaySecs) / 2 / 60;
+  const numAccounts = campaign.campaign_accounts.length;
+  const emailsPerWindowPerAcc = schedWindowMins > 0 && avgDelayMins > 0 ? Math.max(1, Math.floor(schedWindowMins / avgDelayMins)) : 0;
+  const emailsPerDay = Math.min(campaign.daily_limit, emailsPerWindowPerAcc * Math.max(1, numAccounts));
+  const daysToComplete = emailsPerDay > 0 && leads.length > 0 ? Math.ceil(leads.length / emailsPerDay) : null;
+  const activeDayLabels = ['Mo','Tu','We','Th','Fr','Sa','Su'].filter((_, i) => (campaign.active_days || [true,true,true,true,true,false,false])[i]);
+
   const TERMINAL_STATUSES = ['completed', 'bounced', 'unsubscribed', 'replied'];
   const isEffectivelyComplete = leads.length > 0 && leads.every(l => TERMINAL_STATUSES.includes(l.status));
 
@@ -257,6 +276,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               { label: 'Window', value: `${campaign.from_hour} – ${campaign.to_hour}` },
               { label: 'Timezone', value: campaign.timezone },
               { label: 'Daily limit', value: `${campaign.daily_limit} emails/day` },
+              { label: 'Delay', value: `${Math.round(minDelaySecs/60)}–${Math.round(maxDelaySecs/60)} min (random)` },
+              { label: 'Active days', value: activeDayLabels.length > 0 ? activeDayLabels.join(', ') : '—' },
             ].map(r => (
               <div key={r.label} className="flex justify-between">
                 <span className="text-gray-400">{r.label}</span>
@@ -264,6 +285,20 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               </div>
             ))}
           </div>
+          {emailsPerDay > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
+              <div className="bg-blue-50 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
+                <p className="text-sm font-bold text-gray-900">~{emailsPerDay}</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {daysToComplete === null ? '—' : `~${daysToComplete}d`}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sending Accounts</p>
