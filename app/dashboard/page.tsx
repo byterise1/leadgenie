@@ -70,20 +70,61 @@ export default function DashboardPage() {
             <h2 className="text-sm font-bold text-gray-900">Recent Campaigns</h2>
             <Link href="/dashboard/campaigns" className="text-xs font-semibold text-blue-600 hover:text-blue-700">View all →</Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
-              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          {!stats ? (
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="px-6 py-4 flex items-center gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-gray-100 rounded animate-pulse w-40"/>
+                    <div className="h-2.5 bg-gray-100 rounded animate-pulse w-24"/>
+                  </div>
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-12"/>
+                </div>
+              ))}
             </div>
-            <p className="text-sm font-semibold text-gray-700 mb-1">
-              {(stats?.activeCampaigns ?? 0) > 0 ? `${stats!.activeCampaigns} active campaign${stats!.activeCampaigns > 1 ? 's' : ''}` : 'No campaigns yet'}
-            </p>
-            <p className="text-xs text-gray-400 mb-5 max-w-xs">
-              {(stats?.totalSent ?? 0) > 0 ? `${stats!.totalSent} emails sent total.` : 'Create your first cold email campaign to start generating replies and meetings.'}
-            </p>
-            <Link href="/dashboard/campaigns/new" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
-              Create Campaign →
-            </Link>
-          </div>
+          ) : !stats.campaigns || stats.campaigns.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 px-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
+                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-700 mb-1">No campaigns yet</p>
+              <p className="text-xs text-gray-400 mb-5 max-w-xs">Create your first cold email campaign to start generating replies and meetings.</p>
+              <Link href="/dashboard/campaigns/new" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
+                Create Campaign →
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {[...stats.campaigns]
+                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 5)
+                .map((c: any) => {
+                  const statusColors: Record<string, string> = {
+                    active: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    paused: 'bg-amber-50 text-amber-700 border-amber-100',
+                    completed: 'bg-blue-50 text-blue-700 border-blue-100',
+                    draft: 'bg-gray-100 text-gray-500 border-gray-200',
+                  };
+                  return (
+                    <Link key={c.id} href={`/dashboard/campaigns/${c.id}`}
+                      className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{c.name}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          {c.sent} sent · {c.open_rate} opens · {c.reply_rate} replies
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border capitalize ${statusColors[c.status] ?? statusColors.draft}`}>
+                          {c.status}
+                        </span>
+                        <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                      </div>
+                    </Link>
+                  );
+                })}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

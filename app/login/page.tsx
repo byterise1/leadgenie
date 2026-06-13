@@ -76,7 +76,7 @@ export default function LoginPage() {
             </div>
             {idleMsg && (
               <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
-                You were signed out after 8 hours of inactivity. Please log in again.
+                You were signed out after 2 hours of inactivity. Please log in again.
               </div>
             )}
             {error && (

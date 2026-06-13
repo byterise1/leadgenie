@@ -62,6 +62,7 @@ export async function GET() {
       id: c.id,
       name: c.name,
       status: c.status,
+      created_at: c.created_at,
       sent: r.sent,
       opened: r.opened,
       replied: r.replied,

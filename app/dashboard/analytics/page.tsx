@@ -17,6 +17,7 @@ type Stats = {
     id: string;
     name: string;
     status: string;
+    created_at: string;
     sent: number;
     opened: number;
     replied: number;
@@ -95,7 +96,7 @@ export default function AnalyticsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Campaign', 'Status', 'Sent', 'Opened', 'Open Rate', 'Clicked', 'Click Rate', 'Replied', 'Reply Rate'].map(col => (
+                {['Campaign', 'Created', 'Status', 'Sent', 'Opened', 'Open Rate', 'Clicked', 'Click Rate', 'Replied', 'Reply Rate'].map(col => (
                   <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
@@ -104,14 +105,14 @@ export default function AnalyticsPage() {
               {!stats ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-100">
-                    {Array.from({ length: 9 }).map((_, j) => (
-                      <td key={j} className="px-5 py-4"><Skeleton className={`h-3.5 ${j === 0 ? 'w-32' : 'w-12'}`} /></td>
+                    {Array.from({ length: 10 }).map((_, j) => (
+                      <td key={j} className="px-5 py-4"><Skeleton className={`h-3.5 ${j === 0 ? 'w-32' : j === 1 ? 'w-20' : 'w-12'}`} /></td>
                     ))}
                   </tr>
                 ))
               ) : stats.campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-14 text-center text-sm text-gray-400">
+                  <td colSpan={10} className="px-5 py-14 text-center text-sm text-gray-400">
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
@@ -122,6 +123,10 @@ export default function AnalyticsPage() {
               }).map(c => (
                 <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
+                    {new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <span className="block text-[10px] text-gray-300">{new Date(c.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </td>
                   <td className="px-5 py-3">
                     <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border capitalize ${
                       c.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :

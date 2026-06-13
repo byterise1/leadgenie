@@ -67,8 +67,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearInterval(id);
   }, []);
 
-  // Auto-logout after 8 hours of inactivity
-  const INACTIVITY_MS = 8 * 60 * 60 * 1000;
+  // Auto-logout after 2 hours of inactivity
+  const INACTIVITY_MS = 2 * 60 * 60 * 1000;
   const ACTIVITY_KEY = 'lg_last_activity';
   const updateActivity = useCallback(() => {
     localStorage.setItem(ACTIVITY_KEY, Date.now().toString());
