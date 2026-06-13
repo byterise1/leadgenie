@@ -164,23 +164,24 @@ export async function register() {
         return;
       }
 
-      // Credits check — 1 credit per sent email (100 free on free plan)
-      const FREE_CREDITS = 100;
-      const { data: userCampaigns } = await supabase.from('campaigns').select('id').eq('user_id', campaign.user_id);
-      const userCampaignIds = (userCampaigns || []).map((c: any) => c.id as string);
-      const { count: usedCredits } = userCampaignIds.length
-        ? await supabase.from('sent_emails').select('id', { count: 'exact', head: true }).in('campaign_id', userCampaignIds)
-        : { count: 0 };
+      // Credits check — read from profiles so top-ups are instantly honoured
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('credits_used, credits_total')
+        .eq('id', campaign.user_id)
+        .single();
+      const creditsUsed = profileData?.credits_used ?? 0;
+      const creditsTotal = profileData?.credits_total ?? 100;
 
-      if ((usedCredits ?? 0) >= FREE_CREDITS) {
-        console.log(`⛔ User ${campaign.user_id} out of credits (${usedCredits}/${FREE_CREDITS})`);
+      if (creditsUsed >= creditsTotal) {
+        console.log(`⛔ User ${campaign.user_id} out of credits (${creditsUsed}/${creditsTotal})`);
         const { data: existingCreditNotif } = await supabase
           .from('notifications').select('id').eq('user_id', campaign.user_id)
-          .ilike('message', '%free email credits%').limit(1).maybeSingle();
+          .ilike('message', '%email credits%').limit(1).maybeSingle();
         if (!existingCreditNotif) {
           await supabase.from('notifications').insert({
             user_id: campaign.user_id,
-            message: `You've used all ${FREE_CREDITS} free email credits. Upgrade your plan to continue sending.`,
+            message: `You've used all ${creditsTotal} email credits. Upgrade your plan or add more credits to continue sending.`,
             type: 'warning',
           });
         }
@@ -315,9 +316,13 @@ export async function register() {
         status: hasNextStep ? 'active' : 'completed',
       }).eq('id', campaignLeadId);
 
-      // Direct increment — avoids needing a separate DB function
+      // Increment campaign total_sent
       const { data: campRow } = await supabase.from('campaigns').select('total_sent').eq('id', campaign.id).single();
       await supabase.from('campaigns').update({ total_sent: (campRow?.total_sent || 0) + 1 }).eq('id', campaign.id);
+
+      // Deduct 1 credit from profile — profiles is the source of truth for billing
+      const { data: profRow } = await supabase.from('profiles').select('credits_used').eq('id', campaign.user_id).single();
+      await supabase.from('profiles').update({ credits_used: (profRow?.credits_used || 0) + 1 }).eq('id', campaign.user_id);
 
       // Auto-complete campaign when all leads are in a terminal state
       if (!hasNextStep) {

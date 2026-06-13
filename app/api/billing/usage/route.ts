@@ -25,7 +25,7 @@ export async function GET() {
 
   return NextResponse.json({
     plan,
-    credits_used: emails.count ?? 0,
+    credits_used: profile.data?.credits_used ?? 0,
     credits_total: profile.data?.credits_total ?? 100,
     usage: {
       campaigns: { used: campaigns.count ?? 0, max: limits.campaigns },
