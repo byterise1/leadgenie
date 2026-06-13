@@ -115,7 +115,17 @@ export async function POST(req: NextRequest) {
     template_id: s.templateId || null,
   }));
 
-  await supabaseAdmin.from('email_steps').insert(stepRows);
+  const { error: stepsErr } = await supabaseAdmin.from('email_steps').insert(stepRows);
+  if (stepsErr) {
+    // If template_id column doesn't exist yet (migration pending), retry without it
+    const baseRows = stepRows.map(({ template_id, ...rest }: any) => rest);
+    const { error: retryErr } = await supabaseAdmin.from('email_steps').insert(baseRows);
+    if (retryErr) {
+      // Clean up orphaned campaign
+      await supabaseAdmin.from('campaigns').delete().eq('id', campaign.id);
+      return NextResponse.json({ error: 'Failed to save email steps: ' + retryErr.message }, { status: 500 });
+    }
+  }
 
   // Link sending accounts
   if (account_ids?.length) {
