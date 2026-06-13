@@ -17,6 +17,7 @@ async function gmailFetch(path: string, accessToken: string) {
 }
 
 export async function POST(_req: NextRequest) {
+  try {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -153,4 +154,8 @@ export async function POST(_req: NextRequest) {
   }
 
   return NextResponse.json({ synced: totalSynced });
+  } catch (err) {
+    console.error('Inbox sync error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

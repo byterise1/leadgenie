@@ -302,13 +302,14 @@ export default function HelpPage() {
               <p className="text-sm font-bold text-gray-900">Still need help?</p>
               <p className="text-xs text-gray-500 mt-0.5">Our support team responds within a few hours on business days.</p>
             </div>
-            <a
-              href="mailto:Claudecodebyterise@gmail.com?subject=LeadGenie Support"
+            <Link
+              href="/contact"
+              target="_blank"
               className="shrink-0 inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               Contact Support
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
