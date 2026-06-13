@@ -43,6 +43,7 @@ export default function LeadsPage() {
   const [renameVal, setRenameVal] = useState('');
   const [newListName, setNewListName] = useState('');
   const [showNewList, setShowNewList] = useState(false);
+  const [creatingList, setCreatingList] = useState(false);
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,10 +311,12 @@ export default function LeadsPage() {
   };
 
   const createList = async () => {
-    if (!newListName.trim()) return;
+    if (!newListName.trim() || creatingList) return;
+    setCreatingList(true);
     const res = await fetch('/api/lead-lists', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newListName.trim() }) });
     const d = await res.json();
     if (res.ok) { setLists(p => [...p, d]); setNewListName(''); setShowNewList(false); }
+    setCreatingList(false);
   };
 
   const deleteList = (id: string) => {
@@ -323,11 +326,11 @@ export default function LeadsPage() {
       title: 'Delete list?',
       message: `"${list?.name ?? 'This list'}" and all leads inside it will be permanently deleted. This cannot be undone.`,
       confirmLabel: 'Delete',
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmModal(null);
-        await fetch(`/api/lead-lists/${id}?deleteLeads=true`, { method: 'DELETE' });
         setLists(p => p.filter(l => l.id !== id));
-        if (selectedList === id) selectList(null);
+        if (selectedList === id) { setSelectedList(null); setLeads([]); setTotalCount(0); }
+        fetch(`/api/lead-lists/${id}?deleteLeads=true`, { method: 'DELETE' });
       },
     });
   };

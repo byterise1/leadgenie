@@ -93,13 +93,19 @@ export async function POST(req: NextRequest) {
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
   const emails = leads.map(l => l.email);
-  const { data: existing } = await supabaseAdmin
-    .from('leads')
-    .select('email')
-    .eq('user_id', user.id)
-    .in('email', emails);
 
-  const existingSet = new Set((existing || []).map((e: { email: string }) => e.email));
+  // Chunk into 100 to avoid URL length limits on .in() queries
+  const existingSet = new Set<string>();
+  for (let i = 0; i < emails.length; i += 100) {
+    const chunk = emails.slice(i, i + 100);
+    const { data } = await supabaseAdmin
+      .from('leads')
+      .select('email')
+      .eq('user_id', user.id)
+      .in('email', chunk);
+    (data || []).forEach((r: { email: string }) => existingSet.add(r.email));
+  }
+
   const duplicatesInFile = emails.length - new Set(emails).size;
   const duplicatesInDB = leads.filter(l => existingSet.has(l.email)).length;
 
