@@ -92,8 +92,6 @@ export async function POST(req: NextRequest) {
   // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
-  const emails = leads.map(l => l.email);
-
   // Deduplicate within the file itself
   const seenInFile = new Set<string>();
   const uniqueLeads = leads.filter(l => {
@@ -103,21 +101,38 @@ export async function POST(req: NextRequest) {
   });
   const duplicatesInFile = leads.length - uniqueLeads.length;
 
-  // Upsert: DB unique constraint (user_id, email) handles all duplicate detection.
-  // ignoreDuplicates=true skips existing rows silently — no error thrown.
-  const { data: upserted, error } = await supabaseAdmin
+  // Fetch ALL existing emails for this user in one query (avoids URL length limits)
+  const { data: allExisting } = await supabaseAdmin
     .from('leads')
-    .upsert(uniqueLeads, { onConflict: 'user_id,email', ignoreDuplicates: true })
+    .select('email')
+    .eq('user_id', user.id);
+  const existingSet = new Set((allExisting || []).map((r: { email: string }) => r.email));
+
+  const newLeads = uniqueLeads.filter(l => !existingSet.has(l.email));
+  const duplicatesInDB = uniqueLeads.length - newLeads.length;
+
+  if (!newLeads.length) {
+    return NextResponse.json({
+      imported: 0,
+      total_in_file: totalRows,
+      invalid,
+      duplicates_in_file: duplicatesInFile,
+      already_in_db: duplicatesInDB,
+      list_id: list_id || null,
+      enrolled: 0,
+    });
+  }
+
+  const { data: inserted, error } = await supabaseAdmin
+    .from('leads')
+    .insert(newLeads)
     .select('id');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const inserted = upserted || [];
-  const duplicatesInDB = uniqueLeads.length - inserted.length;
-
   // Add imported leads to the chosen list
   if (list_id && inserted?.length) {
-    const memberRows = inserted.map((l: { id: string }) => ({ list_id, lead_id: l.id }));
+    const memberRows = (inserted as { id: string }[]).map((l) => ({ list_id, lead_id: l.id }));
     await supabaseAdmin
       .from('lead_list_members')
       .upsert(memberRows, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
@@ -136,7 +151,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    imported: inserted.length,
+    imported: inserted?.length ?? 0,
     total_in_file: totalRows,
     invalid,
     duplicates_in_file: duplicatesInFile,
