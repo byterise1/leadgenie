@@ -38,7 +38,7 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
   const valid = form.email && form.host && form.user && form.pass;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 mb-4">Enter your SMTP credentials. Works with any email provider (SendGrid, Mailgun, Zoho, etc.).</p>
+      <p className="text-xs text-gray-400 mb-4">Works with Titan, Zoho, Mailgun, SendGrid, and any non-Gmail provider. For Gmail use OAuth above.</p>
       {[
         { label: 'From Email', key: 'email', placeholder: 'you@yourdomain.com', type: 'email' },
         { label: 'SMTP Host', key: 'host', placeholder: 'smtp.yourdomain.com', type: 'text' },
@@ -76,7 +76,7 @@ function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
   const valid = form.email && form.imapHost && form.smtpHost && form.user && form.pass;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 mb-2">Connect any email via IMAP/SMTP. Works with Yahoo, Zoho, Fastmail, and most providers.</p>
+      <p className="text-xs text-gray-400 mb-2">Works with Titan, Zoho, Yahoo, Fastmail, and most providers. Enables both sending and reply detection. Not for Gmail — use OAuth above.</p>
       {[
         { label: 'Email Address', key: 'email', placeholder: 'you@yourprovider.com', type: 'email' },
         { label: 'Password', key: 'pass', placeholder: '••••••••', type: 'password' },
@@ -133,8 +133,12 @@ function GmailAppForm({ onBack, onConnect }: { onBack: () => void; onConnect: (e
   const valid = email && appPass.length >= 16;
   return (
     <div className="space-y-3">
+      <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
+        <p className="font-bold mb-1">⚠ Not recommended — use Gmail OAuth instead</p>
+        <p className="text-red-600">Google blocks SMTP connections from cloud servers (including Railway). App Password accounts will fail to send. Use <span className="font-bold">Gmail / Google Workspace (OAuth)</span> above — it uses Google's API instead of SMTP and works on all servers.</p>
+      </div>
       <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
-        <p className="font-bold mb-1">How to get an App Password:</p>
+        <p className="font-bold mb-1">How to get an App Password (if needed locally):</p>
         <ol className="list-decimal list-inside space-y-0.5 text-amber-600">
           <li>Go to your Google Account → Security</li>
           <li>Enable 2-Step Verification</li>
@@ -195,7 +199,7 @@ const CONNECT_OPTIONS = [
   {
     id: 'imap' as const,
     name: 'IMAP / Any Email',
-    desc: 'Yahoo, Zoho, Fastmail, or any IMAP provider',
+    desc: 'Titan, Zoho, Yahoo, Fastmail — sending + reply detection',
     tag: null,
     icon: (
       <svg className="w-6 h-6 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +210,7 @@ const CONNECT_OPTIONS = [
   {
     id: 'smtp' as const,
     name: 'Custom SMTP',
-    desc: 'Zoho, SendGrid, Mailgun, or any SMTP',
+    desc: 'Titan, Zoho, Mailgun — sending only, no reply detection',
     tag: null,
     icon: (
       <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
