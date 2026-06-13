@@ -31,16 +31,13 @@ const CACHE_KEY = 'lg_campaigns_list';
 
 export default function CampaignsPage() {
   const [tab, setTab] = useState('All');
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
-    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : []; } catch { return []; }
-  });
-  const [loading, setLoading] = useState(() => {
-    try { return !sessionStorage.getItem(CACHE_KEY); } catch { return true; }
-  });
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); if (c) { setCampaigns(JSON.parse(c)); setLoading(false); } } catch {}
     const fetchCampaigns = () =>
       fetch('/api/campaigns').then(r => r.json()).then(data => {
         if (Array.isArray(data)) {

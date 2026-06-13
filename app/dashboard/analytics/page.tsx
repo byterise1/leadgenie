@@ -31,9 +31,7 @@ const CACHE_KEY = 'lg_analytics_stats';
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState('30 days');
-  const [stats, setStats] = useState<Stats | null>(() => {
-    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
-  });
+  const [stats, setStats] = useState<Stats | null>(null);
 
   const fetchStats = useCallback(() => {
     fetch('/api/dashboard/stats')
@@ -48,6 +46,7 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); if (c) setStats(JSON.parse(c)); } catch {}
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);

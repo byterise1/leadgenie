@@ -20,11 +20,10 @@ const stepColor: Record<string, { num: string }> = {
 const CACHE_KEY = 'lg_overview_stats';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState(() => {
-    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
-  });
+  const [stats, setStats] = useState<null | Record<string, any>>(null);
 
   useEffect(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); if (c) setStats(JSON.parse(c)); } catch {}
     const fetchStats = () => fetch('/api/dashboard/stats').then(r => r.json()).then(d => {
       if (!d.error) { setStats(d); try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} }
     });
@@ -76,10 +75,10 @@ export default function DashboardPage() {
               <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <p className="text-sm font-semibold text-gray-700 mb-1">
-              {stats.activeCampaigns > 0 ? `${stats.activeCampaigns} active campaign${stats.activeCampaigns > 1 ? 's' : ''}` : 'No campaigns yet'}
+              {(stats?.activeCampaigns ?? 0) > 0 ? `${stats!.activeCampaigns} active campaign${stats!.activeCampaigns > 1 ? 's' : ''}` : 'No campaigns yet'}
             </p>
             <p className="text-xs text-gray-400 mb-5 max-w-xs">
-              {stats.totalSent > 0 ? `${stats.totalSent} emails sent total.` : 'Create your first cold email campaign to start generating replies and meetings.'}
+              {(stats?.totalSent ?? 0) > 0 ? `${stats!.totalSent} emails sent total.` : 'Create your first cold email campaign to start generating replies and meetings.'}
             </p>
             <Link href="/dashboard/campaigns/new" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
               Create Campaign →
