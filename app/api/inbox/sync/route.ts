@@ -133,8 +133,16 @@ export async function POST(_req: NextRequest) {
             received_at: receivedAt,
           });
           totalSynced++;
+        }
 
-          // In-app notification (respects user's notif_new_reply pref)
+        // Mark the sent email as replied (do this regardless of whether thread was new)
+        await supabaseAdmin
+          .from('sent_emails')
+          .update({ replied_at: receivedAt })
+          .eq('id', sentEmail.id);
+
+        // Fire notification only for brand-new threads so it's not re-sent on every sync
+        if (!existing) {
           const { data: prof } = await supabaseAdmin
             .from('profiles').select('notif_new_reply').eq('id', user.id).maybeSingle();
           if (prof?.notif_new_reply !== false) {
@@ -146,12 +154,6 @@ export async function POST(_req: NextRequest) {
             );
           }
         }
-
-        // Mark the sent email as replied and stop further steps for this lead
-        await supabaseAdmin
-          .from('sent_emails')
-          .update({ replied_at: receivedAt })
-          .eq('id', sentEmail.id);
 
         if (sentEmail.lead_id && sentEmail.campaign_id) {
           await supabaseAdmin
