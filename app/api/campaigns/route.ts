@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id } = body;
+  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id, from_name } = body;
 
   if (!name || !steps?.length) {
     return NextResponse.json({ error: 'name and steps required' }, { status: 400 });
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       name,
       goal: goal || 'Book a Meeting',
+      from_name: from_name?.trim() || null,
       daily_limit: daily_limit || 50,
       from_hour: from_hour || '8:00 AM',
       to_hour: to_hour || '6:00 PM',

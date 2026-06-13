@@ -258,8 +258,10 @@ export async function register() {
       const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#111;max-width:600px;margin:0 auto;padding:24px">${htmlLines}${unsubHtml}${trackPixel}</body></html>`;
 
       try {
+        const fromName = campaign.from_name?.trim();
+        const fromHeader = fromName ? `"${fromName}" <${account.email}>` : account.email;
         const { threadId } = await sendEmail(account, {
-          from: account.email,
+          from: fromHeader,
           to: lead.email,
           subject,
           text: body,

@@ -79,6 +79,7 @@ export default function NewCampaignPage() {
 
   // Step 0
   const [name, setName] = useState('');
+  const [fromName, setFromName] = useState('');
   const [goal, setGoal] = useState('Book a Meeting');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [allAccounts, setAllAccounts] = useState(false);
@@ -177,6 +178,7 @@ export default function NewCampaignPage() {
     fetch('/api/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setRealAccounts(d); });
     fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLeadLists(d); });
     fetch('/api/templates').then(r => r.json()).then(d => { if (Array.isArray(d)) setApiTemplates(d); });
+    fetch('/api/profile').then(r => r.json()).then(d => { if (d?.default_from_name) setFromName(d.default_from_name); });
   }, []);
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
@@ -247,6 +249,26 @@ export default function NewCampaignPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Campaign Name</label>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. SaaS Founders Q3 Outreach"
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Sender Name <span className="font-normal text-gray-400">(what recipients see)</span>
+              </label>
+              <p className="text-xs text-gray-400 mb-2">
+                This is the name shown in the inbox — e.g. <span className="font-semibold text-gray-600">John at Acme</span>. It overrides whatever name is on your Gmail/SMTP account.
+              </p>
+              <input
+                value={fromName}
+                onChange={e => setFromName(e.target.value)}
+                placeholder="e.g. John at Acme, or ByteRise Team"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+              {fromName && (
+                <p className="text-[11px] text-gray-400 mt-1.5">
+                  Recipients will see: <span className="font-semibold text-gray-700">{fromName} &lt;your@gmail.com&gt;</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -701,6 +723,7 @@ export default function NewCampaignPage() {
                     body: JSON.stringify({
                       name,
                       goal,
+                      from_name: fromName.trim() || null,
                       daily_limit: dailyLimit,
                       from_hour: instantStart ? '00:00' : fromTime,
                       to_hour: instantStart ? '23:59' : toTime,
