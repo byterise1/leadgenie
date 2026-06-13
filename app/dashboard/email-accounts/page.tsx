@@ -105,9 +105,9 @@ function SmtpForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
 }
 
 function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void }) {
-  const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', user: '', pass: '' });
+  const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', pass: '' });
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
-  const valid = form.email && form.imapHost && form.smtpHost && form.user && form.pass;
+  const valid = form.email && form.imapHost && form.smtpHost && form.pass;
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400 mb-2">Works with Titan, Zoho, Yahoo, Fastmail, and most providers. Enables both sending and reply detection. Not for Gmail — use OAuth above.</p>
@@ -152,7 +152,7 @@ function ImapForm({ onBack, onConnect }: { onBack: () => void; onConnect: (email
       </div>
       <div className="flex gap-2 pt-2">
         <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
-        <button disabled={!valid} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.user, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
+        <button disabled={!valid} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.email, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect Account
         </button>
