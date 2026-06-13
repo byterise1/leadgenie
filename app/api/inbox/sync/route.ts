@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAccessToken } from '@/lib/mailer';
 import { createNotification } from '@/lib/notifications';
+import { fetchImapReplies } from '@/lib/imap-reader';
 
 function getHeader(headers: { name: string; value: string }[] | undefined, name: string): string {
   return headers?.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
@@ -164,6 +165,115 @@ export async function POST(_req: NextRequest) {
         }
       } catch (err) {
         console.error(`Sync error thread ${sentEmail.message_id}:`, err);
+      }
+    }
+  }
+
+  // ── IMAP reply sync (Titan, Zoho, Yahoo, App Password, Custom SMTP) ──────────
+  const { data: imapAccounts } = await supabaseAdmin
+    .from('email_accounts')
+    .select('*')
+    .eq('user_id', user.id)
+    .in('type', ['imap', 'gmail-app', 'smtp'])
+    .neq('status', 'error')
+    .not('imap_host', 'is', null);
+
+  if (imapAccounts?.length) {
+    const SYSTEM_SENDER_PATTERNS = [
+      'mailer-daemon', 'postmaster', 'noreply', 'no-reply',
+      'bounce', 'delivery', 'auto-reply', 'autoreply',
+      'do-not-reply', 'donotreply', 'notifications@', 'notification@',
+    ];
+
+    for (const account of imapAccounts) {
+      try {
+        // Get sent emails for this account that have a stored Message-ID and no reply yet
+        const { data: sentEmails } = await supabaseAdmin
+          .from('sent_emails')
+          .select('id, message_id, lead_id, campaign_id, subject')
+          .eq('account_id', account.id)
+          .not('message_id', 'is', null)
+          .is('replied_at', null)
+          .limit(50);
+
+        if (!sentEmails?.length) continue;
+
+        const messageIds = sentEmails.map((s: { message_id: string }) => s.message_id);
+
+        const replies = await fetchImapReplies(
+          {
+            imap_host: account.imap_host,
+            imap_port: account.imap_port || 993,
+            smtp_user: account.smtp_user || account.email,
+            smtp_pass: account.smtp_pass,
+            email: account.email,
+          },
+          messageIds,
+        );
+
+        for (const reply of replies) {
+          // Skip system/bounce senders
+          if (SYSTEM_SENDER_PATTERNS.some(p => reply.fromEmail.toLowerCase().includes(p))) continue;
+
+          // Find the matching sent email
+          const sentEmail = sentEmails.find(
+            (s: { message_id: string }) => s.message_id === reply.inReplyTo,
+          );
+          if (!sentEmail) continue;
+
+          // Dedup: one thread per lead per campaign
+          const { data: existing } = await supabaseAdmin
+            .from('inbox_threads')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('lead_id', sentEmail.lead_id)
+            .eq('campaign_id', sentEmail.campaign_id)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabaseAdmin.from('inbox_threads').insert({
+              user_id: user.id,
+              campaign_id: sentEmail.campaign_id,
+              lead_id: sentEmail.lead_id,
+              account_id: account.id,
+              subject: reply.subject || sentEmail.subject,
+              last_message: `Reply from ${reply.fromEmail}`,
+              from_email: reply.fromEmail,
+              from_name: reply.fromName,
+              status: 'new',
+              read: false,
+              received_at: reply.receivedAt,
+            });
+            totalSynced++;
+
+            const { data: prof } = await supabaseAdmin
+              .from('profiles').select('notif_new_reply').eq('id', user.id).maybeSingle();
+            if (prof?.notif_new_reply !== false) {
+              await createNotification(
+                user.id,
+                `New reply from ${reply.fromName || reply.fromEmail} — "${reply.subject || sentEmail.subject}"`,
+                'info',
+                '/dashboard/inbox',
+              );
+            }
+          }
+
+          // Mark as replied regardless
+          await supabaseAdmin
+            .from('sent_emails')
+            .update({ replied_at: reply.receivedAt })
+            .eq('id', sentEmail.id);
+
+          if (sentEmail.lead_id && sentEmail.campaign_id) {
+            await supabaseAdmin
+              .from('campaign_leads')
+              .update({ status: 'replied' })
+              .eq('lead_id', sentEmail.lead_id)
+              .eq('campaign_id', sentEmail.campaign_id);
+          }
+        }
+      } catch (err) {
+        console.error(`[imap-sync] error for ${account.email}:`, (err as Error).message);
       }
     }
   }

@@ -199,8 +199,9 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
     return sendViaGmailApi(account, opts);
   }
   const transport = createSmtpTransport(account);
-  await transport.sendMail(opts);
-  return {};
+  const info = await transport.sendMail(opts);
+  // Store RFC2822 Message-ID so IMAP sync can match replies via In-Reply-To header
+  return { threadId: (info as any).messageId || undefined };
 }
 
 // ─── Legacy exports kept for backward compat ─────────────────────────────────
