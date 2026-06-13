@@ -71,12 +71,14 @@ export default function InboxPage() {
   const selectThread = async (thread: Thread) => {
     setSelected(thread);
     if (!thread.read) {
+      // Immediately update local state and signal the sidebar to decrement its badge
+      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, read: true } : t));
+      window.dispatchEvent(new CustomEvent('leadgenie:thread-read'));
       await fetch('/api/inbox', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: thread.id, read: true }),
       });
-      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, read: true } : t));
     }
   };
 

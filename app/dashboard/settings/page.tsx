@@ -33,14 +33,17 @@ export default function SettingsPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
 
-  const [notifs, setNotifs] = useState({
-    new_reply: true,
-    campaign_complete: true,
-    warmup_alert: false,
-    lead_open: false,
-    weekly_report: true,
-    unsubscribe: false,
-  });
+  const NOTIF_KEY = 'lg_notif_prefs';
+  const defaultNotifs = { new_reply: true, campaign_complete: true, warmup_alert: false, lead_open: false, weekly_report: true, unsubscribe: false };
+  const [notifs, setNotifs] = useState(defaultNotifs);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(NOTIF_KEY);
+      if (saved) setNotifs({ ...defaultNotifs, ...JSON.parse(saved) });
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetch('/api/profile')
@@ -261,7 +264,11 @@ export default function SettingsPage() {
                   </div>
                   <Toggle
                     on={notifs[n.key as keyof typeof notifs]}
-                    onToggle={() => setNotifs(p => ({ ...p, [n.key]: !p[n.key as keyof typeof notifs] }))}
+                    onToggle={() => setNotifs(p => {
+                      const next = { ...p, [n.key]: !p[n.key as keyof typeof p] };
+                      try { localStorage.setItem(NOTIF_KEY, JSON.stringify(next)); } catch {}
+                      return next;
+                    })}
                   />
                 </div>
               ))}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 
 type Notification = {
@@ -64,6 +65,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const id = setInterval(sync, 120000);
     return () => clearInterval(id);
   }, []);
+
+  // Auto-logout after 8 hours of inactivity
+  const INACTIVITY_MS = 8 * 60 * 60 * 1000;
+  const ACTIVITY_KEY = 'lg_last_activity';
+  const updateActivity = useCallback(() => {
+    localStorage.setItem(ACTIVITY_KEY, Date.now().toString());
+  }, []);
+  useEffect(() => {
+    updateActivity();
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const;
+    events.forEach(e => window.addEventListener(e, updateActivity, { passive: true }));
+    const check = setInterval(async () => {
+      const last = Number(localStorage.getItem(ACTIVITY_KEY) || Date.now());
+      if (Date.now() - last > INACTIVITY_MS) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        window.location.href = '/login?reason=idle';
+      }
+    }, 60000);
+    return () => {
+      events.forEach(e => window.removeEventListener(e, updateActivity));
+      clearInterval(check);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateActivity]);
 
   const markAllRead = () => {
     fetch('/api/notifications', {

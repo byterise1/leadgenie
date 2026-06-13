@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
@@ -13,6 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [idleMsg, setIdleMsg] = useState(false);
+
+  useEffect(() => {
+    if (window.location.search.includes('reason=idle')) setIdleMsg(true);
+  }, []);
   const router = useRouter();
 
   const handleGoogle = async () => {
@@ -69,6 +74,11 @@ export default function LoginPage() {
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
               <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">or continue with email</span></div>
             </div>
+            {idleMsg && (
+              <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+                You were signed out after 8 hours of inactivity. Please log in again.
+              </div>
+            )}
             {error && (
               <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                 {error}

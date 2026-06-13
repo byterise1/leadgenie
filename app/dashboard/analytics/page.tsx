@@ -29,23 +29,17 @@ type Stats = {
 export default function AnalyticsPage() {
   const [range, setRange] = useState('30 days');
   const [stats, setStats] = useState<Stats | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchStats = useCallback(() => {
     fetch('/api/dashboard/stats')
       .then(r => r.json())
-      .then(data => {
-        if (!data.error) {
-          setStats(data);
-          setLastUpdated(new Date());
-        }
-      })
+      .then(data => { if (!data.error) setStats(data); })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 10000);
+    const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, [fetchStats]);
 
@@ -62,14 +56,7 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Track your campaign performance.
-            {lastUpdated && (
-              <span className="ml-2 text-[10px] text-gray-300">
-                Updated {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-          </p>
+          <p className="text-sm text-gray-400 mt-0.5">Track your campaign performance.</p>
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           {ranges.map(r => (
@@ -92,11 +79,8 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-900">Campaign Breakdown</h3>
-          <span className="text-[10px] text-gray-400 bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100">
-            Auto-refreshes every 10s
-          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -114,7 +98,11 @@ export default function AnalyticsPage() {
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
-              ) : stats.campaigns.map(c => (
+              ) : [...stats.campaigns].sort((a, b) => {
+                const order = { active: 0, paused: 1, completed: 2, draft: 3 };
+                const od = (order[a.status as keyof typeof order] ?? 4) - (order[b.status as keyof typeof order] ?? 4);
+                return od !== 0 ? od : b.sent - a.sent;
+              }).map(c => (
                 <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
                   <td className="px-5 py-3">

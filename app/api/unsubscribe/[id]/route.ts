@@ -151,9 +151,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     <div class="icon-wrap">
       <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <span class="badge">${alreadyUnsubbed ? 'Already opted out' : 'Opted out'}</span>
+    <span class="badge">${alreadyUnsubbed ? 'Already unsubscribed' : 'Successfully unsubscribed'}</span>
     <h1>${greeting} all set</h1>
-    <p class="sub">Your preference has been recorded. You won't receive any more emails from this sender.</p>
+    <p class="sub">You've been removed from this mailing list. No more emails from this sender — ever.</p>
     <hr class="divider">
     <div class="detail">
       <div class="detail-icon" style="background:#eff6ff">📭</div>
