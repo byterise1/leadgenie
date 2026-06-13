@@ -324,13 +324,13 @@ export default function LeadsPage() {
     setCtxMenu(null);
     setConfirmModal({
       title: 'Delete list?',
-      message: `"${list?.name ?? 'This list'}" and all leads inside it will be permanently deleted. This cannot be undone.`,
-      confirmLabel: 'Delete',
+      message: `"${list?.name ?? 'This list'}" will be deleted. Leads stay in your database — re-importing the same file won't add duplicates.`,
+      confirmLabel: 'Delete List',
       onConfirm: () => {
         setConfirmModal(null);
         setLists(p => p.filter(l => l.id !== id));
         if (selectedList === id) { setSelectedList(null); setLeads([]); setTotalCount(0); }
-        fetch(`/api/lead-lists/${id}?deleteLeads=true`, { method: 'DELETE' });
+        fetch(`/api/lead-lists/${id}`, { method: 'DELETE' });
       },
     });
   };
