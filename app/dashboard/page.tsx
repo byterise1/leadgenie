@@ -17,22 +17,28 @@ const stepColor: Record<string, { num: string }> = {
   violet:  { num: 'bg-violet-600 text-white' },
 };
 
+const CACHE_KEY = 'lg_overview_stats';
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ activeCampaigns: 0, totalSent: 0, openRate: '—', clickRate: '—', replyRate: '—' });
+  const [stats, setStats] = useState(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
+  });
 
   useEffect(() => {
-    const fetchStats = () => fetch('/api/dashboard/stats').then(r => r.json()).then(d => { if (!d.error) setStats(d); });
+    const fetchStats = () => fetch('/api/dashboard/stats').then(r => r.json()).then(d => {
+      if (!d.error) { setStats(d); try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} }
+    });
     fetchStats();
-    const id = setInterval(fetchStats, 10000);
+    const id = setInterval(fetchStats, 30000);
     return () => clearInterval(id);
   }, []);
 
   const statCards = [
-    { label: 'Active Campaigns', value: String(stats.activeCampaigns) },
-    { label: 'Emails Sent', value: String(stats.totalSent) },
-    { label: 'Avg Open Rate', value: stats.openRate },
-    { label: 'Avg Click Rate', value: stats.clickRate },
-    { label: 'Avg Reply Rate', value: stats.replyRate },
+    { label: 'Active Campaigns', value: stats ? String(stats.activeCampaigns) : '—' },
+    { label: 'Emails Sent', value: stats ? String(stats.totalSent) : '—' },
+    { label: 'Avg Open Rate', value: stats?.openRate ?? '—' },
+    { label: 'Avg Click Rate', value: stats?.clickRate ?? '—' },
+    { label: 'Avg Reply Rate', value: stats?.replyRate ?? '—' },
   ];
 
   return (

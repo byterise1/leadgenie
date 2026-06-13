@@ -27,14 +27,23 @@ type Stats = {
   }[];
 };
 
+const CACHE_KEY = 'lg_analytics_stats';
+
 export default function AnalyticsPage() {
   const [range, setRange] = useState('30 days');
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<Stats | null>(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
+  });
 
   const fetchStats = useCallback(() => {
     fetch('/api/dashboard/stats')
       .then(r => r.json())
-      .then(data => { if (!data.error) setStats(data); })
+      .then(data => {
+        if (!data.error) {
+          setStats(data);
+          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
+        }
+      })
       .catch(() => {});
   }, []);
 

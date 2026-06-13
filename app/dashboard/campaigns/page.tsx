@@ -27,16 +27,27 @@ const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-500 border-gray-200',
 };
 
+const CACHE_KEY = 'lg_campaigns_list';
+
 export default function CampaignsPage() {
   const [tab, setTab] = useState('All');
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
+    try { const c = sessionStorage.getItem(CACHE_KEY); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try { return !sessionStorage.getItem(CACHE_KEY); } catch { return true; }
+  });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     const fetchCampaigns = () =>
-      fetch('/api/campaigns').then(r => r.json()).then(data => { if (Array.isArray(data)) setCampaigns(data); }).finally(() => setLoading(false));
+      fetch('/api/campaigns').then(r => r.json()).then(data => {
+        if (Array.isArray(data)) {
+          setCampaigns(data);
+          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
+        }
+      }).finally(() => setLoading(false));
     fetchCampaigns();
     const id = setInterval(fetchCampaigns, 10000);
     return () => clearInterval(id);
