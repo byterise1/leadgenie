@@ -174,8 +174,8 @@ export default function LeadsPage() {
       const parts = [`✓ ${d.imported} leads imported`];
       if (skipped > 0) {
         const skipDetails = [];
-        if (d.already_in_db > 0) skipDetails.push(`${d.already_in_db} duplicate`);
-        if (d.duplicates_in_file > 0) skipDetails.push(`${d.duplicates_in_file} in-file duplicate`);
+        if (d.already_in_db > 0) skipDetails.push(`${d.already_in_db} already in account`);
+        if (d.duplicates_in_file > 0) skipDetails.push(`${d.duplicates_in_file} file duplicate`);
         if (d.invalid > 0) skipDetails.push(`${d.invalid} invalid`);
         parts.push(`${skipped} skipped (${skipDetails.join(', ')})`);
       }
@@ -324,8 +324,8 @@ export default function LeadsPage() {
     setCtxMenu(null);
     setConfirmModal({
       title: 'Delete list?',
-      message: `"${list?.name ?? 'This list'}" will be deleted. Leads stay in your database — re-importing the same file won't add duplicates.`,
-      confirmLabel: 'Delete List',
+      message: `"${list?.name ?? 'This list'}" and all leads that are only in this list will be permanently deleted.`,
+      confirmLabel: 'Delete',
       onConfirm: () => {
         setConfirmModal(null);
         setLists(p => p.filter(l => l.id !== id));

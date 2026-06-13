@@ -30,7 +30,30 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  // Delete the list only — leads stay in the database for future dedup
+  // Find leads exclusively in this list (not in any other list) and delete them
+  const { data: members } = await supabaseAdmin
+    .from('lead_list_members')
+    .select('lead_id')
+    .eq('list_id', id);
+
+  const leadIds = (members || []).map((m: { lead_id: string }) => m.lead_id);
+
+  if (leadIds.length) {
+    const { data: inOtherLists } = await supabaseAdmin
+      .from('lead_list_members')
+      .select('lead_id')
+      .in('lead_id', leadIds)
+      .neq('list_id', id);
+
+    const sharedSet = new Set((inOtherLists || []).map((m: { lead_id: string }) => m.lead_id));
+    const toDelete = leadIds.filter(lid => !sharedSet.has(lid));
+
+    if (toDelete.length) {
+      await supabaseAdmin.from('leads').delete().in('id', toDelete);
+    }
+  }
+
+  // Delete the list (cascade removes lead_list_members rows)
   const { error } = await supabaseAdmin
     .from('lead_lists')
     .delete()
