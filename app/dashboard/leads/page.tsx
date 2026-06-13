@@ -316,22 +316,19 @@ export default function LeadsPage() {
     if (res.ok) { setLists(p => [...p, d]); setNewListName(''); setShowNewList(false); }
   };
 
-  const deleteList = (id: string, withLeads = false) => {
+  const deleteList = (id: string) => {
     const list = lists.find(l => l.id === id);
     setCtxMenu(null);
-    const doDelete = async (leads: boolean) => {
-      setConfirmModal(null);
-      await fetch(`/api/lead-lists/${id}${leads ? '?deleteLeads=true' : ''}`, { method: 'DELETE' });
-      setLists(p => p.filter(l => l.id !== id));
-      if (selectedList === id) selectList(null);
-    };
     setConfirmModal({
       title: 'Delete list?',
-      message: `"${list?.name ?? 'This list'}" — choose how to delete:`,
-      confirmLabel: 'Delete List Only',
-      onConfirm: () => doDelete(false),
-      secondLabel: 'Delete List + All Leads',
-      onSecond: () => doDelete(true),
+      message: `"${list?.name ?? 'This list'}" and all leads inside it will be permanently deleted. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await fetch(`/api/lead-lists/${id}?deleteLeads=true`, { method: 'DELETE' });
+        setLists(p => p.filter(l => l.id !== id));
+        if (selectedList === id) selectList(null);
+      },
     });
   };
 
