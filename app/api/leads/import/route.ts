@@ -24,16 +24,21 @@ function isValidEmail(email: string): boolean {
   return true;
 }
 
+function clean(v: string | undefined): string | null {
+  const s = (v || '').trim();
+  return s || null;
+}
+
 function normalizeRow(r: Record<string, string>) {
   return {
-    email: (r.email || r.Email || r.EMAIL || '').trim(),
-    first_name: r.first_name || r.firstname || r.first || r['First Name'] || r['First name'] || null,
-    last_name: r.last_name || r.lastname || r.last || r['Last Name'] || r['Last name'] || null,
-    company: r.company || r.company_name || r['Company'] || r['Company Name'] || null,
-    title: r.title || r.job_title || r.position || r['Title'] || r['Job Title'] || null,
-    website: r.website || r.domain || r['Website'] || null,
-    linkedin: r.linkedin || r.linkedin_url || r['LinkedIn'] || null,
-    phone: r.phone || r.phone_number || r['Phone'] || null,
+    email: (r.email || r.Email || r.EMAIL || '').trim().toLowerCase(),
+    first_name: clean(r.first_name || r.firstname || r.first || r['First Name'] || r['First name']),
+    last_name: clean(r.last_name || r.lastname || r.last || r['Last Name'] || r['Last name']),
+    company: clean(r.company || r.company_name || r['Company'] || r['Company Name']),
+    title: clean(r.title || r.job_title || r.position || r['Title'] || r['Job Title']),
+    website: clean(r.website || r.domain || r['Website']),
+    linkedin: clean(r.linkedin || r.linkedin_url || r['LinkedIn']),
+    phone: clean(r.phone || r.phone_number || r['Phone']),
   };
 }
 

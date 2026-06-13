@@ -169,10 +169,15 @@ export default function LeadsPage() {
     const res = await fetch('/api/leads/import', { method: 'POST', body: fd });
     const d = await res.json();
     if (res.ok) {
-      const parts = [`✓ Imported ${d.imported} new leads`];
-      if (d.already_in_db > 0) parts.push(`${d.already_in_db} already in DB`);
-      if (d.duplicates_in_file > 0) parts.push(`${d.duplicates_in_file} file duplicates skipped`);
-      if (d.invalid > 0) parts.push(`${d.invalid} invalid emails blocked`);
+      const skipped = (d.invalid || 0) + (d.duplicates_in_file || 0) + (d.already_in_db || 0);
+      const parts = [`✓ ${d.imported} leads imported`];
+      if (skipped > 0) {
+        const skipDetails = [];
+        if (d.already_in_db > 0) skipDetails.push(`${d.already_in_db} duplicate`);
+        if (d.duplicates_in_file > 0) skipDetails.push(`${d.duplicates_in_file} in-file duplicate`);
+        if (d.invalid > 0) skipDetails.push(`${d.invalid} invalid`);
+        parts.push(`${skipped} skipped (${skipDetails.join(', ')})`);
+      }
       if (d.list_id) parts.push(`added to list`);
       showMsg(parts.join(' · '));
       fetchLeads('', selectedList);
