@@ -170,8 +170,9 @@ export default function LeadsPage() {
     const d = await res.json();
     if (res.ok) {
       const parts = [`✓ Imported ${d.imported} new leads`];
-      if (d.already_in_db > 0) parts.push(`${d.already_in_db} already exist`);
-      if (d.duplicates_in_file > 0) parts.push(`${d.duplicates_in_file} file duplicates`);
+      if (d.already_in_db > 0) parts.push(`${d.already_in_db} already in DB`);
+      if (d.duplicates_in_file > 0) parts.push(`${d.duplicates_in_file} file duplicates skipped`);
+      if (d.invalid > 0) parts.push(`${d.invalid} invalid emails blocked`);
       if (d.list_id) parts.push(`added to list`);
       showMsg(parts.join(' · '));
       fetchLeads('', selectedList);

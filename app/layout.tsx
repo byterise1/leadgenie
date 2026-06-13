@@ -10,6 +10,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  icons: { icon: '/logo.png', apple: '/logo.png' },
   title: 'Lead Genie — Cold Email Outreach That Books Meetings',
   description:
     'Lead Genie is the #1 cold email outreach platform. Send unlimited emails, auto-warm your domains, and book more meetings with AI-personalised sequences. Trusted by 8,500+ sales teams.',

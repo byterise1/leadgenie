@@ -3,6 +3,27 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import Papa from 'papaparse';
 
+const FAKE_DOMAINS = new Set([
+  'example.com', 'test.com', 'website.com', 'domain.com', 'email.com',
+  'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwaway.email',
+  'yopmail.com', 'sharklasers.com', 'spam4.me', 'trashmail.com',
+  'doe.com', 'smith.com', 'foo.com', 'bar.com', 'placeholder.com',
+]);
+const FAKE_EMAILS = new Set([
+  'your@email.com', 'john@doe.com', 'john@smith.com', 'info@website.com',
+  'test@test.com', 'user@domain.com', 'name@email.com', 'me@example.com',
+  'email@email.com', 'admin@example.com', 'no@email.com', 'noemail@noemail.com',
+]);
+
+function isValidEmail(email: string): boolean {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  const lower = email.toLowerCase();
+  if (FAKE_EMAILS.has(lower)) return false;
+  const domain = lower.split('@')[1];
+  if (FAKE_DOMAINS.has(domain)) return false;
+  return true;
+}
+
 function normalizeRow(r: Record<string, string>) {
   return {
     email: (r.email || r.Email || r.EMAIL || '').trim(),
@@ -52,10 +73,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unsupported file type. Use CSV, XLSX, or XLS.' }, { status: 400 });
   }
 
+  const totalRows = rawRows.length;
   const leads = rawRows
     .map(normalizeRow)
-    .filter(r => r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email))
+    .filter(r => isValidEmail(r.email))
     .map(r => ({ ...r, user_id: user.id }));
+  const invalid = totalRows - leads.length;
 
   if (!leads.length) {
     return NextResponse.json({ error: 'No valid email addresses found in file' }, { status: 400 });
@@ -122,7 +145,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     imported: inserted?.length ?? 0,
-    total_in_file: leads.length,
+    total_in_file: totalRows,
+    invalid,
     duplicates_in_file: duplicatesInFile,
     already_in_db: duplicatesInDB,
     list_id: list_id || null,
