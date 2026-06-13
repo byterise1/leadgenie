@@ -60,6 +60,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           campaign.user_id,
           `${lead?.email || 'A lead'} unsubscribed from campaign "${campaign.name}"`,
           'info',
+          '/dashboard/leads',
         );
       }
     }

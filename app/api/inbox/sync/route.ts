@@ -140,8 +140,9 @@ export async function POST(_req: NextRequest) {
           if (prof?.notif_new_reply !== false) {
             await createNotification(
               user.id,
-              `New reply from ${fromName || fromEmail} on "${subjectHeader}"`,
+              `New reply from ${fromName || fromEmail} — "${subjectHeader}"`,
               'info',
+              '/dashboard/inbox',
             );
           }
         }
