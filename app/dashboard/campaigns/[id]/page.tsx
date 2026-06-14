@@ -66,6 +66,8 @@ const LEAD_STATUS_COLORS: Record<string, string> = {
   unsubscribed: 'text-amber-600',
 };
 
+const DAY_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -78,6 +80,16 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [editingName, setEditingName] = useState(false);
   const [msg, setMsg] = useState('');
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  // Schedule edit
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [schedForm, setSchedForm] = useState({ from_hour: '08:00', to_hour: '18:00', daily_limit: 50, min_delay_mins: 1, max_delay_mins: 5, active_days: [true,true,true,true,true,false,false] as boolean[] });
+  const [savingSched, setSavingSched] = useState(false);
+
+  // Accounts edit
+  const [allAccounts, setAllAccounts] = useState<{ id: string; email: string; type: string }[]>([]);
+  const [addingAccount, setAddingAccount] = useState(false);
+  const [selectedAddAccount, setSelectedAddAccount] = useState('');
 
   useEffect(() => {
     const fetchAll = (initial = false) =>
@@ -96,6 +108,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     const pollId = setInterval(() => fetchAll(false), 10000);
     return () => clearInterval(pollId);
   }, [id]);
+
+  // Load all email accounts for the add-account picker
+  useEffect(() => {
+    fetch('/api/email-accounts').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setAllAccounts(d.filter((a: any) => a.status !== 'error'));
+    }).catch(() => {});
+  }, []);
 
   const showMsg = (text: string) => { setMsg(text); setTimeout(() => setMsg(''), 4000); };
 
@@ -131,6 +150,69 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     if (res.ok) { setCampaign(p => p ? { ...p, name: editName.trim() } : p); showMsg('Name saved'); }
     setSaving(false);
     setEditingName(false);
+  };
+
+  const openScheduleEdit = () => {
+    if (!campaign) return;
+    setSchedForm({
+      from_hour: campaign.from_hour || '08:00',
+      to_hour: campaign.to_hour || '18:00',
+      daily_limit: campaign.daily_limit || 50,
+      min_delay_mins: Math.round((campaign.min_delay_secs || 60) / 60),
+      max_delay_mins: Math.round((campaign.max_delay_secs || 300) / 60),
+      active_days: campaign.active_days || [true,true,true,true,true,false,false],
+    });
+    setEditingSchedule(true);
+  };
+
+  const saveSchedule = async () => {
+    setSavingSched(true);
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from_hour: schedForm.from_hour,
+        to_hour: schedForm.to_hour,
+        daily_limit: schedForm.daily_limit,
+        min_delay_secs: schedForm.min_delay_mins * 60,
+        max_delay_secs: schedForm.max_delay_mins * 60,
+        active_days: schedForm.active_days,
+      }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setCampaign(p => p ? { ...p, ...updated } : p);
+      showMsg('Schedule saved');
+      setEditingSchedule(false);
+    } else {
+      showMsg('Save failed');
+    }
+    setSavingSched(false);
+  };
+
+  const removeAccount = async (accountId: string) => {
+    const res = await fetch(`/api/campaigns/${id}/accounts`, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: accountId }),
+    });
+    if (res.ok) {
+      setCampaign(p => p ? { ...p, campaign_accounts: p.campaign_accounts.filter(ca => ca.account.id !== accountId) } : p);
+      showMsg('Account removed');
+    }
+  };
+
+  const addAccount = async () => {
+    if (!selectedAddAccount) return;
+    const res = await fetch(`/api/campaigns/${id}/accounts`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: selectedAddAccount }),
+    });
+    if (res.ok) {
+      const acc = allAccounts.find(a => a.id === selectedAddAccount);
+      if (acc) setCampaign(p => p ? { ...p, campaign_accounts: [...p.campaign_accounts, { account: acc }] } : p);
+      setSelectedAddAccount('');
+      setAddingAccount(false);
+      showMsg('Account added');
+    }
   };
 
   const deleteCampaign = () => {
@@ -285,51 +367,147 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
       {/* Configuration */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Schedule card */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Schedule</p>
-          <div className="space-y-2 text-sm">
-            {[
-              { label: 'Window', value: `${campaign.from_hour} – ${campaign.to_hour}` },
-              { label: 'Timezone', value: campaign.timezone },
-              { label: 'Daily limit', value: `${campaign.daily_limit} emails/day` },
-              { label: 'Delay', value: `${Math.round(minDelaySecs/60)}–${Math.round(maxDelaySecs/60)} min (random)` },
-              { label: 'Active days', value: activeDayLabels.length > 0 ? activeDayLabels.join(', ') : '—' },
-            ].map(r => (
-              <div key={r.label} className="flex justify-between">
-                <span className="text-gray-400">{r.label}</span>
-                <span className="font-semibold text-gray-800">{r.value}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Schedule</p>
+            {!editingSchedule && (
+              <button onClick={openScheduleEdit} className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit
+              </button>
+            )}
           </div>
-          {emailsPerDay > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
-              <div className="bg-blue-50 rounded-lg px-3 py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
-                <p className="text-sm font-bold text-gray-900">~{emailsPerDay}</p>
+
+          {editingSchedule ? (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">From</label>
+                  <input type="time" value={schedForm.from_hour} onChange={e => setSchedForm(f => ({ ...f, from_hour: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"/>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">To</label>
+                  <input type="time" value={schedForm.to_hour} onChange={e => setSchedForm(f => ({ ...f, to_hour: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"/>
+                </div>
               </div>
-              <div className="bg-blue-50 rounded-lg px-3 py-2">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
-                <p className="text-sm font-bold text-gray-900">
-                  {daysToComplete === null ? '—' : `~${daysToComplete}d`}
-                </p>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Daily limit</label>
+                <input type="number" min={1} max={500} value={schedForm.daily_limit} onChange={e => setSchedForm(f => ({ ...f, daily_limit: Number(e.target.value) }))}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"/>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Min delay (min)</label>
+                  <input type="number" min={1} value={schedForm.min_delay_mins} onChange={e => setSchedForm(f => ({ ...f, min_delay_mins: Number(e.target.value) }))}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"/>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Max delay (min)</label>
+                  <input type="number" min={1} value={schedForm.max_delay_mins} onChange={e => setSchedForm(f => ({ ...f, max_delay_mins: Number(e.target.value) }))}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400"/>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Active days</label>
+                <div className="flex gap-1.5">
+                  {DAY_LABELS.map((d, i) => (
+                    <button key={d} onClick={() => setSchedForm(f => { const days = [...f.active_days]; days[i] = !days[i]; return { ...f, active_days: days }; })}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold border transition-colors ${schedForm.active_days[i] ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-400 border-gray-200'}`}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveSchedule} disabled={savingSched}
+                  className="flex-1 bg-blue-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  {savingSched ? 'Saving…' : 'Save'}
+                </button>
+                <button onClick={() => setEditingSchedule(false)}
+                  className="flex-1 border border-gray-200 text-gray-600 text-xs font-bold py-2 rounded-lg hover:bg-gray-50">
+                  Cancel
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2 text-sm">
+                {[
+                  { label: 'Window', value: `${campaign.from_hour} – ${campaign.to_hour}` },
+                  { label: 'Timezone', value: campaign.timezone },
+                  { label: 'Daily limit', value: `${campaign.daily_limit} emails/day` },
+                  { label: 'Delay', value: `${Math.round(minDelaySecs/60)}–${Math.round(maxDelaySecs/60)} min (random)` },
+                  { label: 'Active days', value: activeDayLabels.length > 0 ? activeDayLabels.join(', ') : '—' },
+                ].map(r => (
+                  <div key={r.label} className="flex justify-between">
+                    <span className="text-gray-400">{r.label}</span>
+                    <span className="font-semibold text-gray-800">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+              {emailsPerDay > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
+                  <div className="bg-blue-50 rounded-lg px-3 py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
+                    <p className="text-sm font-bold text-gray-900">~{emailsPerDay}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg px-3 py-2">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {daysToComplete === null ? '—' : `~${daysToComplete}d`}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
+
+        {/* Sending Accounts card */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sending Accounts</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sending Accounts</p>
+            <button onClick={() => setAddingAccount(v => !v)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+              Add
+            </button>
+          </div>
+
           {campaign.campaign_accounts.length === 0 ? (
             <p className="text-sm text-gray-400">No accounts linked</p>
           ) : (
             <div className="space-y-2">
               {campaign.campaign_accounts.map(ca => (
-                <div key={ca.account.id} className="flex items-center gap-2">
+                <div key={ca.account.id} className="flex items-center gap-2 group">
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shrink-0">
                     <span className="text-[9px] text-white font-bold">{ca.account.email[0].toUpperCase()}</span>
                   </div>
-                  <span className="text-sm text-gray-700 truncate">{ca.account.email}</span>
+                  <span className="text-sm text-gray-700 truncate flex-1">{ca.account.email}</span>
+                  <button onClick={() => removeAccount(ca.account.id)}
+                    className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all ml-auto shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {addingAccount && (
+            <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+              <select value={selectedAddAccount} onChange={e => setSelectedAddAccount(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400">
+                <option value="">Select account…</option>
+                {allAccounts
+                  .filter(a => !campaign.campaign_accounts.some(ca => ca.account.id === a.id))
+                  .map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+              </select>
+              <button onClick={addAccount} disabled={!selectedAddAccount}
+                className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-40">
+                Add
+              </button>
             </div>
           )}
         </div>
