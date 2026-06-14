@@ -131,7 +131,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   // Only reset stats when starting fresh from draft, not on resume
-  const statsReset = campaign.status === 'draft' ? { total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : {};
+  const statsReset = campaign.status === 'draft' ? { total_sent: 0, total_opened: 0, total_replied: 0 } : {};
   const { error: updateErr } = await supabaseAdmin
     .from('campaigns')
     .update({ status: 'active', ...statsReset })

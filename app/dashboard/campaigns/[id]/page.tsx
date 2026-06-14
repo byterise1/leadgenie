@@ -138,7 +138,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     const r = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
     const d = await r.json().catch(() => ({}));
     if (r.ok && d.status === 'active') {
-      setCampaign(p => p ? { ...p, status: 'active', total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : p);
+      setCampaign(p => p ? { ...p, status: 'active', total_sent: 0, total_opened: 0, total_replied: 0 } : p);
       showMsg(`Campaign started! ${d.queued} lead${d.queued !== 1 ? 's' : ''} queued.`);
     } else {
       setStartError(d.error || 'Start failed — check accounts and leads then try again.');
