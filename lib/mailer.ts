@@ -1,20 +1,9 @@
 import nodemailer from 'nodemailer';
 import dns from 'dns';
-import dnsPromises from 'dns/promises';
 import https from 'https';
 
-// Node.js 18+ defaults to verbatim IPv6-first DNS. Railway has no IPv6 outbound.
+// Force IPv4 DNS globally — Railway/GCP has no IPv6 outbound
 dns.setDefaultResultOrder('ipv4first');
-
-// Explicitly resolve to IPv4 — pool ignores family:4 option on some Node versions
-async function resolveIPv4(hostname: string): Promise<string> {
-  try {
-    const addrs = await dnsPromises.resolve4(hostname);
-    return addrs[0];
-  } catch {
-    return hostname;
-  }
-}
 
 export type EmailAccount = {
   id?: string;
@@ -176,14 +165,12 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
 // ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
 
-// requireTLS: true forces STARTTLS upgrade or hard-fails — critical on Railway.
-// We pre-resolve hostnames to IPv4 because pool ignores the family:4 socket option.
-async function createSmtpTransport(account: EmailAccount) {
+// Exact config proven to work on Railway — pool reuses session, requireTLS forces STARTTLS
+function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
-    const host = await resolveIPv4('smtp.gmail.com');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
-      host,
+      host: 'smtp.gmail.com',
       port: 587,
       secure: false,
       requireTLS: true,
@@ -196,10 +183,9 @@ async function createSmtpTransport(account: EmailAccount) {
       auth: { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') },
     } as any);
   }
-  const host = await resolveIPv4(account.smtp_host!);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
-    host,
+    host: account.smtp_host!,
     port: account.smtp_port ?? 587,
     secure: account.smtp_port === 465,
     requireTLS: account.smtp_port !== 465,
@@ -216,10 +202,10 @@ async function createSmtpTransport(account: EmailAccount) {
 // ─── Transporter cache — reuse pooled connections, evict on any send error ───
 const _transportCache = new Map<string, nodemailer.Transporter<any>>();
 
-async function getTransport(account: EmailAccount) {
+function getTransport(account: EmailAccount) {
   const key = account.id || account.email;
   if (!_transportCache.has(key)) {
-    _transportCache.set(key, await createSmtpTransport(account));
+    _transportCache.set(key, createSmtpTransport(account));
   }
   return _transportCache.get(key)!;
 }
@@ -239,7 +225,7 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   if (account.type === 'gmail-oauth') {
     return sendViaGmailApi(account, opts);
   }
-  const transport = await getTransport(account);
+  const transport = getTransport(account);
   try {
     const info = await transport.sendMail(opts);
     return { threadId: (info as any).messageId || undefined };
@@ -247,7 +233,7 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
     evictTransport(account);
     // Pool closed itself (idle timeout / prior error) — retry once with fresh transport
     if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
-      const fresh = await getTransport(account);
+      const fresh = getTransport(account);
       const info = await fresh.sendMail(opts);
       return { threadId: (info as any).messageId || undefined };
     }
@@ -265,7 +251,7 @@ export async function createTransportAsync(account: EmailAccount) {
       sendMail: async (opts: any) => sendViaGmailApi(account, { from: opts.from, to: opts.to, subject: opts.subject, text: opts.text || '', html: opts.html || '' }),
     };
   }
-  return await createSmtpTransport(account);
+  return createSmtpTransport(account);
 }
 
 export { createSmtpTransport as createTransport };
