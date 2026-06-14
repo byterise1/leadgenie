@@ -167,9 +167,6 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
 // requireTLS: true is critical on Railway — forces STARTTLS upgrade or hard-fails.
 // Without it, nodemailer can silently skip TLS and Gmail rejects the auth.
-//
-// SMTP_PROXY_HOST: optional TCP passthrough proxy (e.g. Hetzner VPS running scripts/smtp-proxy.js)
-// Routes non-Gmail SMTP through a non-GCP IP so providers like Titan don't block the connection.
 function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -188,21 +185,12 @@ function createSmtpTransport(account: EmailAccount) {
       auth: { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') },
     } as any);
   }
-
-  // For imap/smtp accounts: route through TCP proxy if configured
-  const proxyHost = process.env.SMTP_PROXY_HOST;
-  const directPort = account.smtp_port ?? 587;
-  // Proxy listens on 2587 (→587) and 2465 (→465)
-  const proxyPort = proxyHost
-    ? (directPort === 465 ? 2465 : 2587)
-    : directPort;
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
-    host: proxyHost || account.smtp_host!,
-    port: proxyPort,
-    secure: directPort === 465,  // SSL on 465, STARTTLS on 587 — same protocol regardless of proxy
-    requireTLS: directPort !== 465,
+    host: account.smtp_host!,
+    port: account.smtp_port ?? 587,
+    secure: account.smtp_port === 465,
+    requireTLS: account.smtp_port !== 465,
     pool: true,
     maxConnections: 1,
     maxMessages: 100,
