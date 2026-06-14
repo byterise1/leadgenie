@@ -203,7 +203,7 @@ function createSmtpTransport(account: EmailAccount) {
 }
 
 // ─── Transporter cache — reuse pooled connections, evict on any send error ───
-const _transportCache = new Map<string, ReturnType<typeof nodemailer.createTransport>>();
+const _transportCache = new Map<string, nodemailer.Transporter<any>>();
 
 function getTransport(account: EmailAccount) {
   const key = account.id || account.email;
