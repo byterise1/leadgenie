@@ -128,19 +128,28 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     }).then(r => { if (!r.ok) setCampaign(p => p ? { ...p, status: campaign.status } : p); });
   };
 
+  const [starting, setStarting] = useState(false);
+
+  const startCampaign = async () => {
+    setStarting(true);
+    showMsg('Starting…');
+    const r = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
+    if (r.ok) { setCampaign(p => p ? { ...p, status: 'active', total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : p); showMsg('Campaign started!'); }
+    else { const d = await r.json().catch(() => ({})); showMsg(d.error || 'Start failed'); }
+    setStarting(false);
+  };
+
   const toggleStatus = async () => {
     if (!campaign) return;
     if (campaign.status === 'active') {
-      // Pause: just update status
       setCampaign(p => p ? { ...p, status: 'paused' } : p);
       showMsg('Campaign paused');
       const r = await fetch(`/api/campaigns/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'paused' }) });
       if (!r.ok) { setCampaign(p => p ? { ...p, status: 'active' } : p); showMsg('Pause failed'); }
     } else if (campaign.status === 'paused') {
-      // Resume: call /start to re-queue all pending leads with fresh jobs
       showMsg('Resuming…');
       const r = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
-      if (r.ok) { setCampaign(p => p ? { ...p, status: 'active' } : p); showMsg('Campaign resumed — emails re-queued'); }
+      if (r.ok) { setCampaign(p => p ? { ...p, status: 'active' } : p); showMsg('Campaign resumed — leads re-queued'); }
       else { const d = await r.json().catch(() => ({})); showMsg(d.error || 'Resume failed'); }
     }
   };
@@ -320,6 +329,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {campaign.status === 'draft' && (
+            <button onClick={startCampaign} disabled={starting}
+              className="text-sm font-bold px-4 py-2 rounded-xl border bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 transition-colors disabled:opacity-50">
+              {starting ? 'Starting…' : '▶ Start'}
+            </button>
+          )}
           {isEffectivelyComplete && campaign.status !== 'completed' ? (
             <button onClick={markComplete}
               className="text-sm font-bold px-4 py-2 rounded-xl border bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 transition-colors">

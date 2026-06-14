@@ -130,7 +130,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'No leads enrolled in this campaign' }, { status: 400 });
   }
 
-  await supabaseAdmin.from('campaigns').update({ status: 'active', total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 }).eq('id', id);
+  // Only reset stats when starting fresh from draft, not on resume
+  const statsReset = campaign.status === 'draft' ? { total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : {};
+  await supabaseAdmin.from('campaigns').update({ status: 'active', ...statsReset }).eq('id', id);
 
   // ── Sending window ──
   const fromMins = parseTimeToMinutes(campaign.from_hour || '08:00');
