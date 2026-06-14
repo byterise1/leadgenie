@@ -2,12 +2,39 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { resolve4 } from 'dns/promises';
 import https from 'https';
+import net from 'net';
 
 // Railway/GCP has no IPv6 outbound — force IPv4
 dns.setDefaultResultOrder('ipv4first');
 
-// Pre-resolve to IPv4 so the pool never tries an IPv6 address.
-// Pass original hostname as tls.servername so SNI still works for cert validation.
+// Test raw TCP reachability for one IP:port within timeoutMs
+function testTcp(host: string, port: number, timeoutMs = 5000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const sock = net.connect({ host, port, family: 4 });
+    sock.setTimeout(timeoutMs);
+    sock.on('connect', () => { sock.destroy(); resolve(); });
+    sock.on('timeout', () => { sock.destroy(); reject(new Error('timeout')); });
+    sock.on('error', reject);
+  });
+}
+
+// smtp.gmail.com has multiple IP addresses — some Railway IPs can reach certain
+// Google SMTP servers but not others. Probe all IPs in parallel and return the
+// first one that actually accepts a TCP connection.
+async function findReachableIp(hostname: string, port: number): Promise<string> {
+  let addrs: string[];
+  try { addrs = await resolve4(hostname); } catch { return hostname; }
+  if (addrs.length === 1) return addrs[0];
+
+  const results = await Promise.allSettled(
+    addrs.map(ip => testTcp(ip, port, 6000).then(() => ip))
+  );
+  const winner = results.find(r => r.status === 'fulfilled');
+  if (winner && winner.status === 'fulfilled') return winner.value;
+
+  return addrs[0];
+}
+
 async function resolveIPv4(hostname: string): Promise<string> {
   try {
     const addrs = await resolve4(hostname);
@@ -180,7 +207,7 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 // Resolve to IPv4 first, keep original hostname as TLS servername for SNI cert validation
 async function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
-    const host = await resolveIPv4('smtp.gmail.com');
+    const host = await findReachableIp('smtp.gmail.com', 587);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host,
