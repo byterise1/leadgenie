@@ -132,7 +132,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   // Only reset stats when starting fresh from draft, not on resume
   const statsReset = campaign.status === 'draft' ? { total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : {};
-  await supabaseAdmin.from('campaigns').update({ status: 'active', ...statsReset }).eq('id', id);
+  const { error: updateErr } = await supabaseAdmin
+    .from('campaigns')
+    .update({ status: 'active', ...statsReset })
+    .eq('id', id);
+  if (updateErr) {
+    console.error('[start] campaign update failed:', updateErr.message);
+    return NextResponse.json({ error: `Could not activate campaign: ${updateErr.message}` }, { status: 500 });
+  }
 
   // ── Sending window ──
   const fromMins = parseTimeToMinutes(campaign.from_hour || '08:00');
@@ -214,5 +221,5 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   await emailQueue.addBulk(jobs);
 
-  return NextResponse.json({ success: true, queued: campaignLeads.length });
+  return NextResponse.json({ success: true, status: 'active', queued: campaignLeads.length });
 }

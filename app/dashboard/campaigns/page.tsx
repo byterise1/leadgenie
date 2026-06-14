@@ -58,10 +58,10 @@ export default function CampaignsPage() {
     e.preventDefault();
     setStartingId(c.id);
     const res = await fetch(`/api/campaigns/${c.id}/start`, { method: 'POST' });
-    if (res.ok) {
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.status === 'active') {
       setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: 'active', total_sent: 0 } : x));
     } else {
-      const d = await res.json().catch(() => ({}));
       alert(d.error || 'Start failed');
     }
     setStartingId(null);
