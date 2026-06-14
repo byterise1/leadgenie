@@ -19,6 +19,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
+  // Gmail App Password: skip live SMTP test (Railway GCP IPs are blocked by Google).
+  // Mark active immediately — wrong credentials surface on first campaign send.
+  if (account.type === 'gmail-app') {
+    await supabaseAdmin.from('email_accounts').update({ status: 'active' }).eq('id', id);
+    return NextResponse.json({ success: true, sentTo: null });
+  }
+
   try {
     await sendEmail(account, {
       from: account.email,
