@@ -491,7 +491,7 @@ export default function EmailAccountsPage() {
                     setTestResult(r => ({ ...r, [acc.id]: { ok: false, msg: '' } }));
                     const res = await fetch(`/api/email-accounts/${acc.id}/test`, { method: 'POST' });
                     const d = await res.json();
-                    setTestResult(r => ({ ...r, [acc.id]: { ok: res.ok, msg: res.ok ? `Sent to ${d.sentTo}` : d.error } }));
+                    setTestResult(r => ({ ...r, [acc.id]: { ok: res.ok, msg: res.ok ? (d.sentTo ? `Sent to ${d.sentTo}` : 'Credentials verified — account active') : d.error } }));
                     setTestingId(null);
                     if (res.ok) fetchAccounts();
                   }}
