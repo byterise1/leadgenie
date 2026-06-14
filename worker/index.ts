@@ -19,7 +19,7 @@ const supabase = createClient(
 );
 
 async function processEmailJob(job: Job) {
-  const { campaignLeadId, stepNumber } = job.data;
+  const { campaignLeadId, stepNumber, accountIndex } = job.data;
 
   // Get campaign lead + lead + campaign + step + account
   const { data: cl } = await supabase
@@ -41,8 +41,7 @@ async function processEmailJob(job: Job) {
   const accounts = campaign.campaign_accounts.map((ca: any) => ca.account).filter(Boolean);
   if (!accounts.length) return;
 
-  // Round-robin account selection
-  const account = accounts[stepNumber % accounts.length];
+  const account = accounts[(accountIndex ?? stepNumber) % accounts.length];
   const lead = cl.lead;
 
   const subject = replaceVars(step.subject, lead);
