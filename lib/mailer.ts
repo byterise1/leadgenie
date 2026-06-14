@@ -232,9 +232,14 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   try {
     const info = await transport.sendMail(opts);
     return { threadId: (info as any).messageId || undefined };
-  } catch (err) {
-    // Evict wedged connection — next send rebuilds fresh
+  } catch (err: any) {
     evictTransport(account);
+    // Pool closed itself (idle timeout / prior error) — retry once with fresh transport
+    if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
+      const fresh = getTransport(account);
+      const info = await fresh.sendMail(opts);
+      return { threadId: (info as any).messageId || undefined };
+    }
     throw err;
   }
 }
