@@ -61,6 +61,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
+  // inbox_threads.campaign_id has no ON DELETE CASCADE — null it out first to avoid FK violation
+  await supabaseAdmin.from('inbox_threads').update({ campaign_id: null }).eq('campaign_id', id);
+
   const { error } = await supabaseAdmin
     .from('campaigns')
     .delete()
