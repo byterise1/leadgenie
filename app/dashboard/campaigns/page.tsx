@@ -52,11 +52,25 @@ export default function CampaignsPage() {
 
   const filtered = tab === 'All' ? campaigns : campaigns.filter(c => c.status === tab.toLowerCase());
 
+  const [startingId, setStartingId] = useState<string | null>(null);
+
+  const startCampaign = async (e: React.MouseEvent, c: Campaign) => {
+    e.preventDefault();
+    setStartingId(c.id);
+    const res = await fetch(`/api/campaigns/${c.id}/start`, { method: 'POST' });
+    if (res.ok) {
+      setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: 'active', total_sent: 0 } : x));
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || 'Start failed');
+    }
+    setStartingId(null);
+  };
+
   const toggleStatus = (e: React.MouseEvent, c: Campaign) => {
     e.preventDefault();
     const next = c.status === 'active' ? 'paused' : c.status === 'paused' ? 'active' : c.status;
     if (next === c.status) return;
-    // Optimistic update
     setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: next } : x));
     fetch(`/api/campaigns/${c.id}`, {
       method: 'PATCH',
@@ -179,6 +193,12 @@ export default function CampaignsPage() {
                           className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200">
                           View
                         </Link>
+                        {c.status === 'draft' && (
+                          <button onClick={e => startCampaign(e, c)} disabled={startingId === c.id}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 disabled:opacity-50">
+                            {startingId === c.id ? '…' : '▶ Start'}
+                          </button>
+                        )}
                         {(c.status === 'active' || c.status === 'paused') && (
                           <button onClick={e => toggleStatus(e, c)}
                             className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${c.status === 'active' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'}`}>

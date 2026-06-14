@@ -130,12 +130,19 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
   const [starting, setStarting] = useState(false);
 
+  const [startError, setStartError] = useState('');
+
   const startCampaign = async () => {
     setStarting(true);
-    showMsg('Starting…');
+    setStartError('');
     const r = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
-    if (r.ok) { setCampaign(p => p ? { ...p, status: 'active', total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : p); showMsg('Campaign started!'); }
-    else { const d = await r.json().catch(() => ({})); showMsg(d.error || 'Start failed'); }
+    if (r.ok) {
+      setCampaign(p => p ? { ...p, status: 'active', total_sent: 0, total_opened: 0, total_clicked: 0, total_replied: 0 } : p);
+      showMsg('Campaign started!');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      setStartError(d.error || 'Start failed — check accounts and leads then try again.');
+    }
     setStarting(false);
   };
 
@@ -354,6 +361,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
+      {startError && (
+        <div className="rounded-xl px-4 py-3 text-sm font-medium bg-red-50 text-red-700 border border-red-100 flex items-start justify-between gap-3">
+          <span>⚠ {startError}</span>
+          <button onClick={() => setStartError('')} className="text-red-400 hover:text-red-600 shrink-0 text-lg leading-none">×</button>
+        </div>
+      )}
       {msg && (
         <div className={`rounded-xl px-4 py-2.5 text-sm font-medium ${msg.includes('fail') || msg.includes('error') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
           {msg}
