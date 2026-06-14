@@ -1,9 +1,21 @@
 import nodemailer from 'nodemailer';
 import dns from 'dns';
+import { resolve4 } from 'dns/promises';
 import https from 'https';
 
-// Force IPv4 DNS globally — Railway/GCP has no IPv6 outbound
+// Railway/GCP has no IPv6 outbound — force IPv4
 dns.setDefaultResultOrder('ipv4first');
+
+// Pre-resolve to IPv4 so the pool never tries an IPv6 address.
+// Pass original hostname as tls.servername so SNI still works for cert validation.
+async function resolveIPv4(hostname: string): Promise<string> {
+  try {
+    const addrs = await resolve4(hostname);
+    return addrs[0];
+  } catch {
+    return hostname;
+  }
+}
 
 export type EmailAccount = {
   id?: string;
@@ -165,15 +177,17 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
 // ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
 
-// Exact config proven to work on Railway — pool reuses session, requireTLS forces STARTTLS
-function createSmtpTransport(account: EmailAccount) {
+// Resolve to IPv4 first, keep original hostname as TLS servername for SNI cert validation
+async function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
+    const host = await resolveIPv4('smtp.gmail.com');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host,
       port: 587,
       secure: false,
       requireTLS: true,
+      tls: { servername: 'smtp.gmail.com' },
       pool: true,
       maxConnections: 1,
       maxMessages: 100,
@@ -183,12 +197,15 @@ function createSmtpTransport(account: EmailAccount) {
       auth: { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') },
     } as any);
   }
+  const smtpHostname = account.smtp_host!;
+  const host = await resolveIPv4(smtpHostname);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
-    host: account.smtp_host!,
+    host,
     port: account.smtp_port ?? 587,
     secure: account.smtp_port === 465,
     requireTLS: account.smtp_port !== 465,
+    tls: { servername: smtpHostname },
     pool: true,
     maxConnections: 1,
     maxMessages: 100,
@@ -202,10 +219,10 @@ function createSmtpTransport(account: EmailAccount) {
 // ─── Transporter cache — reuse pooled connections, evict on any send error ───
 const _transportCache = new Map<string, nodemailer.Transporter<any>>();
 
-function getTransport(account: EmailAccount) {
+async function getTransport(account: EmailAccount) {
   const key = account.id || account.email;
   if (!_transportCache.has(key)) {
-    _transportCache.set(key, createSmtpTransport(account));
+    _transportCache.set(key, await createSmtpTransport(account));
   }
   return _transportCache.get(key)!;
 }
@@ -225,7 +242,7 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   if (account.type === 'gmail-oauth') {
     return sendViaGmailApi(account, opts);
   }
-  const transport = getTransport(account);
+  const transport = await getTransport(account);
   try {
     const info = await transport.sendMail(opts);
     return { threadId: (info as any).messageId || undefined };
@@ -233,7 +250,7 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
     evictTransport(account);
     // Pool closed itself (idle timeout / prior error) — retry once with fresh transport
     if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
-      const fresh = getTransport(account);
+      const fresh = await getTransport(account);
       const info = await fresh.sendMail(opts);
       return { threadId: (info as any).messageId || undefined };
     }
@@ -251,7 +268,7 @@ export async function createTransportAsync(account: EmailAccount) {
       sendMail: async (opts: any) => sendViaGmailApi(account, { from: opts.from, to: opts.to, subject: opts.subject, text: opts.text || '', html: opts.html || '' }),
     };
   }
-  return createSmtpTransport(account);
+  return await createSmtpTransport(account);
 }
 
 export { createSmtpTransport as createTransport };

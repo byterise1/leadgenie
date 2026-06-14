@@ -48,7 +48,7 @@ async function processEmailJob(job: Job) {
   const subject = replaceVars(step.subject, lead);
   const body = replaceVars(step.body, lead);
 
-  const transport = createTransport(account);
+  const transport = await createTransport(account);
 
   const htmlBody = body.split('\n').map((l: string) =>
     l.trim() ? `<p style="margin:0 0 12px 0;font-family:Arial,sans-serif;font-size:14px;color:#111">${l}</p>` : ''
@@ -119,7 +119,7 @@ async function processWarmupJob(job: Job) {
   const subject = subjects[Math.floor(Math.random() * subjects.length)];
   const body = bodies[Math.floor(Math.random() * bodies.length)];
 
-  const transport = createTransport(fromAcc);
+  const transport = await createTransport(fromAcc);
   await transport.sendMail({
     from: fromAcc.email,
     to: toAcc.email,
