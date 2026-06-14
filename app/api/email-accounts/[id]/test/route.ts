@@ -48,8 +48,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
     if (errCode === 'ETIMEDOUT' || errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' ||
         msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+      if (account.type === 'gmail-app') {
+        return NextResponse.json({
+          error: `Google blocks smtp.gmail.com from cloud servers like Railway. Use Gmail OAuth instead — it works via the Gmail API and has no SMTP restrictions.`,
+        }, { status: 500 });
+      }
+      const host = account.smtp_host || 'SMTP server';
       return NextResponse.json({
-        error: `Cannot reach ${account.smtp_host || 'SMTP server'}:${account.smtp_port || 587} — the provider is likely blocking connections from cloud servers. Use Brevo or Mailgun as a relay, or switch to Gmail OAuth.`,
+        error: `Cannot reach ${host}:${account.smtp_port || 587} — the provider is blocking connections from cloud servers. Move the app to DigitalOcean/Hetzner, or use Gmail OAuth.`,
       }, { status: 500 });
     }
     return NextResponse.json({ error: msg }, { status: 500 });
