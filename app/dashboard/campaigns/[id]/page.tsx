@@ -128,16 +128,21 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     }).then(r => { if (!r.ok) setCampaign(p => p ? { ...p, status: campaign.status } : p); });
   };
 
-  const toggleStatus = () => {
+  const toggleStatus = async () => {
     if (!campaign) return;
-    const next = campaign.status === 'active' ? 'paused' : campaign.status === 'paused' ? 'active' : null;
-    if (!next) return;
-    setCampaign(p => p ? { ...p, status: next } : p);
-    showMsg(`Campaign ${next}`);
-    fetch(`/api/campaigns/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: next }),
-    }).then(r => { if (!r.ok) setCampaign(p => p ? { ...p, status: campaign.status } : p); });
+    if (campaign.status === 'active') {
+      // Pause: just update status
+      setCampaign(p => p ? { ...p, status: 'paused' } : p);
+      showMsg('Campaign paused');
+      const r = await fetch(`/api/campaigns/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'paused' }) });
+      if (!r.ok) { setCampaign(p => p ? { ...p, status: 'active' } : p); showMsg('Pause failed'); }
+    } else if (campaign.status === 'paused') {
+      // Resume: call /start to re-queue all pending leads with fresh jobs
+      showMsg('Resuming…');
+      const r = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
+      if (r.ok) { setCampaign(p => p ? { ...p, status: 'active' } : p); showMsg('Campaign resumed — emails re-queued'); }
+      else { const d = await r.json().catch(() => ({})); showMsg(d.error || 'Resume failed'); }
+    }
   };
 
   const saveName = async () => {
