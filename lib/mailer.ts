@@ -165,6 +165,8 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
 // ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
 
+// requireTLS: true is critical on Railway — forces STARTTLS upgrade or hard-fails.
+// Without it, nodemailer can silently skip TLS and Gmail rejects the auth.
 function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,11 +174,15 @@ function createSmtpTransport(account: EmailAccount) {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      requireTLS: true,
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 100,
       family: 4,
-      connectionTimeout: 20000,
+      connectionTimeout: 25000,
       greetingTimeout: 15000,
       socketTimeout: 30000,
-      auth: { user: account.smtp_user!, pass: account.smtp_pass! },
+      auth: { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') },
     } as any);
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,12 +190,36 @@ function createSmtpTransport(account: EmailAccount) {
     host: account.smtp_host!,
     port: account.smtp_port ?? 587,
     secure: account.smtp_port === 465,
+    requireTLS: account.smtp_port !== 465,
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 100,
     family: 4,
-    connectionTimeout: 20000,
+    connectionTimeout: 25000,
     greetingTimeout: 15000,
     socketTimeout: 30000,
     auth: { user: account.smtp_user!, pass: account.smtp_pass! },
   } as any);
+}
+
+// ─── Transporter cache — reuse pooled connections, evict on any send error ───
+const _transportCache = new Map<string, ReturnType<typeof nodemailer.createTransport>>();
+
+function getTransport(account: EmailAccount) {
+  const key = account.id || account.email;
+  if (!_transportCache.has(key)) {
+    _transportCache.set(key, createSmtpTransport(account));
+  }
+  return _transportCache.get(key)!;
+}
+
+function evictTransport(account: EmailAccount) {
+  const key = account.id || account.email;
+  const t = _transportCache.get(key);
+  if (t) {
+    try { (t as any).close(); } catch { /* ignore */ }
+    _transportCache.delete(key);
+  }
 }
 
 // ─── Unified send (used by worker and test route) ─────────────────────────────
@@ -198,10 +228,15 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   if (account.type === 'gmail-oauth') {
     return sendViaGmailApi(account, opts);
   }
-  const transport = createSmtpTransport(account);
-  const info = await transport.sendMail(opts);
-  // Store RFC2822 Message-ID so IMAP sync can match replies via In-Reply-To header
-  return { threadId: (info as any).messageId || undefined };
+  const transport = getTransport(account);
+  try {
+    const info = await transport.sendMail(opts);
+    return { threadId: (info as any).messageId || undefined };
+  } catch (err) {
+    // Evict wedged connection — next send rebuilds fresh
+    evictTransport(account);
+    throw err;
+  }
 }
 
 // ─── Legacy exports kept for backward compat ─────────────────────────────────
