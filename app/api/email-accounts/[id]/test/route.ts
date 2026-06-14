@@ -2,24 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/mailer';
-import { ImapFlow } from 'imapflow';
-
-// Verify Gmail App Password via IMAP — imap.gmail.com:993 works from Railway,
-// smtp.gmail.com is blocked. Same credentials work for both IMAP and SMTP.
-async function verifyGmailAppPassword(email: string, pass: string): Promise<void> {
-  const client = new ImapFlow({
-    host: 'imap.gmail.com',
-    port: 993,
-    secure: true,
-    auth: { user: email, pass: pass.replace(/\s+/g, '') },
-    logger: false,
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 15000,
-    socketTimeout: 20000,
-  });
-  await client.connect();
-  await client.logout();
-}
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -37,26 +19,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
-  // Gmail App Password: verify via IMAP (works from Railway, same credentials as SMTP)
-  if (account.type === 'gmail-app') {
-    try {
-      await verifyGmailAppPassword(account.smtp_user || account.email, account.smtp_pass);
-      await supabaseAdmin.from('email_accounts').update({ status: 'active' }).eq('id', id);
-      return NextResponse.json({ success: true, sentTo: null, note: 'Credentials verified via IMAP' });
-    } catch (err: any) {
-      const msg = err?.message || '';
-      await supabaseAdmin.from('email_accounts').update({ status: 'error' }).eq('id', id);
-      if (msg.includes('535') || msg.includes('auth') || msg.includes('Invalid') || msg.includes('credentials')) {
-        return NextResponse.json({ error: 'Wrong App Password — go to myaccount.google.com/apppasswords and generate a new one.' }, { status: 500 });
-      }
-      if (msg.includes('IMAP access is disabled') || msg.includes('not enabled')) {
-        return NextResponse.json({ error: 'Enable IMAP in Gmail settings: Settings → See all settings → Forwarding and POP/IMAP → Enable IMAP.' }, { status: 500 });
-      }
-      return NextResponse.json({ error: `IMAP check failed: ${msg}` }, { status: 500 });
-    }
-  }
-
-  // All other account types: send a real test email via SMTP
   try {
     await sendEmail(account, {
       from: account.email,
@@ -76,19 +38,35 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const msg = err?.message || 'Unknown error';
     const code = err?.responseCode;
     const errCode = err?.code || '';
+    const msgLow = msg.toLowerCase();
+
+    await supabaseAdmin.from('email_accounts').update({ status: 'error' }).eq('id', id);
 
     if (code === 535 || code === 401 || errCode === 'EAUTH' ||
-        msg.includes('auth') || msg.includes('token') || msg.includes('credentials') || msg.includes('not enabled')) {
-      await supabaseAdmin.from('email_accounts').update({ status: 'error' }).eq('id', id);
+        msgLow.includes('auth') || msgLow.includes('535') ||
+        msgLow.includes('credentials') || msgLow.includes('username') || msgLow.includes('password')) {
+      if (account.type === 'gmail-app') {
+        return NextResponse.json({
+          error: 'Wrong App Password. Make sure: 1) 2-Step Verification is ON at myaccount.google.com/security. 2) You generated an App Password at myaccount.google.com/apppasswords (not your regular Gmail password).',
+        }, { status: 500 });
+      }
       return NextResponse.json({ error: 'Authentication failed — check your username and password.' }, { status: 500 });
     }
+
     if (errCode === 'ETIMEDOUT' || errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' ||
-        msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+        errCode === 'ENETUNREACH' || msgLow.includes('etimedout') || msgLow.includes('timeout') ||
+        msgLow.includes('econnrefused') || msgLow.includes('enetunreach')) {
+      if (account.type === 'gmail-app') {
+        return NextResponse.json({
+          error: 'Cannot connect to smtp.gmail.com — Google is blocking this server IP. Try redeploying on Railway to get a new IP, then test again.',
+        }, { status: 500 });
+      }
       const host = account.smtp_host || 'SMTP server';
       return NextResponse.json({
-        error: `Cannot reach ${host}:${account.smtp_port || 587} — the provider is blocking connections from cloud servers.`,
+        error: `Cannot reach ${host}:${account.smtp_port || 587} — the provider may be blocking connections from cloud servers.`,
       }, { status: 500 });
     }
+
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
