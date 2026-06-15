@@ -2,12 +2,12 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { resolve4 } from 'dns/promises';
 import https from 'https';
+import net from 'net';
+import { SocksClient } from 'socks';
 
 // Railway/GCP: Node.js ignores dns.setDefaultResultOrder — resolve IPv4 explicitly
 dns.setDefaultResultOrder('ipv4first');
 
-// Pick a random IPv4 address for the hostname so each retry attempt may hit a
-// different smtp.gmail.com server (Google has several; some accept Railway IPs).
 async function randomIPv4(hostname: string): Promise<string> {
   try {
     const addrs = await resolve4(hostname);
@@ -16,6 +16,26 @@ async function randomIPv4(hostname: string): Promise<string> {
   } catch {
     return hostname;
   }
+}
+
+// ─── SOCKS5 proxy socket (routes through Hetzner to bypass Railway/GCP blocks) ─
+// SMTP_PROXY env var format: socks5://HOST:PORT (e.g. socks5://65.21.10.50:1080)
+// When set, all SMTP connections tunnel through the proxy server instead of
+// connecting directly (which fails on Railway due to GCP IP bans + port blocks).
+
+async function createSocksSocket(targetHost: string, targetPort: number): Promise<net.Socket> {
+  const proxyUrl = new URL(process.env.SMTP_PROXY!);
+  const { socket } = await SocksClient.createConnection({
+    proxy: {
+      host: proxyUrl.hostname,
+      port: Number(proxyUrl.port) || 1080,
+      type: 5,
+    },
+    command: 'connect',
+    destination: { host: targetHost, port: targetPort },
+    timeout: 20000,
+  });
+  return socket;
 }
 
 export type EmailAccount = {
@@ -66,7 +86,6 @@ async function fetchAccessToken(refreshToken: string): Promise<{ token: string; 
 }
 
 export async function getAccessToken(account: EmailAccount): Promise<string> {
-  // Include first 20 chars of refresh token so cache auto-invalidates on reconnect
   const cacheKey = `${account.id || account.email}:${(account.smtp_pass || '').slice(0, 20)}`;
   const cached = _tokenCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + 5 * 60 * 1000) return cached.token;
@@ -76,10 +95,7 @@ export async function getAccessToken(account: EmailAccount): Promise<string> {
 }
 
 // ─── Gmail REST API sender (bypasses SMTP entirely) ───────────────────────────
-// Railway runs on GCP; Google blocks GCP→smtp.gmail.com to prevent spam.
-// The Gmail REST API uses HTTPS (port 443) which is never blocked.
 
-// Use Node.js https module directly — bypasses Next.js fetch wrapper and undici quirks
 function httpsPost(
   hostname: string,
   path: string,
@@ -176,48 +192,94 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
   }
 }
 
-// ─── SMTP transport (gmail-app, imap, smtp) ────────────────────────────────
+// ─── SMTP transport builder ────────────────────────────────────────────────────
+// If SMTP_PROXY is set: opens socket via SOCKS5 proxy (Hetzner), bypassing
+// Railway's port blocks and Google's GCP IP ban on smtp.gmail.com.
+// If not set: direct connection with IPv4 resolution (existing behaviour).
 
-// Resolve to IPv4 first, keep original hostname as TLS servername for SNI cert validation
 async function createSmtpTransport(account: EmailAccount) {
+  const useProxy = !!process.env.SMTP_PROXY;
+
   if (account.type === 'gmail-app') {
-    const host = await randomIPv4('smtp.gmail.com');
+    const targetHost = 'smtp.gmail.com';
+    const targetPort = 587;
+    const auth = { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') };
+    const tlsBase = { servername: targetHost };
+
+    if (useProxy) {
+      const socket = await createSocksSocket(targetHost, targetPort);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return nodemailer.createTransport({
+        socket,
+        secure: false,
+        requireTLS: true,
+        tls: tlsBase,
+        connectionTimeout: 25000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000,
+        auth,
+      } as any);
+    }
+
+    const host = await randomIPv4(targetHost);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
       host,
-      port: 587,
+      port: targetPort,
       secure: false,
       requireTLS: true,
-      tls: { servername: 'smtp.gmail.com' },
+      tls: tlsBase,
       pool: true,
       maxConnections: 1,
       maxMessages: 100,
       connectionTimeout: 25000,
       greetingTimeout: 15000,
       socketTimeout: 30000,
-      auth: { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') },
+      auth,
     } as any);
   }
+
+  // Custom SMTP (Titan, Zoho, cPanel, Hostinger, etc.)
   const smtpHostname = account.smtp_host!;
+  const smtpPort = account.smtp_port ?? 587;
+  const auth = { user: account.smtp_user!, pass: account.smtp_pass! };
+  const tlsBase = { servername: smtpHostname };
+  const isSecure = smtpPort === 465;
+
+  if (useProxy) {
+    const socket = await createSocksSocket(smtpHostname, smtpPort);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return nodemailer.createTransport({
+      socket,
+      secure: isSecure,
+      requireTLS: !isSecure,
+      tls: tlsBase,
+      connectionTimeout: 25000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
+      auth,
+    } as any);
+  }
+
   const host = await randomIPv4(smtpHostname);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
     host,
-    port: account.smtp_port ?? 587,
-    secure: account.smtp_port === 465,
-    requireTLS: account.smtp_port !== 465,
-    tls: { servername: smtpHostname },
+    port: smtpPort,
+    secure: isSecure,
+    requireTLS: !isSecure,
+    tls: tlsBase,
     pool: true,
     maxConnections: 1,
     maxMessages: 100,
     connectionTimeout: 25000,
     greetingTimeout: 15000,
     socketTimeout: 30000,
-    auth: { user: account.smtp_user!, pass: account.smtp_pass! },
+    auth,
   } as any);
 }
 
-// ─── Transporter cache — reuse pooled connections, evict on any send error ───
+// ─── Transport cache (direct mode only — proxy sockets are single-use) ────────
 const _transportCache = new Map<string, nodemailer.Transporter<any>>();
 
 async function getTransport(account: EmailAccount) {
@@ -237,19 +299,31 @@ function evictTransport(account: EmailAccount) {
   }
 }
 
-// ─── Unified send (used by worker and test route) ─────────────────────────────
+// ─── Unified send ─────────────────────────────────────────────────────────────
 
 export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string }> {
   if (account.type === 'gmail-oauth') {
     return sendViaGmailApi(account, opts);
   }
+
+  // Proxy mode: SOCKS5 socket is single-use — create a fresh transport per email
+  if (process.env.SMTP_PROXY) {
+    const transport = await createSmtpTransport(account);
+    try {
+      const info = await transport.sendMail(opts);
+      return { threadId: (info as any).messageId || undefined };
+    } finally {
+      try { (transport as any).close(); } catch { /* ignore */ }
+    }
+  }
+
+  // Direct mode: use cached pooled transport
   const transport = await getTransport(account);
   try {
     const info = await transport.sendMail(opts);
     return { threadId: (info as any).messageId || undefined };
   } catch (err: any) {
     evictTransport(account);
-    // Pool closed itself (idle timeout / prior error) — retry once with fresh transport
     if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
       const fresh = await getTransport(account);
       const info = await fresh.sendMail(opts);
@@ -259,12 +333,10 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   }
 }
 
-// ─── Legacy exports kept for backward compat ─────────────────────────────────
+// ─── Legacy exports ───────────────────────────────────────────────────────────
 
 export async function createTransportAsync(account: EmailAccount) {
   if (account.type === 'gmail-oauth') {
-    // For gmail-oauth the caller should use sendEmail() instead.
-    // This shim returns a fake transport so old call sites still work.
     return {
       sendMail: async (opts: any) => sendViaGmailApi(account, { from: opts.from, to: opts.to, subject: opts.subject, text: opts.text || '', html: opts.html || '' }),
     };
