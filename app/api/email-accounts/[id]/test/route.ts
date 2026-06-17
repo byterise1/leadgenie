@@ -60,7 +60,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       if (account.type === 'gmail-app') {
         return NextResponse.json({
           error: 'Cannot connect to smtp.gmail.com — Google is blocking this server IP. Try redeploying on Railway to get a new IP, then test again.',
-          _debug: { code, errCode, msg },
         }, { status: 500 });
       }
       const host = account.smtp_host || 'SMTP server';
@@ -69,6 +68,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       }, { status: 500 });
     }
 
-    return NextResponse.json({ error: msg, _debug: { code, errCode, msg } }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
