@@ -55,6 +55,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     if (errCode === 'ETIMEDOUT' || errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' ||
         errCode === 'ENETUNREACH' || msgLow.includes('etimedout') || msgLow.includes('timeout') ||
+        msgLow.includes('timed out') || msgLow.includes('proxy') ||
         msgLow.includes('econnrefused') || msgLow.includes('enetunreach')) {
       if (account.type === 'gmail-app') {
         return NextResponse.json({
