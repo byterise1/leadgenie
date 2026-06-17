@@ -311,21 +311,39 @@ export default function EmailAccountsPage() {
   const addAccount = async (type: Account['type'], email: string, extra?: Record<string, string>) => {
     setAddError('');
     setConnecting(true);
+
+    // Step 1: save account to DB
     const res = await fetch('/api/email-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, email, ...extra }),
     });
     const data = await res.json();
-    setConnecting(false);
-    if (res.ok) {
-      // If it already existed, add to list only if not already shown
-      setAccounts(prev => prev.some(a => a.id === data.id) ? prev : [data, ...prev]);
-      setToast(data._already_existed ? 'Account already connected — shown in list.' : 'Account connected successfully!');
-      setStep(null);
-    } else {
+
+    if (!res.ok) {
+      setConnecting(false);
       setAddError(data.error || 'Failed to connect account');
+      return;
     }
+
+    // Step 2: test connection immediately (skip OAuth — verified via redirect)
+    if (type !== 'gmail-oauth') {
+      const testRes = await fetch(`/api/email-accounts/${data.id}/test`, { method: 'POST' });
+      const testData = await testRes.json();
+      if (!testRes.ok) {
+        // Remove the account — bad credentials should not appear in dashboard
+        await fetch(`/api/email-accounts/${data.id}`, { method: 'DELETE' });
+        setConnecting(false);
+        setAddError(testData.error || 'Connection test failed — check your credentials.');
+        return;
+      }
+      data.status = 'active';
+    }
+
+    setConnecting(false);
+    setAccounts(prev => prev.some(a => a.id === data.id) ? prev : [data, ...prev]);
+    setToast('Account connected and verified!');
+    setStep(null);
   };
 
   const totalAccounts = accounts.length;
