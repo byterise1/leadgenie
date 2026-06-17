@@ -327,6 +327,7 @@ export async function register() {
           return;
         }
 
+        console.error(`⛔ Transient error [${lead.email}] code=${err?.code} responseCode=${err?.responseCode} msg=${err?.message}`);
         throw err; // Transient error → BullMQ retries
       }
 
@@ -375,7 +376,9 @@ export async function register() {
       }
 
       console.log(`✓ Sent step ${stepNumber} to ${lead.email}`);
-    }, { connection, concurrency: 5 });
+    }, { connection, concurrency: 5 }).on('failed', (job, err) => {
+      console.error(`❌ Job permanently failed after all retries | campaignLeadId=${job?.data?.campaignLeadId} | ${err?.message}`);
+    });
 
     console.log('✅ Email worker started');
 

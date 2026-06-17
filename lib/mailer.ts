@@ -203,7 +203,7 @@ async function createSmtpTransport(account: EmailAccount) {
   if (account.type === 'gmail-app') {
     const targetHost = 'smtp.gmail.com';
     const targetPort = 587;
-    const auth = { user: account.smtp_user!, pass: account.smtp_pass!.replace(/\s+/g, '') };
+    const auth = { user: account.smtp_user!.trim(), pass: account.smtp_pass!.replace(/\s+/g, '') };
     const tlsBase = { servername: targetHost };
 
     if (useProxy) {
