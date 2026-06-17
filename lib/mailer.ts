@@ -214,9 +214,9 @@ async function createSmtpTransport(account: EmailAccount) {
         secure: false,
         requireTLS: true,
         tls: tlsBase,
-        connectionTimeout: 25000,
-        greetingTimeout: 15000,
-        socketTimeout: 30000,
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000,
         auth,
       } as any);
     }
@@ -254,9 +254,9 @@ async function createSmtpTransport(account: EmailAccount) {
       secure: isSecure,
       requireTLS: !isSecure,
       tls: tlsBase,
-      connectionTimeout: 25000,
-      greetingTimeout: 15000,
-      socketTimeout: 30000,
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
       auth,
     } as any);
   }
