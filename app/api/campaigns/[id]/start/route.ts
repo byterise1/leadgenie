@@ -219,7 +219,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     };
   });
 
-  await emailQueue.addBulk(jobs);
+  try {
+    await emailQueue.addBulk(jobs);
+  } catch (err: any) {
+    console.error('[start] queue error:', err?.message);
+    return NextResponse.json({ error: `Queue error: ${err?.message || 'Redis unavailable'}` }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, status: 'active', queued: campaignLeads.length });
 }
