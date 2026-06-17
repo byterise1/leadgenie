@@ -240,9 +240,9 @@ async function createSmtpTransport(account: EmailAccount) {
   }
 
   // Custom SMTP (Titan, Zoho, cPanel, Hostinger, etc.)
-  const smtpHostname = account.smtp_host!;
+  const smtpHostname = account.smtp_host!.trim();
   const smtpPort = account.smtp_port ?? 587;
-  const auth = { user: account.smtp_user!, pass: account.smtp_pass! };
+  const auth = { user: account.smtp_user!.trim(), pass: account.smtp_pass! };
   const tlsBase = { servername: smtpHostname };
   const isSecure = smtpPort === 465;
 

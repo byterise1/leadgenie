@@ -25,16 +25,20 @@ export async function fetchImapReplies(
 
   const idSet = new Set(sentMessageIds.map(normaliseId));
 
-  const client = new ImapFlow({
-    host: account.imap_host,
+  const imapConfig: ConstructorParameters<typeof ImapFlow>[0] = {
+    host: account.imap_host.trim(),
     port: account.imap_port || 993,
     secure: (account.imap_port || 993) === 993,
-    auth: { user: account.smtp_user || account.email, pass: account.smtp_pass },
+    auth: { user: (account.smtp_user || account.email).trim(), pass: account.smtp_pass },
     logger: false,
     tls: { rejectUnauthorized: false },
     connectionTimeout: 15000,
     socketTimeout: 20000,
-  });
+  };
+  if (process.env.SMTP_PROXY) {
+    (imapConfig as any).proxy = process.env.SMTP_PROXY;
+  }
+  const client = new ImapFlow(imapConfig);
 
   const replies: ImapReply[] = [];
 
