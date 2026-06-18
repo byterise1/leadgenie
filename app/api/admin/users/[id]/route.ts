@@ -10,11 +10,11 @@ async function requireAdmin() {
   return profile?.is_admin ? user : null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id } = params;
+  const { id } = await params;
 
   const [profileRes, campaignsRes, accountsRes, emailsRes] = await Promise.all([
     supabaseAdmin.from('profiles').select('*').eq('id', id).single(),
@@ -33,11 +33,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id } = params;
+  const { id } = await params;
   const body = await req.json();
   const allowed = ['plan', 'credits_total', 'credits_used', 'is_admin', 'full_name'];
   const updates: Record<string, unknown> = {};
@@ -56,11 +56,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(data);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id } = params;
+  const { id } = await params;
   if (id === admin.id) return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
 
   const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
