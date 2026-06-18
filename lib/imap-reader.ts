@@ -17,17 +17,25 @@ export type ImapCredentials = {
   email: string;
 };
 
+function decodeQP(str: string): string {
+  // Quoted-printable: join soft line breaks, then decode =XX hex escapes
+  return str
+    .replace(/=\r?\n/g, '')
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
 function extractSnippet(raw: string): string {
-  // raw is BODY[TEXT] — no envelope headers, but may have MIME structure
-  return raw
-    .replace(/--[^\r\n]*/g, '')                    // MIME boundaries
-    .replace(/Content-[^\r\n]+/gi, '')             // Content-Type / Content-Transfer-Encoding
-    .replace(/MIME-Version:[^\r\n]+/gi, '')        // MIME-Version
-    .replace(/^On .+?\n?.+?wrote:\s*$/gm, '')      // "On X, Y wrote:" (Gmail-style, may wrap)
-    .replace(/^>.*$/gm, '')                        // quoted lines
-    .replace(/<[^>]+>/g, ' ')                     // HTML tags
-    .replace(/&[a-z]+;/gi, ' ')                   // HTML entities (&amp; etc.)
-    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')    // base64 blobs
+  const decoded = decodeQP(raw);
+  return decoded
+    .replace(/--[^\r\n]*/g, '')                      // MIME boundaries
+    .replace(/Content-[^\r\n]+/gi, '')               // MIME sub-headers
+    .replace(/MIME-Version:[^\r\n]+/gi, '')
+    .replace(/^On .+?\n?.+?wrote:\s*$/gm, '')        // "On X wrote:" (Gmail-style)
+    .replace(/^>.*$/gm, '')                          // quoted lines
+    .replace(/https?:\/\/\S+/g, '')                  // URLs (strips tracking links)
+    .replace(/<[^>]+>/g, ' ')                       // HTML tags
+    .replace(/&[a-z#0-9]+;/gi, ' ')                 // HTML entities
+    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')      // base64 blobs
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 300);
