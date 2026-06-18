@@ -18,16 +18,16 @@ export type ImapCredentials = {
 };
 
 function extractSnippet(raw: string): string {
-  // Find body after email headers (double CRLF)
-  const bodyStart = raw.indexOf('\r\n\r\n');
-  const body = bodyStart >= 0 ? raw.slice(bodyStart + 4) : raw;
-  return body
-    .replace(/--[^\r\n]*/g, '')            // MIME boundaries
-    .replace(/Content-[^\r\n]+/g, '')      // MIME sub-headers
-    .replace(/^On .+wrote:.*$/gm, '')      // "On X wrote:" quoted reply header
-    .replace(/^>.*$/gm, '')               // quoted lines starting with >
-    .replace(/<[^>]+>/g, ' ')            // HTML tags
-    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '') // base64 blobs
+  // raw is BODY[TEXT] — no envelope headers, but may have MIME structure
+  return raw
+    .replace(/--[^\r\n]*/g, '')                    // MIME boundaries
+    .replace(/Content-[^\r\n]+/gi, '')             // Content-Type / Content-Transfer-Encoding
+    .replace(/MIME-Version:[^\r\n]+/gi, '')        // MIME-Version
+    .replace(/^On .+?\n?.+?wrote:\s*$/gm, '')      // "On X, Y wrote:" (Gmail-style, may wrap)
+    .replace(/^>.*$/gm, '')                        // quoted lines
+    .replace(/<[^>]+>/g, ' ')                     // HTML tags
+    .replace(/&[a-z]+;/gi, ' ')                   // HTML entities (&amp; etc.)
+    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')    // base64 blobs
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 300);
@@ -104,11 +104,12 @@ export async function fetchImapReplies(
         try {
           for await (const msg of client.fetch(
             matchingUids,
-            { source: { start: 0, maxLength: 2000 } } as any,
+            { bodyParts: ['TEXT'] } as any,
             { uid: true },
           )) {
-            const raw = (msg as any).source?.toString('utf8') || '';
-            if (raw) snippetMap.set(msg.uid as number, extractSnippet(raw));
+            const bp = (msg as any).bodyParts as Map<string, Buffer> | undefined;
+            const buf = bp?.get('TEXT') ?? bp?.get('text');
+            if (buf) snippetMap.set(msg.uid as number, extractSnippet(buf.toString('utf8')));
           }
         } catch { /* snippet is optional */ }
       }

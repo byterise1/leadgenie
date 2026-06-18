@@ -549,6 +549,12 @@ export async function register() {
                 await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
                   `New reply from ${reply.fromName || reply.fromEmail} — "${reply.subject || sent.subject}"`,
                   'info', '/dashboard/inbox');
+              } else if (reply.snippet && existing.id) {
+                // Backfill snippet for threads that were created before snippet support
+                await supabase.from('inbox_threads')
+                  .update({ last_message: reply.snippet })
+                  .eq('id', existing.id)
+                  .like('last_message', 'Reply from %');
               }
 
               await supabase.from('sent_emails').update({ replied_at: reply.receivedAt }).eq('id', sent.id);
