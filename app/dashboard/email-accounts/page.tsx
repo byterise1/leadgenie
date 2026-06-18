@@ -107,7 +107,7 @@ function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
 }
 
 function ImapForm({ onBack, onConnect, connecting }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void; connecting?: boolean }) {
-  const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '587', pass: '' });
+  const [form, setForm] = useState({ email: '', imapHost: '', imapPort: '993', smtpHost: '', smtpPort: '465', pass: '' });
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.email && form.imapHost && form.smtpHost && form.pass;
   return (
@@ -148,7 +148,7 @@ function ImapForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
           <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
           <select value={form.smtpPort} onChange={e => set('smtpPort', e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
-            {['587', '465', '25'].map(p => <option key={p}>{p}</option>)}
+            {['465', '587', '25'].map(p => <option key={p}>{p}</option>)}
           </select>
         </div>
       </div>

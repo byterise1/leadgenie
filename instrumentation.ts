@@ -542,7 +542,7 @@ export async function register() {
                   user_id: account.user_id, campaign_id: sent.campaign_id,
                   lead_id: sent.lead_id, account_id: account.id,
                   subject: reply.subject || sent.subject,
-                  last_message: `Reply from ${reply.fromEmail}`,
+                  last_message: reply.snippet || `Reply from ${reply.fromEmail}`,
                   from_email: reply.fromEmail, from_name: reply.fromName,
                   status: 'new', read: false, received_at: reply.receivedAt,
                 });

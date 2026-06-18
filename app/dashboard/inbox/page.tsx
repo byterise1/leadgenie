@@ -24,6 +24,9 @@ type Thread = {
     id: string;
     name: string;
   };
+  account?: {
+    email: string;
+  };
 };
 
 export default function InboxPage() {
@@ -207,6 +210,10 @@ export default function InboxPage() {
                   {selected.from_name && selected.from_name !== selected.from_email ? ` (${selected.from_name})` : ''}
                   {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
                   {' · '}{new Date(selected.received_at).toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  To: {selected.lead?.email || '—'}
+                  {selected.account?.email ? ` · via ${selected.account.email}` : ''}
                 </p>
                 {selected.campaign && (
                   <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mt-1">
