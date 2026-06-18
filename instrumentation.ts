@@ -499,8 +499,11 @@ export async function register() {
               } catch { /* skip single thread error */ }
             }
 
-          } else if (account.imap_host) {
-            // ── IMAP path (Titan, Zoho, Yahoo, App Password, Custom SMTP) ────
+          } else if (account.imap_host || account.type === 'gmail-app') {
+            // ── IMAP path (Gmail App Password, Titan, Zoho, Custom SMTP) ────
+            const imapHost = account.imap_host || 'imap.gmail.com';
+            const imapPort = account.imap_port || 993;
+
             const { data: sentEmails } = await supabase
               .from('sent_emails')
               .select('id, message_id, lead_id, campaign_id, subject')
@@ -513,8 +516,8 @@ export async function register() {
 
             const replies = await imapFetch(
               {
-                imap_host: account.imap_host,
-                imap_port: account.imap_port || 993,
+                imap_host: imapHost,
+                imap_port: imapPort,
                 smtp_user: account.smtp_user || account.email,
                 smtp_pass: account.smtp_pass,
                 email: account.email,

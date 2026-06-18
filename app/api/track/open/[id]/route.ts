@@ -9,6 +9,8 @@ const BOT_PATTERNS = [
   'facebookexternalhit', 'bot/', 'crawler', 'spider',
   'wget/', 'curl/', 'python-requests', 'postmanruntime',
   'okhttp', 'go-http-client', 'apache-httpclient',
+  // Google Image Proxy prefetches email images on delivery — not a real open
+  'googleimageproxy', 'google image proxy',
 ];
 
 function isBot(ua: string): boolean {
