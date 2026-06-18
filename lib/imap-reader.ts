@@ -18,7 +18,6 @@ export type ImapCredentials = {
 };
 
 function decodeQP(str: string): string {
-  // Quoted-printable: join soft line breaks, then decode =XX hex escapes
   return str
     .replace(/=\r?\n/g, '')
     .replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
@@ -26,19 +25,43 @@ function decodeQP(str: string): string {
 
 function extractSnippet(raw: string): string {
   const decoded = decodeQP(raw);
-  return decoded
-    .replace(/--[^\r\n]*/g, '')                      // MIME boundaries
-    .replace(/Content-[^\r\n]+/gi, '')               // MIME sub-headers
+
+  // Mark blockquote regions as "> " lines BEFORE stripping HTML tags
+  const withMarkedQuotes = decoded
+    .replace(/<blockquote[^>]*>/gi, '\n__QUOTE_START__\n')
+    .replace(/<\/blockquote>/gi, '\n__QUOTE_END__\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|tr|li)>/gi, '\n');
+
+  // Strip remaining HTML, MIME structure, base64, URLs
+  const stripped = withMarkedQuotes
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z#0-9]+;/gi, ' ')
+    .replace(/--[^\r\n]*/g, '')
+    .replace(/Content-[^\r\n]+/gi, '')
     .replace(/MIME-Version:[^\r\n]+/gi, '')
-    .replace(/^On .+?\n?.+?wrote:\s*$/gm, '')        // "On X wrote:" (Gmail-style)
-    .replace(/^>.*$/gm, '')                          // quoted lines
-    .replace(/https?:\/\/\S+/g, '')                  // URLs (strips tracking links)
-    .replace(/<[^>]+>/g, ' ')                       // HTML tags
-    .replace(/&[a-z#0-9]+;/gi, ' ')                 // HTML entities
-    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')      // base64 blobs
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 300);
+    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')
+    .replace(/https?:\/\/\S+/g, '');
+
+  // Walk line by line; stop before quoted sections
+  const lines = stripped.split(/\r?\n/);
+  const out: string[] = [];
+  let inQuote = false;
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t === '__QUOTE_START__') { inQuote = true; continue; }
+    if (t === '__QUOTE_END__')   { inQuote = false; continue; }
+    if (inQuote) continue;
+    if (t.startsWith('>')) break;                          // plain-text quote
+    if (/^On .{10,}wrote:\s*$/.test(t)) break;            // "On X wrote:"
+    if (/^-{4,}|^_{4,}/.test(t)) break;                  // ---- signature / divider
+    const clean = t.replace(/\s+/g, ' ').trim();
+    if (clean.length > 1) out.push(clean);
+  }
+
+  const snippet = out.join(' ').replace(/\s+/g, ' ').trim();
+  return (snippet || out.join(' ')).slice(0, 2000);
 }
 
 export async function fetchImapReplies(

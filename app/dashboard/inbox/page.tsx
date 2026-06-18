@@ -238,9 +238,26 @@ export default function InboxPage() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {selected.last_message || 'No message content.'}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Reply body */}
+            <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Reply</p>
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {selected.last_message || 'No message content.'}
+              </p>
+            </div>
+
+            {/* Original email context */}
+            <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Original Email Sent</p>
+              <div className="text-xs text-gray-500 space-y-0.5">
+                <p><span className="font-semibold text-gray-600">From:</span> {selected.account?.email || '—'}</p>
+                <p><span className="font-semibold text-gray-600">To:</span> {selected.lead?.email || selected.from_email || '—'}</p>
+                <p><span className="font-semibold text-gray-600">Subject:</span> {selected.subject?.replace(/^Re:\s*/i, '') || '—'}</p>
+                {selected.campaign && (
+                  <p><span className="font-semibold text-gray-600">Campaign:</span> {selected.campaign.name}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
