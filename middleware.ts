@@ -24,12 +24,29 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
 
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+  // Protect dashboard routes
+  if (path.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') && user) {
+  // Protect admin routes
+  if (path.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+    if (!profile?.is_admin) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  if ((path === '/login' || path === '/signup') && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -37,5 +54,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup'],
+  matcher: ['/dashboard/:path*', '/admin/:path*', '/login', '/signup'],
 };

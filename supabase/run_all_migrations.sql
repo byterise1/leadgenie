@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- LeadGenie — run this ONCE in Supabase SQL Editor
+-- Lead Genie — run this ONCE in Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════
 
 -- 1. Create profiles for existing users
@@ -73,5 +73,25 @@ CREATE POLICY "Users manage own list members"
 
 CREATE POLICY "Users manage own notifications"
   ON notifications FOR ALL USING (auth.uid() = user_id);
+
+-- 8. Admin + Warmup columns
+ALTER TABLE profiles       ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_day    INTEGER DEFAULT 0;
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_target INTEGER DEFAULT 40;
+
+-- 9. Enable RLS on warmup_emails (if not already)
+ALTER TABLE warmup_emails ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage own warmup_emails" ON warmup_emails;
+CREATE POLICY "Users manage own warmup_emails"
+  ON warmup_emails FOR ALL
+  USING (
+    from_account_id IN (SELECT id FROM email_accounts WHERE user_id = auth.uid())
+    OR
+    to_account_id   IN (SELECT id FROM email_accounts WHERE user_id = auth.uid())
+  );
+
+-- 10. Notifications link column
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT;
 
 SELECT 'Done ✓' AS result;

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════
--- LeadGenie Database Schema
+-- Lead Genie Database Schema
 -- Run this in Supabase → SQL Editor → Run
 -- ═══════════════════════════════════════════
 
@@ -13,6 +13,7 @@ create table if not exists profiles (
   website text,
   timezone text default 'UTC',
   plan text default 'free',
+  is_admin boolean default false,
   credits_used integer default 0,
   credits_total integer default 100,
   created_at timestamptz default now()
@@ -35,6 +36,8 @@ create table if not exists email_accounts (
   status text default 'active' check (status in ('active','warming','error','paused')),
   health_score integer default 80,
   warmup_enabled boolean default false,
+  warmup_day integer default 0,
+  warmup_target integer default 40,
   sent_today integer default 0,
   created_at timestamptz default now()
 );

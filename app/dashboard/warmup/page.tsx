@@ -8,6 +8,9 @@ type WarmupAccount = {
   email: string;
   type: string;
   warmup_enabled: boolean;
+  warmup_day: number;
+  warmup_target: number;
+  warmup_emails_sent: number;
   health_score: number;
   sent_today: number;
   status: 'active' | 'warming' | 'error' | 'paused';
@@ -44,44 +47,83 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+function RampBar({ day, target }: { day: number; target: number }) {
+  const pct = Math.min(100, Math.round((Math.min(day, 30) / 30) * 100));
+  const todayTarget = day <= 0 ? 2 : Math.max(2, Math.floor(target * (Math.min(day, 30) / 30)));
+  return (
+    <div className="flex flex-col gap-1 min-w-0 flex-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-gray-400">Day {day}</span>
+        <span className="text-[10px] font-semibold text-gray-600">{todayTarget}/{target}/day</span>
+      </div>
+      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
+      </div>
+    </div>
+  );
+}
+
 export default function WarmupPage() {
   const [tab, setTab] = useState('accounts');
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rampTarget, setRampTarget] = useState(40);
-  const [replyRate, setReplyRate] = useState(30);
-  const [weekdays, setWeekdays] = useState([true, true, true, true, true, false, false]);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
-    fetch('/api/email-accounts')
+    fetch('/api/warmup')
       .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setAccounts(data);
-      })
+      .then(data => { if (Array.isArray(data)) setAccounts(data); })
       .finally(() => setLoading(false));
   }, []);
 
   const toggleWarmup = async (id: string, currentlyEnabled: boolean) => {
     const enabled = !currentlyEnabled;
     setAccounts(prev => prev.map(a => a.id === id
-      ? { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' }
+      ? { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active', warmup_day: enabled ? 0 : a.warmup_day }
       : a
     ));
-    await fetch('/api/warmup', {
+    setSavingId(id);
+    const res = await fetch('/api/warmup', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account_id: id, enabled }),
     });
+    const data = await res.json();
+    if (!data.error) showToast(enabled ? 'Warmup enabled — ramp starts next cycle' : 'Warmup disabled');
+    setSavingId(null);
   };
 
-  const activeCount = accounts.filter(a => a.warmup_enabled || a.status === 'warming').length;
+  const updateTarget = async (id: string, warmup_target: number) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_target } : a));
+    await fetch('/api/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, warmup_target }),
+    });
+  };
+
+  const warmingAccounts = accounts.filter(a => a.warmup_enabled || a.status === 'warming');
   const avgScore = accounts.length
     ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
     : 0;
-  const totalSentToday = accounts.reduce((s, a) => s + (a.sent_today || 0), 0);
+  const totalSentToday = warmingAccounts.reduce((s, a) => s + (a.sent_today || 0), 0);
+  const totalWarmupSent = warmingAccounts.reduce((s, a) => s + (a.warmup_emails_sent || 0), 0);
 
   return (
     <main className="flex-1 p-6 space-y-6">
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-gray-900 text-white text-sm font-semibold rounded-xl px-5 py-3 shadow-xl z-50 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/>
+          {toast}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Warmup</h1>
@@ -91,10 +133,10 @@ export default function WarmupPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Accounts warming', value: String(activeCount) },
+          { label: 'Accounts warming', value: String(warmingAccounts.length) },
           { label: 'Avg health score', value: accounts.length ? `${avgScore}%` : '—' },
           { label: 'Emails sent today', value: String(totalSentToday) },
-          { label: 'Inbox placement', value: accounts.length ? '—' : '—' },
+          { label: 'Total warmup sent', value: totalWarmupSent.toLocaleString() },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
@@ -116,7 +158,7 @@ export default function WarmupPage() {
         <>
           {loading ? (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}
+              {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i}/>)}
             </div>
           ) : accounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-16 flex flex-col items-center text-center">
@@ -137,21 +179,25 @@ export default function WarmupPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_1fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                <span>Account</span><span>Status</span><span>Score</span><span>Sent today</span><span>Health</span><span>Warmup</span>
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Account</span><span>Status</span><span>Score</span><span>Ramp Progress</span><span>Health</span><span>Warmup</span>
               </div>
               {accounts.map(acc => (
-                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_1fr_1fr_auto] gap-4 items-center">
+                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center">
                   <div>
                     <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                    <p className="text-[10px] text-gray-400">{acc.type}</p>
+                    <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-gray-300'}`}/>
+                    <span className={`w-1.5 h-1.5 rounded-full ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400 animate-pulse' : 'bg-gray-300'}`}/>
                     <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
                   </div>
                   <ScoreRing score={acc.health_score || 0}/>
-                  <span className="text-sm font-semibold text-gray-700">{acc.sent_today || 0}</span>
+                  {acc.warmup_enabled ? (
+                    <RampBar day={acc.warmup_day || 0} target={acc.warmup_target || 40}/>
+                  ) : (
+                    <span className="text-xs text-gray-400">Warmup off</span>
+                  )}
                   <div className="flex items-center gap-2">
                     <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
@@ -159,10 +205,18 @@ export default function WarmupPage() {
                     </div>
                     <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
                   </div>
-                  <Toggle
-                    on={acc.warmup_enabled || acc.status === 'warming'}
-                    onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
-                  />
+                  <div className="relative">
+                    {savingId === acc.id && (
+                      <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    )}
+                    <Toggle
+                      on={acc.warmup_enabled || acc.status === 'warming'}
+                      onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -173,8 +227,8 @@ export default function WarmupPage() {
             <div className="grid sm:grid-cols-4 gap-4">
               {[
                 { step: '1', title: 'Enable warmup', desc: 'Toggle warmup on for any connected account', color: 'blue' },
-                { step: '2', title: 'Auto-sends', desc: 'We send and receive emails on your behalf daily', color: 'indigo' },
-                { step: '3', title: 'Score grows', desc: 'Your sender score improves over 2–4 weeks', color: 'emerald' },
+                { step: '2', title: 'Auto-sends', desc: 'System sends emails between warmed accounts every 6h', color: 'indigo' },
+                { step: '3', title: 'Score grows', desc: 'Health score improves over 2–4 weeks', color: 'emerald' },
                 { step: '4', title: 'Safe to send', desc: 'Launch campaigns with better inbox placement', color: 'violet' },
               ].map(s => (
                 <div key={s.step} className="flex flex-col gap-2">
@@ -191,53 +245,52 @@ export default function WarmupPage() {
       )}
 
       {tab === 'settings' && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 max-w-xl">
-          <h2 className="text-base font-bold text-gray-900">Warmup Settings</h2>
-          <p className="text-sm text-gray-400 -mt-3">These apply to all accounts with warmup enabled.</p>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-semibold text-gray-700">Daily email target</label>
-              <span className="text-sm font-bold text-blue-600">{rampTarget} / day</span>
+        <div className="space-y-4 max-w-xl">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Per-Account Settings</h2>
+              <p className="text-sm text-gray-400 mt-0.5">Set warmup target for each account individually.</p>
             </div>
-            <input type="range" min={5} max={100} step={5} value={rampTarget}
-              onChange={e => setRampTarget(Number(e.target.value))}
-              className="w-full accent-blue-600"/>
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-              <span>5 (slow ramp)</span><span>100 (aggressive)</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5">Recommended: 20–40/day for new accounts.</p>
+            {accounts.length === 0 ? (
+              <p className="text-sm text-gray-400">No accounts connected yet.</p>
+            ) : accounts.map(acc => (
+              <div key={acc.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${acc.warmup_enabled ? 'bg-amber-400' : 'bg-gray-300'}`}/>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-gray-700">Daily email target</label>
+                    <span className="text-xs font-bold text-blue-600">{acc.warmup_target || 40} / day</span>
+                  </div>
+                  <input type="range" min={5} max={100} step={5}
+                    value={acc.warmup_target || 40}
+                    onChange={e => updateTarget(acc.id, Number(e.target.value))}
+                    className="w-full accent-blue-600"/>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                    <span>5 (slow)</span><span>100 (aggressive)</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-semibold text-gray-700">Reply rate target</label>
-              <span className="text-sm font-bold text-blue-600">{replyRate}%</span>
-            </div>
-            <input type="range" min={10} max={50} step={5} value={replyRate}
-              onChange={e => setReplyRate(Number(e.target.value))}
-              className="w-full accent-blue-600"/>
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-              <span>10% (conservative)</span><span>50% (realistic)</span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">Active days</p>
-            <div className="flex gap-2">
-              {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d, i) => (
-                <button key={d} type="button"
-                  onClick={() => setWeekdays(w => w.map((v, idx) => idx === i ? !v : v))}
-                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${weekdays[i] ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
-                  {d}
-                </button>
-              ))}
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-blue-900 mb-1">Warmup Pool</p>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  Warmup emails are sent between all {accounts.filter(a => a.warmup_enabled).length} warmed accounts in your pool.
+                  The more accounts you warm, the more realistic the warmup traffic.
+                  Warmup runs automatically every 6 hours.
+                </p>
+              </div>
             </div>
           </div>
-
-          <button className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
-            Save Settings
-          </button>
         </div>
       )}
 
@@ -245,23 +298,41 @@ export default function WarmupPage() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-5">Warmup Performance</h3>
-            {accounts.length === 0 ? (
+            {accounts.filter(a => a.warmup_enabled).length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
                 <p className="text-sm font-semibold text-gray-400">No warmup data yet</p>
-                <p className="text-xs text-gray-400 mt-0.5">Connect and enable warmup to see stats here.</p>
+                <p className="text-xs text-gray-400 mt-0.5">Enable warmup on an account to see stats here.</p>
               </div>
             ) : (
-              <div className="grid sm:grid-cols-3 gap-6">
-                {[
-                  { label: 'Total accounts warming', value: activeCount, suffix: '' },
-                  { label: 'Emails sent today', value: totalSentToday, suffix: '' },
-                  { label: 'Avg health score', value: avgScore, suffix: '%' },
-                ].map(s => (
-                  <div key={s.label} className="text-center">
-                    <p className="text-3xl font-extrabold text-gray-900">{s.value}<span className="text-sm font-normal text-gray-400 ml-1">{s.suffix}</span></p>
-                    <p className="text-xs text-gray-400 mt-1">{s.label}</p>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {accounts.filter(a => a.warmup_enabled).map(acc => {
+                  const pct = Math.min(100, Math.round((Math.min(acc.warmup_day || 0, 30) / 30) * 100));
+                  return (
+                    <div key={acc.id} className="border border-gray-100 rounded-xl p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{acc.email}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{acc.warmup_emails_sent} total warmup emails sent</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ScoreRing score={acc.health_score || 0}/>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-gray-700">Warmup progress</span>
+                          <span className="text-xs text-gray-500">Day {acc.warmup_day || 0} / 30</span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          {pct >= 100 ? 'Fully warmed — maintaining at target volume' : `${pct}% complete — ramping up to ${acc.warmup_target || 40}/day`}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

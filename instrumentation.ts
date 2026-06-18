@@ -366,7 +366,7 @@ export async function register() {
       if (hasNextStep) {
         const { emailQueue } = await import('./lib/queue');
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
-        // TEST MODE: 1 unit = 1 minute. Revert to 24*60*60*1000 for production (days).
+        // TEST MODE: 1 unit = 1 minute. Change to 24*60*60*1000 before launch.
         const DELAY_UNIT_MS = 60 * 1000;
         const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
         const targetFireMs = Date.now() + rawDelayMs;
@@ -571,5 +571,110 @@ export async function register() {
     }, { connection, concurrency: 1 });
 
     console.log('✅ Inbox sync worker started (every 90s)');
+
+    // ── Warmup worker (runs every 6 hours) ──────────────────────────────────
+    const warmupQueue = new Queue('warmup', { connection });
+    await warmupQueue.upsertJobScheduler('warmup-daily', { every: 6 * 60 * 60_000 }, { name: 'warmup', data: {} });
+
+    const WARMUP_SUBJECTS = [
+      'Quick follow-up',
+      'Checking in',
+      'Thoughts on this?',
+      'Following up from our conversation',
+      'Hope this finds you well',
+      'A question for you',
+      'Reaching out',
+      'Wanted to connect',
+    ];
+    const WARMUP_BODIES = [
+      'Hi,\n\nJust wanted to follow up and see if you had a chance to look at my previous message.\n\nBest regards',
+      'Hello,\n\nHope you are having a great week. I wanted to touch base regarding our previous discussion.\n\nThank you',
+      'Hi there,\n\nI hope this email finds you well. I wanted to check in and see how things are going on your end.\n\nBest',
+      'Hello,\n\nThanks for your time. I wanted to reach out and continue our conversation from last week.\n\nRegards',
+      'Hi,\n\nI wanted to follow up on my earlier email. Please let me know if you have any questions.\n\nBest wishes',
+    ];
+
+    function warmupDailyTarget(day: number, target: number): number {
+      if (day <= 0) return 2;
+      const ramp = Math.floor(target * (Math.min(day, 30) / 30));
+      return Math.max(2, Math.min(ramp, target));
+    }
+
+    new SyncWorker('warmup', async () => {
+      const { data: allWarmupAccounts } = await supabase
+        .from('email_accounts')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, access_token, refresh_token, warmup_day, warmup_target, health_score, sent_today')
+        .eq('warmup_enabled', true)
+        .neq('status', 'error');
+
+      if (!allWarmupAccounts || allWarmupAccounts.length < 2) return;
+
+      console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts`);
+
+      const { sendEmail } = await import('./lib/mailer');
+
+      for (const account of allWarmupAccounts) {
+        try {
+          const day = (account.warmup_day ?? 0) + 1;
+          const target = account.warmup_target ?? 40;
+          const emailsToday = warmupDailyTarget(day, target);
+
+          const pool = allWarmupAccounts.filter(a => a.id !== account.id);
+          if (pool.length === 0) continue;
+
+          let sent = 0;
+          for (let i = 0; i < emailsToday; i++) {
+            const toAccount = pool[Math.floor(Math.random() * pool.length)];
+            const subject = WARMUP_SUBJECTS[Math.floor(Math.random() * WARMUP_SUBJECTS.length)];
+            const body = WARMUP_BODIES[Math.floor(Math.random() * WARMUP_BODIES.length)];
+
+            try {
+              await sendEmail(
+                {
+                  id: account.id,
+                  type: account.type,
+                  email: account.email,
+                  smtp_host: account.smtp_host,
+                  smtp_port: account.smtp_port,
+                  smtp_user: account.smtp_user,
+                  smtp_pass: account.smtp_pass,
+                },
+                {
+                  from: `"LeadGenie Warmup" <${account.email}>`,
+                  to: toAccount.email,
+                  subject: `[warmup] ${subject}`,
+                  text: body,
+                  html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+                }
+              );
+
+              await supabase.from('warmup_emails').insert({
+                from_account_id: account.id,
+                to_account_id: toAccount.id,
+                subject,
+                body,
+                sent_at: new Date().toISOString(),
+              });
+
+              sent++;
+            } catch (e: any) {
+              console.error(`[warmup] send failed ${account.email} → ${toAccount.email}: ${e.message}`);
+            }
+          }
+
+          const newHealth = Math.min(100, Math.round((account.health_score ?? 50) + (sent / Math.max(emailsToday, 1)) * 2));
+          await supabase.from('email_accounts').update({
+            warmup_day: day,
+            health_score: newHealth,
+          }).eq('id', account.id);
+
+          console.log(`[warmup] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
+        } catch (e: any) {
+          console.error(`[warmup] account error ${account.email}: ${e.message}`);
+        }
+      }
+    }, { connection, concurrency: 1 });
+
+    console.log('✅ Warmup worker started (every 6h)');
   }
 }

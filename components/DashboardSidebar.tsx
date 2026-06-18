@@ -66,6 +66,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   const [unreadCount, setUnreadCount] = useState(0);
   const [creditsUsed, setCreditsUsed] = useState(0);
   const [creditsTotal, setCreditsTotal] = useState(100);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -73,6 +74,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
     fetch('/api/profile').then(r => r.json()).then(d => {
       if (d?.avatar_url) setAvatarUrl(d.avatar_url);
       if (d?.full_name) setUser(u => u ? { ...u, user_metadata: { ...u.user_metadata, full_name: d.full_name } } : u);
+      if (d?.is_admin) setIsAdmin(true);
     }).catch(() => {});
   }, []);
 
@@ -161,6 +163,24 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
               <span className="flex-1">{item.label}</span>
             </Link>
           ))}
+
+          {isAdmin && (
+            <>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2 mt-5">Admin</p>
+              <Link href="/admin" onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname.startsWith('/admin')
+                    ? 'bg-red-50 text-red-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}>
+                <span className={pathname.startsWith('/admin') ? 'text-red-600' : 'text-gray-400'}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </span>
+                <span className="flex-1">Admin Panel</span>
+                <span className="text-[9px] font-bold bg-red-500 text-white rounded px-1">ADMIN</span>
+              </Link>
+            </>
+          )}
 
           <div className="mt-6 mx-1 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 p-4 text-white">
             <div className="flex items-center justify-between mb-1">
