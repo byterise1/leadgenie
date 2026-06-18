@@ -3,6 +3,7 @@ import dns from 'dns';
 import { resolve4 } from 'dns/promises';
 import https from 'https';
 import net from 'net';
+import tls from 'tls';
 import { SocksClient } from 'socks';
 
 // Railway/GCP: Node.js ignores dns.setDefaultResultOrder — resolve IPv4 explicitly
@@ -247,12 +248,27 @@ async function createSmtpTransport(account: EmailAccount) {
   const isSecure = smtpPort === 465;
 
   if (useProxy) {
-    const socket = await createSocksSocket(smtpHostname, smtpPort);
+    const rawSocket = await createSocksSocket(smtpHostname, smtpPort);
+
+    // Port 465 uses implicit SSL — nodemailer does not reliably upgrade a
+    // pre-connected socket to TLS, so we do it manually before handing off.
+    const finalSocket: net.Socket = isSecure
+      ? await new Promise<net.Socket>((resolve, reject) => {
+          const tlsSocket = tls.connect({
+            socket: rawSocket,
+            servername: smtpHostname,
+            rejectUnauthorized: false,
+          });
+          tlsSocket.once('secureConnect', () => resolve(tlsSocket as unknown as net.Socket));
+          tlsSocket.once('error', reject);
+        })
+      : rawSocket;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
-      socket,
-      secure: isSecure,
-      requireTLS: !isSecure,
+      socket: finalSocket,
+      secure: false,   // socket is already in the right state (plain or TLS)
+      requireTLS: false,
       tls: tlsBase,
       connectionTimeout: 30000,
       greetingTimeout: 30000,
