@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 type User = {
@@ -230,7 +230,7 @@ function DetailDrawer({ userId, onClose }: { userId: string; onClose: () => void
   );
 }
 
-export default function AdminUsersPage() {
+function AdminUsersInner() {
   const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -426,5 +426,13 @@ export default function AdminUsersPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<main className="flex-1 p-6"><div className="h-8 w-48 bg-gray-100 rounded animate-pulse"/></main>}>
+      <AdminUsersInner />
+    </Suspense>
   );
 }
