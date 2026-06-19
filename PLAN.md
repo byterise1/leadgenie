@@ -1,4 +1,4 @@
-# LeadGenie — Living Project Plan
+# Lead Genie — Living Project Plan
 > **Rule**: Update this file after EVERY change. One edit to data/style/copy here means update every place it appears across all pages.
 > **Last updated**: 2026-06-06 (session 3)
 
@@ -294,7 +294,7 @@ grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100
 ## 7. Key Components
 
 ### Navbar (`components/Navbar.tsx`)
-- Logo: "LeadGenie" with sparkle icon
+- Logo: "Lead Genie" with sparkle icon
 - Nav items: Campaigns, Email Accounts, Warmup, Unibox, Analytics, Deliverability (no Integrations in nav)
 - CTA: "Start Free" → `/signup`
 

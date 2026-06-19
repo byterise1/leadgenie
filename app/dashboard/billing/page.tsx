@@ -5,6 +5,19 @@ import { useState, useEffect } from 'react';
 
 type Cycle = 'monthly' | 'annual';
 
+type BillingEvent = {
+  id: string;
+  type: string;
+  plan_id: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+};
+
 type Usage = {
   plan: string;
   credits_used: number;
@@ -65,6 +78,7 @@ export default function BillingPage() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
   const [usage, setUsage] = useState<Usage | null>(null);
   const [plans, setPlans] = useState<PlanDef[]>(FALLBACK_PLANS);
+  const [invoices, setInvoices] = useState<BillingEvent[]>([]);
 
   useEffect(() => {
     fetch('/api/billing/usage')
@@ -87,9 +101,15 @@ export default function BillingPage() {
         }
       })
       .catch(() => {});
+    fetch('/api/billing/events')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setInvoices(data); })
+      .catch(() => {});
   }, []);
 
   const currentPlan = usage?.plan || 'free';
+  const currentPlanDef = plans.find(p => p.id === currentPlan);
+  const currentPrice = currentPlanDef?.monthly ?? 0;
 
   return (
     <main className="flex-1 p-6 space-y-7">
@@ -208,45 +228,91 @@ export default function BillingPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <h2 className="text-sm font-bold text-gray-900 mb-4">Payment Method</h2>
-          <div className="flex items-center gap-4 p-4 border border-dashed border-gray-200 rounded-xl mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+        {/* Payment Method */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+          <h2 className="text-sm font-bold text-gray-900">Payment Method</h2>
+
+          <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-700">No payment method</p>
-              <p className="text-xs text-gray-400">Add a card to upgrade your plan</p>
+              <p className="text-sm font-semibold text-gray-700">No card on file</p>
+              <p className="text-xs text-gray-400">Add a card to activate your subscription</p>
             </div>
           </div>
-          <button className="w-full border border-gray-200 text-sm font-semibold text-gray-700 rounded-xl py-2.5 hover:bg-gray-50 transition-colors">
-            + Add payment method
+
+          <button className="w-full flex items-center justify-center gap-2 border border-gray-200 text-sm font-semibold text-gray-700 rounded-xl py-2.5 hover:bg-gray-50 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+            Add payment method
           </button>
-          <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-            {[{ label: 'Next billing date', value: '—' }, { label: 'Billing email', value: '—' }].map(r => (
-              <div key={r.label} className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">{r.label}</span>
-                <span className="text-xs font-semibold text-gray-700">{r.value}</span>
-              </div>
-            ))}
+
+          <div className="pt-3 border-t border-gray-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Current plan</span>
+              <span className="text-xs font-bold text-gray-700 capitalize">{currentPlan} — ${currentPrice}/mo</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Next billing date</span>
+              <span className="text-xs font-semibold text-gray-700">—</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Billing cycle</span>
+              <span className="text-xs font-semibold text-gray-700 capitalize">{cycle}</span>
+            </div>
           </div>
+
+          {currentPlan !== 'free' && (
+            <button className="w-full text-xs font-semibold text-red-400 hover:text-red-600 transition-colors pt-1">
+              Cancel subscription
+            </button>
+          )}
         </div>
 
+        {/* Invoice History */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900">Invoice History</h2>
           </div>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-3">
-              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
-              </svg>
+
+          {invoices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-3">
+                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6M5 8h14M5 8a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v0a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/>
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-500">No invoices yet</p>
+              <p className="text-xs text-gray-400 mt-0.5">Your invoices will appear here after your first payment</p>
             </div>
-            <p className="text-sm font-semibold text-gray-500">No invoices yet</p>
-            <p className="text-xs text-gray-400 mt-0.5">Invoices appear here after your first payment</p>
-          </div>
+          ) : (
+            <div className="space-y-2">
+              {invoices.map(inv => {
+                const amount = (inv.amount / 100).toFixed(2);
+                const date = new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const label = inv.description || (inv.plan_id ? `${inv.plan_id} plan` : inv.type);
+                return (
+                  <div key={inv.id} className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-900 truncate capitalize">{label}</p>
+                      <p className="text-[10px] text-gray-400">{date}</p>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">${amount}</span>
+                    <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 capitalize shrink-0 ${
+                      inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700' :
+                      inv.status === 'failed' ? 'bg-red-50 text-red-600' :
+                      inv.status === 'refunded' ? 'bg-amber-50 text-amber-700' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {inv.status}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </main>
