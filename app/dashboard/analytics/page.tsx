@@ -255,8 +255,35 @@ export default function AnalyticsPage() {
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
-              ) : sortCampaigns(stats.campaigns, sort).map(c => (
-                <tr key={c.id} className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${range !== 'all' && c.sent === 0 ? 'opacity-40' : ''}`}>
+              ) : (() => {
+                const filtered = range === 'all'
+                  ? sortCampaigns(stats.campaigns, sort)
+                  : sortCampaigns(stats.campaigns.filter(c => c.sent > 0), sort);
+
+                if (filtered.length === 0) {
+                  const periodLabel =
+                    range === 'today'  ? 'today' :
+                    range === '7d'     ? 'in the last 7 days' :
+                    range === '30d'    ? 'in the last 30 days' :
+                    range === '90d'    ? 'in the last 90 days' :
+                    range === 'custom' && customFrom
+                      ? `between ${new Date(customFrom + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} and ${new Date(customTo + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : 'in this period';
+                  return (
+                    <tr>
+                      <td colSpan={10} className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="w-8 h-8 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                          <p className="text-sm font-semibold text-gray-500">No emails sent {periodLabel}</p>
+                          <p className="text-xs text-gray-400">Try a different date range to see campaign data.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filtered.map(c => (
+                <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
                   <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
                     {new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -278,7 +305,8 @@ export default function AnalyticsPage() {
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.replied}</td>
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.reply_rate}</td>
                 </tr>
-              ))}
+              ));
+              })()}
             </tbody>
           </table>
         </div>
