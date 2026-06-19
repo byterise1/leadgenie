@@ -564,6 +564,7 @@ function toTemplate(row: Record<string, unknown>): Template {
 
 export default function TemplatesPage() {
   const [userTemplates, setUserTemplates] = useState<Template[]>([]);
+  const [prebuiltTemplates, setPrebuiltTemplates] = useState<Template[]>(DEFAULT_TEMPLATES);
   const [filterCat, setFilterCat] = useState('All');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -571,20 +572,37 @@ export default function TemplatesPage() {
   const [useTarget, setUseTarget] = useState<Template | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Load user templates from Supabase on mount
   useEffect(() => {
     fetch('/api/templates').then(r => r.json()).then(data => {
       if (Array.isArray(data)) setUserTemplates(data.map(toTemplate));
     });
+    fetch('/api/templates/prebuilt').then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        setPrebuiltTemplates(data.map((t: any) => ({
+          id: t.id,
+          dbId: undefined,
+          sourceBuiltinId: null,
+          name: t.name,
+          category: t.category,
+          subject: t.subject,
+          body: t.body,
+          unsubText: t.unsub_text,
+          builtIn: true,
+          openRate: t.open_rate ?? '—',
+          replyRate: t.reply_rate ?? '—',
+          uses: 0,
+        } as Template)));
+      }
+    }).catch(() => {});
   }, []);
 
-  // Merge: user templates first, then built-ins not overridden by a user edit
+  // Merge: user templates first, then prebuilt ones not overridden by a user edit
   const overriddenBuiltinIds = new Set(
     userTemplates.filter(t => t.sourceBuiltinId != null).map(t => t.sourceBuiltinId!)
   );
   const templates: Template[] = [
     ...userTemplates,
-    ...DEFAULT_TEMPLATES.filter(t => !overriddenBuiltinIds.has(t.id as number)),
+    ...prebuiltTemplates.filter(t => !overriddenBuiltinIds.has(t.id as number)),
   ];
 
   const allCats = ['All', ...CATEGORIES];

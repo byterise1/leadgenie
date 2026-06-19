@@ -17,32 +17,27 @@ type Usage = {
   };
 };
 
-const PLANS = [
+type PlanDef = {
+  id: string;
+  name: string;
+  monthly: number;
+  annual: number;
+  highlight: boolean;
+  cta: string;
+  features: string[];
+};
+
+const FALLBACK_PLANS: PlanDef[] = [
   {
-    id: 'free',
-    name: 'Free',
-    monthly: 0,
-    annual: 0,
-    highlight: false,
-    cta: 'Current plan',
+    id: 'free', name: 'Free', monthly: 0, annual: 0, highlight: false, cta: 'Get Started Free',
     features: ['3 campaigns', '500 leads', '1,000 emails / mo', '1 email account', 'Built-in templates', 'Basic analytics'],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    monthly: 49,
-    annual: 39,
-    highlight: true,
-    cta: 'Upgrade to Pro',
+    id: 'pro', name: 'Pro', monthly: 49, annual: 39, highlight: true, cta: 'Upgrade to Pro',
     features: ['Unlimited campaigns', 'Unlimited leads', '50,000 emails / mo', 'Unlimited accounts', 'AI email writer', 'A/B testing', 'Unibox (all replies)', 'Priority support'],
   },
   {
-    id: 'agency',
-    name: 'Agency',
-    monthly: 149,
-    annual: 119,
-    highlight: false,
-    cta: 'Contact Sales',
+    id: 'agency', name: 'Agency', monthly: 149, annual: 119, highlight: false, cta: 'Contact Sales',
     features: ['Everything in Pro', 'Multi-workspace', 'White-label reports', 'Dedicated CSM', 'Custom integrations', 'SLA guarantee', 'Onboarding session'],
   },
 ];
@@ -69,11 +64,28 @@ function UsageBar({ used, max, label }: { used: number; max: number; label: stri
 export default function BillingPage() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [plans, setPlans] = useState<PlanDef[]>(FALLBACK_PLANS);
 
   useEffect(() => {
     fetch('/api/billing/usage')
       .then(r => r.json())
       .then(data => { if (!data.error) setUsage(data); })
+      .catch(() => {});
+    fetch('/api/pricing')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setPlans(data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            monthly: p.monthly_price,
+            annual: p.annual_price,
+            highlight: p.highlighted,
+            cta: p.cta_label,
+            features: Array.isArray(p.features) ? p.features : [],
+          })));
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -143,7 +155,7 @@ export default function BillingPage() {
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4">
-          {PLANS.map(plan => {
+          {plans.map(plan => {
             const price = cycle === 'annual' ? plan.annual : plan.monthly;
             const isCurrent = plan.id === currentPlan;
             return (

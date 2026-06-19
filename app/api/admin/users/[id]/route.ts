@@ -16,11 +16,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const [profileRes, campaignsRes, accountsRes, emailsRes] = await Promise.all([
+  const [profileRes, campaignsRes, accountsRes, emailsRes, bouncedRes, unsubRes] = await Promise.all([
     supabaseAdmin.from('profiles').select('*').eq('id', id).single(),
     supabaseAdmin.from('campaigns').select('id, name, status, total_sent, created_at').eq('user_id', id).order('created_at', { ascending: false }).limit(10),
     supabaseAdmin.from('email_accounts').select('id, email, type, status, health_score, warmup_enabled, sent_today').eq('user_id', id),
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('user_id', id),
+    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('user_id', id).eq('bounced', true),
+    supabaseAdmin.from('campaign_leads').select('id', { count: 'exact', head: true }).eq('user_id', id).eq('unsubscribed', true),
   ]);
 
   const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(id);
@@ -30,6 +32,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     campaigns: campaignsRes.data ?? [],
     accounts: accountsRes.data ?? [],
     totalEmails: emailsRes.count ?? 0,
+    totalBounced: bouncedRes.count ?? 0,
+    totalUnsubscribed: unsubRes.count ?? 0,
   });
 }
 

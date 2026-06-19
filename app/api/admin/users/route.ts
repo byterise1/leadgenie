@@ -20,35 +20,37 @@ export async function GET(req: NextRequest) {
   const limit = 20;
   const offset = (page - 1) * limit;
 
-  // Get profiles
-  let query = supabaseAdmin
+  const { data: profiles, count, error } = await supabaseAdmin
     .from('profiles')
     .select('id, full_name, plan, is_admin, credits_used, credits_total, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const { data: profiles, count, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Get auth emails for these user IDs
   const profileIds = (profiles ?? []).map(p => p.id);
   const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
   const emailMap = new Map(authUsers?.users?.map(u => [u.id, u.email]) ?? []);
 
-  // Get campaign/account counts per user
-  const [campaignsRes, accountsRes, emailsRes] = await Promise.all([
+  const [campaignsRes, accountsRes, emailsRes, bouncedRes, unsubRes] = await Promise.all([
     supabaseAdmin.from('campaigns').select('user_id').in('user_id', profileIds),
     supabaseAdmin.from('email_accounts').select('user_id').in('user_id', profileIds),
     supabaseAdmin.from('sent_emails').select('user_id').in('user_id', profileIds),
+    supabaseAdmin.from('sent_emails').select('user_id').in('user_id', profileIds).eq('bounced', true),
+    supabaseAdmin.from('campaign_leads').select('user_id').in('user_id', profileIds).eq('unsubscribed', true),
   ]);
 
   const campaignCount = new Map<string, number>();
   const accountCount = new Map<string, number>();
   const emailCount = new Map<string, number>();
+  const bouncedCount = new Map<string, number>();
+  const unsubCount = new Map<string, number>();
 
   for (const r of campaignsRes.data ?? []) campaignCount.set(r.user_id, (campaignCount.get(r.user_id) ?? 0) + 1);
   for (const r of accountsRes.data ?? []) accountCount.set(r.user_id, (accountCount.get(r.user_id) ?? 0) + 1);
   for (const r of emailsRes.data ?? []) emailCount.set(r.user_id, (emailCount.get(r.user_id) ?? 0) + 1);
+  for (const r of bouncedRes.data ?? []) bouncedCount.set(r.user_id, (bouncedCount.get(r.user_id) ?? 0) + 1);
+  for (const r of unsubRes.data ?? []) unsubCount.set(r.user_id, (unsubCount.get(r.user_id) ?? 0) + 1);
 
   const users = (profiles ?? [])
     .map(p => ({
@@ -57,6 +59,8 @@ export async function GET(req: NextRequest) {
       campaigns: campaignCount.get(p.id) ?? 0,
       accounts: accountCount.get(p.id) ?? 0,
       emails_sent: emailCount.get(p.id) ?? 0,
+      bounced: bouncedCount.get(p.id) ?? 0,
+      unsubscribed: unsubCount.get(p.id) ?? 0,
     }))
     .filter(u => !search || u.email.toLowerCase().includes(search.toLowerCase()) || (u.full_name || '').toLowerCase().includes(search.toLowerCase()));
 

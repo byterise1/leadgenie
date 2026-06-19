@@ -14,6 +14,8 @@ type User = {
   campaigns: number;
   accounts: number;
   emails_sent: number;
+  bounced: number;
+  unsubscribed: number;
   created_at: string;
 };
 
@@ -22,6 +24,8 @@ type UserDetail = {
   campaigns: { id: string; name: string; status: string; total_sent: number; created_at: string }[];
   accounts: { id: string; email: string; type: string; status: string; health_score: number; warmup_enabled: boolean }[];
   totalEmails: number;
+  totalBounced: number;
+  totalUnsubscribed: number;
 };
 
 const PLAN_OPTS = ['free', 'starter', 'pro', 'agency'];
@@ -42,7 +46,7 @@ const STATUS_COLORS: Record<string, string> = {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 7 }).map((_, i) => (
+      {Array.from({ length: 9 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-3.5 bg-gray-100 rounded animate-pulse w-full max-w-[80px]"/>
         </td>
@@ -165,17 +169,19 @@ function DetailDrawer({ userId, onClose }: { userId: string; onClose: () => void
           <div className="p-6 text-center text-sm text-gray-400">Failed to load user details.</div>
         ) : (
           <div className="p-6 space-y-6">
-            {/* Profile */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { label: 'Plan', value: detail.profile.plan },
+                { label: 'Plan', value: detail.profile.plan, cls: 'capitalize' },
                 { label: 'Credits', value: `${detail.profile.credits_used}/${detail.profile.credits_total}` },
                 { label: 'Emails Sent', value: detail.totalEmails },
+                { label: 'Bounced', value: detail.totalBounced, warn: detail.totalBounced > 0 },
+                { label: 'Unsubscribed', value: detail.totalUnsubscribed },
                 { label: 'Joined', value: new Date(detail.profile.created_at).toLocaleDateString() },
               ].map(s => (
                 <div key={s.label} className="bg-gray-50 rounded-xl px-4 py-3">
                   <p className="text-[10px] font-bold text-gray-400 uppercase">{s.label}</p>
-                  <p className="text-sm font-bold text-gray-900 mt-1 capitalize">{String(s.value)}</p>
+                  <p className={`text-sm font-bold mt-1 ${s.warn ? 'text-red-600' : 'text-gray-900'} ${s.cls ?? ''}`}>{String(s.value)}</p>
                 </div>
               ))}
             </div>
@@ -306,17 +312,15 @@ function AdminUsersInner() {
           <h1 className="text-xl font-bold text-gray-900">Users</h1>
           <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} total accounts</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input
-              type="text"
-              placeholder="Search by email or name…"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-            />
-          </div>
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input
+            type="text"
+            placeholder="Search by email or name…"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+          />
         </div>
       </div>
 
@@ -328,8 +332,10 @@ function AdminUsersInner() {
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">User</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Plan</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Credits</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sent</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Bounced</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Unsub</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Campaigns</th>
-                <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Accounts</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Joined</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
@@ -339,7 +345,7 @@ function AdminUsersInner() {
                 Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i}/>)
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-4 py-16 text-center text-sm text-gray-400">
                     {search ? `No users matching "${search}"` : 'No users found.'}
                   </td>
                 </tr>
@@ -380,10 +386,16 @@ function AdminUsersInner() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-semibold text-gray-700">{u.campaigns}</span>
+                        <span className="text-sm font-semibold text-gray-700">{u.emails_sent}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-semibold text-gray-700">{u.accounts}</span>
+                        <span className={`text-sm font-semibold ${u.bounced > 0 ? 'text-red-500' : 'text-gray-400'}`}>{u.bounced}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-gray-500">{u.unsubscribed}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-gray-700">{u.campaigns}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString()}</span>
@@ -408,7 +420,6 @@ function AdminUsersInner() {
           </table>
         </div>
 
-        {/* Pagination */}
         {pages > 1 && (
           <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
             <span className="text-xs text-gray-400">Page {page} of {pages}</span>

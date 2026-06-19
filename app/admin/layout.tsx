@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/Logo';
@@ -27,13 +27,29 @@ const navSections = [
         label: 'Campaigns', href: '/admin/campaigns',
         icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>,
       },
+      {
+        label: 'Warmup', href: '/admin/warmup',
+        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg>,
+      },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      {
+        label: 'Templates', href: '/admin/templates',
+        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+      },
+      {
+        label: 'Pricing Plans', href: '/admin/pricing',
+        icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+      },
     ],
   },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const signOut = async () => {
@@ -47,12 +63,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar overlay */}
       {sidebarOpen && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setSidebarOpen(false)}/>}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-slate-900 flex flex-col z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <div className="px-5 h-14 flex items-center border-b border-slate-700/60 shrink-0 gap-3">
+      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0 gap-3">
           <Logo size={28} textSize="text-[14px]" />
           <span className="text-[10px] font-bold bg-red-500 text-white rounded px-1.5 py-0.5 leading-tight">ADMIN</span>
         </div>
@@ -60,15 +75,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
           {navSections.map(section => (
             <div key={section.label}>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2">{section.label}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1.5">{section.label}</p>
               {section.items.map(item => (
                 <Link key={item.href} href={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive(item.href)
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`}>
-                  <span className={isActive(item.href) ? 'text-white' : 'text-slate-500'}>{item.icon}</span>
+                  <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
                   {item.label}
                 </Link>
               ))}
@@ -76,14 +91,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        <div className="px-3 py-3 border-t border-slate-700/60 shrink-0 space-y-1">
+        <div className="px-3 py-3 border-t border-gray-100 shrink-0 space-y-1">
           <Link href="/dashboard"
-            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             Back to Dashboard
           </Link>
           <button onClick={signOut}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors">
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Sign out
           </button>
