@@ -3,16 +3,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 
-type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
+type RangeKey = 'today' | 'yesterday' | '7d' | '30d' | '90d' | 'all' | 'custom';
 type SortKey  = 'newest' | 'oldest' | 'most_sent' | 'status';
 
 const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
-  { value: 'today',  label: 'Today'    },
-  { value: '7d',     label: '7 days'   },
-  { value: '30d',    label: '30 days'  },
-  { value: '90d',    label: '90 days'  },
-  { value: 'all',    label: 'All time' },
-  { value: 'custom', label: 'Custom'   },
+  { value: 'today',     label: 'Today'     },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: '7d',        label: '7 days'    },
+  { value: '30d',       label: '30 days'   },
+  { value: '90d',       label: '90 days'   },
+  { value: 'all',       label: 'All time'  },
+  { value: 'custom',    label: 'Custom'    },
 ];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -61,37 +62,45 @@ function sortCampaigns(campaigns: Campaign[], sort: SortKey): Campaign[] {
   return list;
 }
 
+function toDateInput(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 function getRangeDates(range: RangeKey, customFrom: string, customTo: string): { from: string; to: string } | null {
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const toISO = (d: Date) => d.toISOString();
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const endOfDay   = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
 
   if (range === 'all') return null;
+
   if (range === 'today') {
-    const start = startOfDay(now);
-    const end = new Date(start); end.setDate(end.getDate() + 1);
-    return { from: toISO(start), to: toISO(end) };
+    return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+  }
+  if (range === 'yesterday') {
+    const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+    return { from: startOfDay(yest).toISOString(), to: endOfDay(yest).toISOString() };
   }
   if (range === 'custom') {
     if (!customFrom || !customTo) return null;
-    return { from: new Date(customFrom).toISOString(), to: new Date(new Date(customTo).getTime() + 86400000).toISOString() };
+    const from = startOfDay(new Date(customFrom + 'T12:00:00'));
+    const to   = endOfDay(new Date(customTo + 'T12:00:00'));
+    return { from: from.toISOString(), to: to.toISOString() };
   }
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
   const from = new Date(now.getTime() - days * 86400000);
-  return { from: toISO(from), to: toISO(now) };
+  return { from: from.toISOString(), to: now.toISOString() };
 }
 
 const CACHE_KEY = 'lg_analytics_stats_v3';
 
 export default function AnalyticsPage() {
-  const [range, setRange]         = useState<RangeKey>('30d');
-  const [sort, setSort]           = useState<SortKey>('newest');
+  const [range, setRange]           = useState<RangeKey>('all');
+  const [sort, setSort]             = useState<SortKey>('newest');
   const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo]   = useState('');
-  const [stats, setStats]         = useState<Stats | null>(null);
-  const [loading, setLoading]     = useState(false);
-  const intervalRef               = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [customTo, setCustomTo]     = useState('');
+  const [stats, setStats]           = useState<Stats | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const intervalRef                 = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStats = useCallback((rangeKey: RangeKey, cfrom: string, cto: string) => {
     const dates = getRangeDates(rangeKey, cfrom, cto);
@@ -114,25 +123,42 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const startPolling = useCallback((rangeKey: RangeKey, cfrom: string, cto: string) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => fetchStats(rangeKey, cfrom, cto), 30000);
+  }, [fetchStats]);
+
   useEffect(() => {
     if (range === 'all') {
       try { const c = sessionStorage.getItem(CACHE_KEY); if (c) setStats(JSON.parse(c)); } catch {}
     } else {
       setStats(null);
     }
-    fetchStats(range, customFrom, customTo);
 
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => fetchStats(range, customFrom, customTo), 30000);
+    if (range === 'custom') {
+      // Pre-fill custom pickers to yesterday and fetch immediately
+      const now = new Date();
+      const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+      const y = yest.toISOString().slice(0, 10);
+      setCustomFrom(y);
+      setCustomTo(y);
+      fetchStats('custom', y, y);
+      startPolling('custom', y, y);
+    } else {
+      fetchStats(range, '', '');
+      startPolling(range, '', '');
+    }
+
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [range, fetchStats]);
+  }, [range, fetchStats, startPolling]);
 
   const applyCustomRange = () => {
     if (!customFrom || !customTo) return;
     fetchStats('custom', customFrom, customTo);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => fetchStats('custom', customFrom, customTo), 30000);
+    startPolling('custom', customFrom, customTo);
   };
+
+  const rangeLabel = RANGE_OPTIONS.find(r => r.value === range)?.label ?? '';
 
   const kpis = [
     { label: 'Emails Sent',  value: stats ? String(stats.totalSent) : '—' },
@@ -142,8 +168,6 @@ export default function AnalyticsPage() {
     { label: 'Bounce Rate',  value: stats?.bounceRate ?? '—' },
   ];
 
-  const rangeLabel = RANGE_OPTIONS.find(r => r.value === range)?.label ?? '';
-
   return (
     <main className="flex-1 p-6 space-y-6">
       {/* Header */}
@@ -152,7 +176,7 @@ export default function AnalyticsPage() {
           <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
           <p className="text-sm text-gray-400 mt-0.5">Track your campaign performance.</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
           {RANGE_OPTIONS.map(o => (
             <button key={o.value} onClick={() => setRange(o.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -164,7 +188,7 @@ export default function AnalyticsPage() {
 
       {/* Custom date picker */}
       {range === 'custom' && (
-        <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-5 py-4">
+        <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-5 py-4 flex-wrap">
           <span className="text-xs font-semibold text-gray-400 shrink-0">Date range</span>
           <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"/>
@@ -185,7 +209,7 @@ export default function AnalyticsPage() {
           <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs font-semibold text-gray-400 mb-3">{k.label}</p>
             {loading && !stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>}
-            <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data yet' : rangeLabel}</p>
+            <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data for period' : rangeLabel}</p>
           </div>
         ))}
       </div>
@@ -196,6 +220,11 @@ export default function AnalyticsPage() {
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-gray-900">Campaign Breakdown</h3>
             {loading && <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">Updating…</span>}
+            {!loading && range !== 'all' && stats && (
+              <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+                {rangeLabel}{range === 'custom' && customFrom ? `: ${customFrom} → ${customTo}` : ''}
+              </span>
+            )}
           </div>
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {SORT_OPTIONS.map(o => (
@@ -231,7 +260,7 @@ export default function AnalyticsPage() {
                   </td>
                 </tr>
               ) : sortCampaigns(stats.campaigns, sort).map(c => (
-                <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                <tr key={c.id} className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${range !== 'all' && c.sent === 0 ? 'opacity-40' : ''}`}>
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
                   <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
                     {new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
