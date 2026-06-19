@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { NavigationProgress } from '@/components/NavigationProgress';
 import { Logo } from '@/components/Logo';
+import SupportWidget from '@/components/SupportWidget';
 
 type Notification = {
   id: string;
@@ -269,6 +270,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {children}
+        <SupportWidget />
       </div>
     </div>
   );
