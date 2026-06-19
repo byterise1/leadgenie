@@ -5,6 +5,29 @@ import { Skeleton } from '@/components/Skeleton';
 
 const ranges = ['7 days', '30 days', '90 days', 'All time'];
 
+type SortKey = 'newest' | 'oldest' | 'most_sent' | 'status';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'most_sent', label: 'Most sent' },
+  { value: 'status', label: 'By status' },
+];
+
+type Campaign = {
+  id: string;
+  name: string;
+  status: string;
+  created_at: string;
+  sent: number;
+  opened: number;
+  replied: number;
+  clicked: number;
+  open_rate: string;
+  click_rate: string;
+  reply_rate: string;
+};
+
 type Stats = {
   activeCampaigns: number;
   totalSent: number;
@@ -13,25 +36,28 @@ type Stats = {
   replyRate: string;
   bounceRate: string;
   totalLeads: number;
-  campaigns: {
-    id: string;
-    name: string;
-    status: string;
-    created_at: string;
-    sent: number;
-    opened: number;
-    replied: number;
-    clicked: number;
-    open_rate: string;
-    click_rate: string;
-    reply_rate: string;
-  }[];
+  campaigns: Campaign[];
 };
 
-const CACHE_KEY = 'lg_analytics_stats';
+const STATUS_ORDER: Record<string, number> = { active: 0, paused: 1, completed: 2, draft: 3 };
+
+function sortCampaigns(campaigns: Campaign[], sort: SortKey): Campaign[] {
+  const list = [...campaigns];
+  if (sort === 'newest') return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  if (sort === 'oldest') return list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  if (sort === 'most_sent') return list.sort((a, b) => b.sent - a.sent);
+  if (sort === 'status') return list.sort((a, b) => {
+    const od = (STATUS_ORDER[a.status] ?? 4) - (STATUS_ORDER[b.status] ?? 4);
+    return od !== 0 ? od : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+  return list;
+}
+
+const CACHE_KEY = 'lg_analytics_stats_v2';
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState('30 days');
+  const [sort, setSort] = useState<SortKey>('newest');
   const [stats, setStats] = useState<Stats | null>(null);
 
   const fetchStats = useCallback(() => {
@@ -89,8 +115,16 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
           <h3 className="text-sm font-bold text-gray-900">Campaign Breakdown</h3>
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            {SORT_OPTIONS.map(o => (
+              <button key={o.value} onClick={() => setSort(o.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${sort === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -116,11 +150,7 @@ export default function AnalyticsPage() {
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
-              ) : [...stats.campaigns].sort((a, b) => {
-                const order = { active: 0, paused: 1, completed: 2, draft: 3 };
-                const od = (order[a.status as keyof typeof order] ?? 4) - (order[b.status as keyof typeof order] ?? 4);
-                return od !== 0 ? od : b.sent - a.sent;
-              }).map(c => (
+              ) : sortCampaigns(stats.campaigns, sort).map(c => (
                 <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
                   <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
