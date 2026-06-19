@@ -3,17 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 
-type RangeKey = 'today' | 'yesterday' | '7d' | '30d' | '90d' | 'all' | 'custom';
+type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
 type SortKey  = 'newest' | 'oldest' | 'most_sent' | 'status';
 
 const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
-  { value: 'today',     label: 'Today'     },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: '7d',        label: '7 days'    },
-  { value: '30d',       label: '30 days'   },
-  { value: '90d',       label: '90 days'   },
-  { value: 'all',       label: 'All time'  },
-  { value: 'custom',    label: 'Custom'    },
+  { value: 'today', label: 'Today'        },
+  { value: '7d',    label: 'Last 7 days'  },
+  { value: '30d',   label: 'Last 30 days' },
+  { value: '90d',   label: 'Last 90 days' },
+  { value: 'all',   label: 'All time'     },
+  { value: 'custom',label: 'Custom'       },
 ];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -76,10 +75,6 @@ function getRangeDates(range: RangeKey, customFrom: string, customTo: string): {
   if (range === 'today') {
     return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
   }
-  if (range === 'yesterday') {
-    const yest = new Date(now); yest.setDate(yest.getDate() - 1);
-    return { from: startOfDay(yest).toISOString(), to: endOfDay(yest).toISOString() };
-  }
   if (range === 'custom') {
     if (!customFrom || !customTo) return null;
     const from = startOfDay(new Date(customFrom + 'T12:00:00'));
@@ -94,7 +89,7 @@ function getRangeDates(range: RangeKey, customFrom: string, customTo: string): {
 const CACHE_KEY = 'lg_analytics_stats_v3';
 
 export default function AnalyticsPage() {
-  const [range, setRange]           = useState<RangeKey>('all');
+  const [range, setRange]           = useState<RangeKey>('30d');
   const [sort, setSort]             = useState<SortKey>('newest');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
@@ -136,14 +131,15 @@ export default function AnalyticsPage() {
     }
 
     if (range === 'custom') {
-      // Pre-fill custom pickers to yesterday and fetch immediately
+      // Pre-fill to last 7 days when Custom is first clicked
       const now = new Date();
-      const yest = new Date(now); yest.setDate(yest.getDate() - 1);
-      const y = yest.toISOString().slice(0, 10);
-      setCustomFrom(y);
-      setCustomTo(y);
-      fetchStats('custom', y, y);
-      startPolling('custom', y, y);
+      const week = new Date(now); week.setDate(week.getDate() - 7);
+      const from = week.toISOString().slice(0, 10);
+      const to   = now.toISOString().slice(0, 10);
+      setCustomFrom(from);
+      setCustomTo(to);
+      fetchStats('custom', from, to);
+      startPolling('custom', from, to);
     } else {
       fetchStats(range, '', '');
       startPolling(range, '', '');
