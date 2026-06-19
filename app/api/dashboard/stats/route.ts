@@ -9,8 +9,11 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const from = searchParams.get('from');
+  const from = searchParams.get('from');  // ISO string or null
   const to   = searchParams.get('to');
+
+  const fromMs = from ? new Date(from).getTime() : null;
+  const toMs   = to   ? new Date(to).getTime()   : null;
 
   const [campaigns, leads, inbox] = await Promise.all([
     supabaseAdmin.from('campaigns').select('id,name,status,total_sent,total_opened,total_replied,created_at').eq('user_id', user.id),
@@ -20,47 +23,60 @@ export async function GET(request: Request) {
 
   const campaignIds = (campaigns.data || []).map(c => c.id);
 
-  let sentQuery = supabaseAdmin
-    .from('sent_emails')
-    .select('id,campaign_id,opened_at,clicked_at,replied_at,bounced,sent_at')
-    .in('campaign_id', campaignIds);
-  if (from) sentQuery = sentQuery.gte('sent_at', from);
-  if (to)   sentQuery = sentQuery.lte('sent_at', to);
-
-  let repliedQuery = supabaseAdmin
-    .from('campaign_leads')
-    .select('campaign_id,last_sent_at')
-    .in('campaign_id', campaignIds)
-    .eq('status', 'replied');
-  if (from) repliedQuery = repliedQuery.gte('last_sent_at', from);
-  if (to)   repliedQuery = repliedQuery.lte('last_sent_at', to);
-
+  // Always fetch all sent_emails — filter in JS to avoid NULL sent_at edge cases
   const [sent, repliedLeadsRes] = campaignIds.length
-    ? await Promise.all([sentQuery, repliedQuery])
+    ? await Promise.all([
+        supabaseAdmin.from('sent_emails').select('id,campaign_id,opened_at,clicked_at,bounced,sent_at').in('campaign_id', campaignIds),
+        supabaseAdmin.from('campaign_leads').select('campaign_id,last_sent_at').in('campaign_id', campaignIds).eq('status', 'replied'),
+      ])
     : [{ data: [] }, { data: [] }];
 
+  // Apply date filter in JS (handles NULL sent_at gracefully)
+  const allEmails = (sent as { data: any[] | null }).data || [];
+  const emails = (fromMs !== null || toMs !== null)
+    ? allEmails.filter(e => {
+        if (!e.sent_at) return false;
+        const t = new Date(e.sent_at).getTime();
+        if (fromMs !== null && t < fromMs) return false;
+        if (toMs   !== null && t > toMs)   return false;
+        return true;
+      })
+    : allEmails;
+
+  // Filter replies by last_sent_at the same way
+  const allReplied = (repliedLeadsRes as { data: any[] | null }).data || [];
+  const filteredReplied = (fromMs !== null || toMs !== null)
+    ? allReplied.filter(r => {
+        if (!r.last_sent_at) return false;
+        const t = new Date(r.last_sent_at).getTime();
+        if (fromMs !== null && t < fromMs) return false;
+        if (toMs   !== null && t > toMs)   return false;
+        return true;
+      })
+    : allReplied;
+
   const repliedByCamp: Record<string, number> = {};
-  ((repliedLeadsRes as { data: { campaign_id: string }[] | null }).data || []).forEach((r: { campaign_id: string }) => {
+  filteredReplied.forEach((r: { campaign_id: string }) => {
     repliedByCamp[r.campaign_id] = (repliedByCamp[r.campaign_id] || 0) + 1;
   });
 
   const activeCampaigns = campaigns.data?.filter(c => c.status === 'active').length ?? 0;
-  const totalSent    = (sent as { data: any[] | null }).data?.length ?? 0;
-  const totalOpened  = (sent as { data: any[] | null }).data?.filter((e: any) => e.opened_at).length ?? 0;
+  const totalSent    = emails.length;
+  const totalOpened  = emails.filter(e => e.opened_at).length;
   const totalReplied = Object.values(repliedByCamp).reduce((s, v) => s + v, 0);
-  const totalClicked = (sent as { data: any[] | null }).data?.filter((e: any) => e.clicked_at).length ?? 0;
-  const totalBounced = (sent as { data: any[] | null }).data?.filter((e: any) => e.bounced).length ?? 0;
+  const totalClicked = emails.filter(e => e.clicked_at).length;
+  const totalBounced = emails.filter(e => e.bounced).length;
   const openRate   = totalSent > 0 ? ((totalOpened  / totalSent) * 100).toFixed(1) + '%' : '—';
   const replyRate  = totalSent > 0 ? ((totalReplied / totalSent) * 100).toFixed(1) + '%' : '—';
   const clickRate  = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) + '%' : '—';
   const bounceRate = totalSent > 0 ? ((totalBounced / totalSent) * 100).toFixed(1) + '%' : '—';
 
   const bycamp: Record<string, { sent: number; opened: number; replied: number; clicked: number }> = {};
-  ((sent as { data: any[] | null }).data || []).forEach((e: { campaign_id: string; opened_at: string | null; clicked_at: string | null }) => {
+  emails.forEach((e: any) => {
     if (!e.campaign_id) return;
     const r = bycamp[e.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
     r.sent++;
-    if (e.opened_at) r.opened++;
+    if (e.opened_at)  r.opened++;
     if (e.clicked_at) r.clicked++;
     bycamp[e.campaign_id] = r;
   });
