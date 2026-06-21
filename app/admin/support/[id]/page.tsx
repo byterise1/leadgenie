@@ -25,7 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700',
   high: 'bg-orange-50 text-orange-700',
-  normal: 'bg-blue-50 text-blue-600',
+  normal: 'bg-blue-50 text-blue-700',
   low: 'bg-gray-100 text-gray-500',
 };
 
@@ -80,14 +80,13 @@ export default function TicketDetailPage() {
   };
 
   const initials = (email: string) => email.charAt(0).toUpperCase();
-
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   if (loading) {
     return (
       <main className="flex-1 p-6">
         <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6"/>
-        <div className="h-8 w-64 bg-gray-100 rounded animate-pulse mb-4"/>
+        <div className="h-7 w-64 bg-gray-100 rounded animate-pulse mb-4"/>
         <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-4 bg-gray-100 rounded animate-pulse"/>)}
         </div>
@@ -120,7 +119,7 @@ export default function TicketDetailPage() {
 
       {/* Title + Reopen */}
       <div className="flex items-start justify-between gap-4 mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
+        <h1 className="text-xl font-bold text-gray-900">{ticket.subject}</h1>
         {ticket.status === 'closed' && (
           <button onClick={() => save('open')} disabled={saving}
             className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors shrink-0">
@@ -151,7 +150,7 @@ export default function TicketDetailPage() {
       <div className="space-y-5 mb-6">
         {/* User message */}
         <div className="flex gap-3 items-start">
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-sm font-bold text-indigo-600">
+          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-bold text-gray-600">
             {initials(ticket.user_email)}
           </div>
           <div className="flex-1">
@@ -168,7 +167,7 @@ export default function TicketDetailPage() {
         {/* Admin reply bubble */}
         {ticket.admin_reply && (
           <div className="flex gap-3 items-start flex-row-reverse">
-            <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0 text-sm font-bold text-orange-600">
+            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-sm font-bold text-blue-600">
               A
             </div>
             <div className="flex-1">
@@ -176,7 +175,7 @@ export default function TicketDetailPage() {
                 <span className="text-xs text-gray-400">{fmtDate(ticket.updated_at)}</span>
                 <span className="text-sm font-semibold text-gray-700">Admin · LeadGenie</span>
               </div>
-              <div className="bg-orange-50 border border-orange-100 rounded-2xl rounded-tr-none px-4 py-3">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{ticket.admin_reply}</p>
               </div>
             </div>
@@ -188,7 +187,7 @@ export default function TicketDetailPage() {
       {ticket.status === 'closed' ? (
         <div className="text-center py-5 border-t border-gray-100 text-sm text-gray-400">
           This ticket is closed. Click{' '}
-          <button onClick={() => save('open')} className="text-indigo-500 font-semibold hover:text-indigo-700">
+          <button onClick={() => save('open')} className="text-blue-600 font-semibold hover:text-blue-700">
             Reopen
           </button>{' '}
           if it needs more attention.
@@ -200,7 +199,7 @@ export default function TicketDetailPage() {
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Status</label>
               <select value={status} onChange={e => setStatus(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
                 <option value="closed">Closed</option>
@@ -209,7 +208,7 @@ export default function TicketDetailPage() {
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Priority</label>
               <select value={priority} onChange={e => setPriority(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
@@ -224,14 +223,14 @@ export default function TicketDetailPage() {
             </label>
             <textarea value={reply} onChange={e => setReply(e.target.value)} rows={4}
               placeholder="Type your reply to the user…"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
           </div>
 
           {error && <p className="text-xs text-red-500">{error}</p>}
 
           <div className="flex justify-end">
             <button onClick={() => save()} disabled={saving}
-              className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+              className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
               {saving ? 'Saving…' : 'Save Reply'}
             </button>
           </div>
