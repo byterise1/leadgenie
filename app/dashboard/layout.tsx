@@ -55,8 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     // Initial load
     fetchNotifications();
-    // Polling fallback every 30s (catches anything Realtime misses)
-    const interval = setInterval(fetchNotifications, 30000);
+    // Polling fallback every 10s (catches anything Realtime misses)
+    const interval = setInterval(fetchNotifications, 10000);
 
     // Supabase Realtime — instant push when a new notification row is inserted
     const supabase = createClient();

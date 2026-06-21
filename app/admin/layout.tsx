@@ -92,8 +92,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     fetchNotifs();
-    const id = setInterval(fetchNotifs, 30000);
-    return () => clearInterval(id);
+    const id = setInterval(fetchNotifs, 10000);
+
+    // Realtime: instant push when a new notification is inserted for this admin user
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      channel = supabase
+        .channel(`admin-notif-${uid}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+          () => fetchNotifs()
+        )
+        .subscribe();
+    });
+
+    return () => {
+      clearInterval(id);
+      if (channel) createClient().removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dismissNotif = async (n: Notif) => {

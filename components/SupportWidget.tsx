@@ -32,17 +32,32 @@ export default function SupportWidget() {
 
   const repliedCount = tickets.filter(t => t.admin_reply !== null && !t.user_seen_at && t.status !== 'closed').length;
 
-  const loadTickets = () => {
-    setLoading(true);
+  // Silent fetch — used on mount and for periodic polling to keep badge fresh
+  const fetchSilent = () => {
     fetch('/api/support/tickets')
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setTickets(d); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
   };
 
+  // Load on mount for badge count, and poll every 60s to stay fresh
   useEffect(() => {
-    if (open) loadTickets();
+    fetchSilent();
+    const id = setInterval(fetchSilent, 60000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When widget opens, reload with loading spinner to show fresh data
+  useEffect(() => {
+    if (open) {
+      setLoading(true);
+      fetch('/api/support/tickets')
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setTickets(d); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
   }, [open]);
 
   // When user opens ticket via full page (bell click), instantly clear widget badge
