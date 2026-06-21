@@ -54,6 +54,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ];
     // Reopen ticket if it was closed
     if (ticket.status === 'closed') updates.status = 'open';
+
+    // Notify all admins about the follow-up
+    const { data: admins } = await supabaseAdmin.from('profiles').select('id').eq('is_admin', true);
+    if (admins?.length) {
+      void supabaseAdmin.from('notifications').insert(
+        admins.map(a => ({
+          user_id: a.id,
+          message: `User replied on ticket: "${ticket.subject}"`,
+          type: 'info',
+          read: false,
+          link: `/admin/support/${id}`,
+        }))
+      );
+    }
   }
 
   // File attachments

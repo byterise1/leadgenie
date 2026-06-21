@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/Logo';
 
@@ -64,6 +64,20 @@ const navSections = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [supportBadge, setSupportBadge] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = () => {
+      if (pathname.startsWith('/admin/support')) { setSupportBadge(0); return; }
+      fetch('/api/admin/support?count=1')
+        .then(r => r.json())
+        .then(d => { if (typeof d.unread === 'number') setSupportBadge(d.unread); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const id = setInterval(fetchUnread, 30000);
+    return () => clearInterval(id);
+  }, [pathname]);
 
   const signOut = async () => {
     const supabase = createClient();
@@ -98,6 +112,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   }`}>
                   <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
                   {item.label}
+                  {item.href === '/admin/support' && supportBadge > 0 && (
+                    <span className="ml-auto min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                      {supportBadge > 9 ? '9+' : supportBadge}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

@@ -17,6 +17,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || '';
 
+  // Fast count for admin sidebar badge: ?count=1
+  if (searchParams.get('count') === '1') {
+    const { count } = await supabaseAdmin
+      .from('support_tickets')
+      .select('id', { count: 'exact', head: true })
+      .is('admin_reply', null)
+      .in('status', ['open', 'in_progress']);
+    return NextResponse.json({ unread: count ?? 0 });
+  }
+
   let query = supabaseAdmin
     .from('support_tickets')
     .select('*')

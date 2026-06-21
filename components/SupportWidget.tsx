@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 type Ticket = {
   id: string;
@@ -61,10 +62,24 @@ export default function SupportWidget() {
     if (!subject.trim() || !message.trim()) return;
     setSubmitting(true);
     try {
+      // Upload files first
+      const attachments: { name: string; url: string }[] = [];
+      if (files.length) {
+        const supabase = createClient();
+        for (const file of files) {
+          const path = `tickets/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { error: upErr } = await supabase.storage.from('support-attachments').upload(path, file);
+          if (!upErr) {
+            const { data: urlData } = supabase.storage.from('support-attachments').getPublicUrl(path);
+            attachments.push({ name: file.name, url: urlData.publicUrl });
+          }
+        }
+      }
+
       const res = await fetch('/api/support/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message, category }),
+        body: JSON.stringify({ subject, message, category, attachments }),
       });
       const data = await res.json();
       if (!data.error) {

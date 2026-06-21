@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { subject, message, category } = await req.json();
+  const { subject, message, category, attachments } = await req.json();
   if (!subject || !message) return NextResponse.json({ error: 'Subject and message required' }, { status: 400 });
 
   const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
@@ -38,10 +38,26 @@ export async function POST(req: NextRequest) {
       category: category || 'general',
       status: 'open',
       priority: 'normal',
+      attachments: Array.isArray(attachments) ? attachments : [],
     })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notify all admins about the new ticket
+  const { data: admins } = await supabaseAdmin.from('profiles').select('id').eq('is_admin', true);
+  if (admins?.length) {
+    void supabaseAdmin.from('notifications').insert(
+      admins.map(a => ({
+        user_id: a.id,
+        message: `New support ticket from ${userEmail}: "${subject}"`,
+        type: 'info',
+        read: false,
+        link: `/admin/support/${data.id}`,
+      }))
+    );
+  }
+
   return NextResponse.json(data);
 }

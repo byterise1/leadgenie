@@ -234,13 +234,28 @@ function AdminWarmupPageInner() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
   useEffect(() => {
-    if (searchParams.get('connected') === 'gmail') {
+    const connected = searchParams.get('connected');
+    const refreshed = searchParams.get('refreshed');
+    const error = searchParams.get('error');
+    const msg = searchParams.get('msg');
+
+    if (connected === 'gmail') {
       showToast('Gmail account connected and added to warmup pool!');
-      // Clean up URL
-      window.history.replaceState({}, '', '/admin/warmup');
+      // Reload pool accounts to show the new one
+      fetch('/api/admin/warmup/pool').then(r => r.json()).then(pool => {
+        if (Array.isArray(pool)) setPoolAccounts(pool);
+      });
     }
-    if (searchParams.get('error') === 'oauth_failed') {
-      showToast('Google OAuth failed — please try again.');
+    if (refreshed === 'gmail') {
+      setToast('Gmail already in pool — OAuth tokens refreshed!');
+    }
+    if (error === 'oauth_failed') setToast('Google OAuth failed — please try again.');
+    if (error === 'update_failed') setToast('Failed to refresh Gmail tokens — please try again.');
+    if (error === 'insert_failed') {
+      setToast(`Failed to add pool account: ${msg ? decodeURIComponent(msg) : 'Please try again.'}`);
+    }
+
+    if (connected || refreshed || error) {
       window.history.replaceState({}, '', '/admin/warmup');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

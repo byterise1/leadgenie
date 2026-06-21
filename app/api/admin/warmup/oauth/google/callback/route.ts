@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
 
   const redirectUri = `${siteOrigin}/api/admin/warmup/oauth/google/callback`;
   const failUrl = `${siteOrigin}/admin/warmup?error=oauth_failed`;
+  const alreadyUrl = `${siteOrigin}/admin/warmup?refreshed=gmail`;
   const successUrl = `${siteOrigin}/admin/warmup?connected=gmail`;
 
   if (oauthError || !code || !state) return NextResponse.redirect(failUrl);
@@ -59,14 +60,17 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (existing) {
-    await supabaseAdmin.from('email_accounts').update({
+    // Refresh tokens for the existing pool account
+    const { error: upErr } = await supabaseAdmin.from('email_accounts').update({
       smtp_pass: tokens.refresh_token,
       smtp_user: info.email,
       status: 'warming',
       warmup_enabled: true,
     }).eq('id', existing.id);
+    if (upErr) return NextResponse.redirect(`${siteOrigin}/admin/warmup?error=update_failed`);
+    return NextResponse.redirect(alreadyUrl);
   } else {
-    await supabaseAdmin.from('email_accounts').insert({
+    const { error: insErr } = await supabaseAdmin.from('email_accounts').insert({
       user_id: adminId,
       type: 'gmail-oauth',
       email: info.email,
@@ -78,6 +82,10 @@ export async function GET(request: NextRequest) {
       warmup_target: 40,
       is_pool_account: true,
     });
+    if (insErr) {
+      const msg = encodeURIComponent(insErr.message ?? 'Unknown error');
+      return NextResponse.redirect(`${siteOrigin}/admin/warmup?error=insert_failed&msg=${msg}`);
+    }
   }
 
   return NextResponse.redirect(successUrl);

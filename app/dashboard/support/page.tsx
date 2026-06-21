@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 type Ticket = {
   id: string;
@@ -42,6 +43,8 @@ export default function SupportPage() {
   const [category, setCategory] = useState('general');
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -57,14 +60,29 @@ export default function SupportPage() {
     if (!subject.trim() || !message.trim()) { setSubmitErr('Subject and message are required.'); return; }
     setSubmitting(true);
     setSubmitErr('');
+
+    // Upload files first
+    const attachments: { name: string; url: string }[] = [];
+    if (files.length) {
+      const supabase = createClient();
+      for (const file of files) {
+        const path = `tickets/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: upErr } = await supabase.storage.from('support-attachments').upload(path, file);
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('support-attachments').getPublicUrl(path);
+          attachments.push({ name: file.name, url: urlData.publicUrl });
+        }
+      }
+    }
+
     const res = await fetch('/api/support/tickets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject: subject.trim(), message: message.trim(), category }),
+      body: JSON.stringify({ subject: subject.trim(), message: message.trim(), category, attachments }),
     });
     const data = await res.json();
     if (data.error) { setSubmitErr(data.error); setSubmitting(false); return; }
-    setSubject(''); setMessage(''); setCategory('general');
+    setSubject(''); setMessage(''); setCategory('general'); setFiles([]);
     setShowNew(false);
     load();
     setSubmitting(false);
@@ -114,6 +132,28 @@ export default function SupportPage() {
                 placeholder="Describe your issue in detail…"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
             </div>
+          </div>
+          {/* File attachment */}
+          <div>
+            <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.csv" className="hidden"
+              onChange={e => setFiles(Array.from(e.target.files ?? []))}/>
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+              </svg>
+              {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} attached` : 'Attach files (optional)'}
+            </button>
+            {files.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {files.map((f, i) => (
+                  <span key={i} className="flex items-center gap-1 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-lg px-2 py-0.5">
+                    {f.name}
+                    <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500 ml-0.5">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {submitErr && <p className="text-xs text-red-500">{submitErr}</p>}
           <div className="flex justify-end gap-3">
