@@ -61,10 +61,14 @@ const navSections = [
   },
 ];
 
+type Notif = { id: string; message: string; type: string; read: boolean; link: string };
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [supportBadge, setSupportBadge] = useState(0);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [showBell, setShowBell] = useState(false);
 
   useEffect(() => {
     const fetchUnread = () => {
@@ -78,6 +82,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const id = setInterval(fetchUnread, 30000);
     return () => clearInterval(id);
   }, [pathname]);
+
+  const fetchNotifs = () => {
+    fetch('/api/notifications')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setNotifs(d.filter((n: Notif) => !n.read)); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+    const id = setInterval(fetchNotifs, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const dismissNotif = async (n: Notif) => {
+    setNotifs(prev => prev.filter(x => x.id !== n.id));
+    setShowBell(false);
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [n.id] }),
+    });
+    if (n.link) window.location.href = n.link;
+  };
 
   const signOut = async () => {
     const supabase = createClient();
@@ -148,6 +176,56 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-sm font-bold text-gray-900">Admin Panel</span>
           </div>
           <div className="flex-1"/>
+
+          {/* Notification bell */}
+          <div className="relative">
+            <button onClick={() => setShowBell(v => !v)}
+              className="relative p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              {notifs.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                  {notifs.length > 9 ? '9+' : notifs.length}
+                </span>
+              )}
+            </button>
+
+            {showBell && (
+              <div className="absolute right-0 top-11 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-900">Notifications</p>
+                  {notifs.length > 0 && (
+                    <button onClick={async () => {
+                      setNotifs([]);
+                      setShowBell(false);
+                      await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                    }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {notifs.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
+                ) : (
+                  <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                    {notifs.map(n => (
+                      <button key={n.id} onClick={() => dismissNotif(n)}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
+                        {n.link && (
+                          <p className="text-xs text-blue-500 font-semibold mt-0.5">
+                            {n.link.includes('support') ? 'View Support Ticket →' : 'View →'}
+                          </p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <Link href="/dashboard" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             User view

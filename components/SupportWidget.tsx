@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 type Ticket = {
   id: string;
@@ -58,23 +57,23 @@ export default function SupportWidget() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const uploadFiles = async (fileList: File[]): Promise<{ name: string; url: string }[]> => {
+    const results: { name: string; url: string }[] = [];
+    for (const file of fileList) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/support/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) results.push({ name: data.name, url: data.url });
+    }
+    return results;
+  };
+
   const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) return;
     setSubmitting(true);
     try {
-      // Upload files first
-      const attachments: { name: string; url: string }[] = [];
-      if (files.length) {
-        const supabase = createClient();
-        for (const file of files) {
-          const path = `tickets/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const { error: upErr } = await supabase.storage.from('support-attachments').upload(path, file);
-          if (!upErr) {
-            const { data: urlData } = supabase.storage.from('support-attachments').getPublicUrl(path);
-            attachments.push({ name: file.name, url: urlData.publicUrl });
-          }
-        }
-      }
+      const attachments = files.length ? await uploadFiles(files) : [];
 
       const res = await fetch('/api/support/tickets', {
         method: 'POST',

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 type Message = { role: 'user' | 'admin'; body: string; ts: string };
 
@@ -83,15 +82,13 @@ export default function UserTicketPage() {
 
   const uploadFiles = async (): Promise<{ name: string; url: string }[]> => {
     if (!files.length) return [];
-    const supabase = createClient();
     const uploaded: { name: string; url: string }[] = [];
     for (const file of files) {
-      const path = `${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const { error } = await supabase.storage.from('support-attachments').upload(path, file);
-      if (!error) {
-        const { data: urlData } = supabase.storage.from('support-attachments').getPublicUrl(path);
-        uploaded.push({ name: file.name, url: urlData.publicUrl });
-      }
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/support/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) uploaded.push({ name: data.name, url: data.url });
     }
     return uploaded;
   };

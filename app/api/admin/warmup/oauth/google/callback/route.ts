@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
       status: 'warming',
       health_score: 85,
       warmup_enabled: true,
-      warmup_target: 40,
       is_pool_account: true,
     });
     if (insErr) {

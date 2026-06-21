@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 type Ticket = {
   id: string;
@@ -61,18 +60,14 @@ export default function SupportPage() {
     setSubmitting(true);
     setSubmitErr('');
 
-    // Upload files first
+    // Upload files via server-side endpoint (auto-creates bucket, bypasses RLS)
     const attachments: { name: string; url: string }[] = [];
-    if (files.length) {
-      const supabase = createClient();
-      for (const file of files) {
-        const path = `tickets/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const { error: upErr } = await supabase.storage.from('support-attachments').upload(path, file);
-        if (!upErr) {
-          const { data: urlData } = supabase.storage.from('support-attachments').getPublicUrl(path);
-          attachments.push({ name: file.name, url: urlData.publicUrl });
-        }
-      }
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up = await fetch('/api/support/upload', { method: 'POST', body: fd });
+      const upData = await up.json();
+      if (upData.url) attachments.push({ name: upData.name, url: upData.url });
     }
 
     const res = await fetch('/api/support/tickets', {
