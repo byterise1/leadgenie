@@ -15,6 +15,14 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
+
+  if (searchParams.get('counts') === '1') {
+    const { data } = await supabaseAdmin.from('campaigns').select('status');
+    const counts = { active: 0, paused: 0, completed: 0, draft: 0 };
+    for (const c of data ?? []) if (c.status in counts) (counts as Record<string, number>)[c.status]++;
+    return NextResponse.json({ counts });
+  }
+
   const status = searchParams.get('status') || '';
   const page = parseInt(searchParams.get('page') || '1');
   const limit = 25;

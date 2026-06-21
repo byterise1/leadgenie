@@ -15,6 +15,8 @@ type Campaign = {
   created_at: string;
 };
 
+type Counts = { active: number; paused: number; completed: number; draft: number };
+
 const STATUS_FILTERS = ['', 'active', 'paused', 'completed', 'draft'];
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-emerald-50 text-emerald-700',
@@ -29,6 +31,14 @@ export default function AdminCampaignsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [counts, setCounts] = useState<Counts | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/campaigns?counts=1')
+      .then(r => r.json())
+      .then(d => { if (d.counts) setCounts(d.counts); })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -51,14 +61,40 @@ export default function AdminCampaignsPage() {
           <h1 className="text-xl font-bold text-gray-900">All Campaigns</h1>
           <p className="text-sm text-gray-400 mt-0.5">{total.toLocaleString()} total across all users</p>
         </div>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-          {STATUS_FILTERS.map(s => (
-            <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {s || 'All'}
-            </button>
-          ))}
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-gray-400">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Total Campaigns</p>
+          <p className="text-2xl font-bold text-gray-900">{counts ? (counts.active + counts.paused + counts.completed + counts.draft) : total}</p>
+          <p className="text-[11px] text-gray-400 mt-1">All time</p>
         </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-emerald-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Active</p>
+          <p className="text-2xl font-bold text-gray-900">{counts?.active ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Running now</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-amber-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Paused</p>
+          <p className="text-2xl font-bold text-gray-900">{counts?.paused ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">On hold</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-blue-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Completed</p>
+          <p className="text-2xl font-bold text-gray-900">{counts?.completed ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Finished</p>
+        </div>
+      </div>
+
+      {/* Status filter */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        {STATUS_FILTERS.map(s => (
+          <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">

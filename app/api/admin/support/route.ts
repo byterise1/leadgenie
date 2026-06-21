@@ -37,6 +37,12 @@ export async function PATCH(req: NextRequest) {
   const { id, status, priority, admin_reply } = await req.json();
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
+  const { data: existing } = await supabaseAdmin
+    .from('support_tickets')
+    .select('user_email, subject, admin_reply, user_id')
+    .eq('id', id)
+    .single();
+
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (status !== undefined) updates.status = status;
   if (priority !== undefined) updates.priority = priority;
@@ -50,5 +56,16 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (admin_reply && existing?.user_id && admin_reply !== existing.admin_reply) {
+    void supabaseAdmin.from('notifications').insert({
+      user_id: existing.user_id,
+      message: `Support reply: your ticket "${existing.subject}" has been answered`,
+      type: 'info',
+      read: false,
+      link: `/dashboard/support/${id}`,
+    });
+  }
+
   return NextResponse.json(data);
 }

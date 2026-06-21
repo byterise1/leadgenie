@@ -288,6 +288,13 @@ function DetailDrawer({ userId, onClose }: { userId: string; onClose: () => void
   );
 }
 
+type AdminStats = {
+  totalUsers: number;
+  newUsersWeek: number;
+  totalEmailsSent: number;
+  activeCampaigns: number;
+};
+
 function AdminUsersInner() {
   const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
@@ -299,6 +306,14 @@ function AdminUsersInner() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/stats')
+      .then(r => r.json())
+      .then(d => { if (!d.error) setAdminStats(d); })
+      .catch(() => {});
+  }, []);
 
   const focusId = searchParams.get('focus');
 
@@ -376,6 +391,30 @@ function AdminUsersInner() {
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
           />
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-blue-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Total Users</p>
+          <p className="text-2xl font-bold text-gray-900">{adminStats ? adminStats.totalUsers.toLocaleString() : total.toLocaleString()}</p>
+          <p className="text-[11px] text-gray-400 mt-1">All-time accounts</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-emerald-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">New This Week</p>
+          <p className="text-2xl font-bold text-gray-900">{adminStats?.newUsersWeek ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Last 7 days</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-violet-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Emails Sent</p>
+          <p className="text-2xl font-bold text-gray-900">{adminStats ? adminStats.totalEmailsSent.toLocaleString() : '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">All time</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-amber-500">
+          <p className="text-xs font-semibold text-gray-400 mb-3">Active Campaigns</p>
+          <p className="text-2xl font-bold text-gray-900">{adminStats?.activeCampaigns ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Running now</p>
         </div>
       </div>
 
