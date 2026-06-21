@@ -13,7 +13,7 @@ type WarmupAccount = {
   warmup_emails_sent: number;
   health_score: number;
   sent_today: number;
-  status: 'active' | 'warming' | 'error' | 'paused';
+  status: 'active' | 'warming' | 'error' | 'paused' | 'login' | string;
 };
 
 const tabs = [
