@@ -36,7 +36,13 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    const { data: profile } = await supabase
+    // Use service role to bypass RLS — anon key can silently fail in Edge middleware
+    const supabaseService = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+    const { data: profile } = await supabaseService
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)

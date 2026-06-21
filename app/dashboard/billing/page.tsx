@@ -3,6 +3,81 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
+function SupportModal({ onClose }: { onClose: () => void }) {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState('billing');
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async () => {
+    if (!subject || !message) return;
+    setSaving(true);
+    await fetch('/api/support/tickets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, message, category }),
+    });
+    setSaving(false);
+    setDone(true);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">Submit a Support Ticket</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        {done ? (
+          <div className="px-6 py-10 text-center space-y-3">
+            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <p className="text-sm font-bold text-gray-900">Ticket submitted!</p>
+            <p className="text-xs text-gray-400">Our team will get back to you within 24 hours.</p>
+            <button onClick={onClose} className="mt-2 px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">Done</button>
+          </div>
+        ) : (
+          <>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Category</label>
+                <select value={category} onChange={e => setCategory(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="billing">Billing / Refund</option>
+                  <option value="technical">Technical Issue</option>
+                  <option value="general">General Question</option>
+                  <option value="account">Account</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Subject</label>
+                <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Request refund for Pro plan"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Message</label>
+                <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Describe your issue…"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
+              <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700">Cancel</button>
+              <button onClick={submit} disabled={saving || !subject || !message}
+                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                {saving ? 'Submitting…' : 'Submit Ticket'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 type Cycle = 'monthly' | 'annual';
 
 type BillingEvent = {
@@ -79,6 +154,7 @@ export default function BillingPage() {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [plans, setPlans] = useState<PlanDef[]>(FALLBACK_PLANS);
   const [invoices, setInvoices] = useState<BillingEvent[]>([]);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/billing/usage')
@@ -113,9 +189,17 @@ export default function BillingPage() {
 
   return (
     <main className="flex-1 p-6 space-y-7">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Plan & Billing</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Manage your subscription, usage, and payment details.</p>
+      {supportOpen && <SupportModal onClose={() => setSupportOpen(false)}/>}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Plan & Billing</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Manage your subscription, usage, and payment details.</p>
+        </div>
+        <button onClick={() => setSupportOpen(true)}
+          className="flex items-center gap-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+          Contact Support
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 p-6">

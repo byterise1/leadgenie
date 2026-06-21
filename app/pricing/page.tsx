@@ -15,26 +15,27 @@ type Plan = {
   features: string[];
   highlighted: boolean;
   cta_label: string;
+  active?: boolean;
 };
 
 const FALLBACK_PLANS: Plan[] = [
   {
-    id: 'starter', name: 'Starter', tagline: 'For solo founders & small teams',
+    id: 'starter', name: 'Starter', tagline: 'For solo founders and small teams',
     monthly_price: 29, annual_price: 23,
-    features: ['Unlimited Email Accounts', 'Unlimited Email Warmup', '5,000 Emails / Month', 'Unibox (Unified Inbox)', 'Basic Analytics', 'Chat Support'],
+    features: ['10 campaigns', '5000 leads', '5000 emails per mo', '5 email accounts', 'Full analytics', 'Chat support'],
     highlighted: false, cta_label: 'Start Free Trial',
   },
   {
     id: 'pro', name: 'Pro', tagline: 'Most popular for growing teams',
     monthly_price: 49, annual_price: 39,
-    features: ['Unlimited Email Accounts', 'Unlimited Email Warmup', '50,000 Emails / Month', 'Unibox (Unified Inbox)', 'Advanced Analytics & Tracking', 'AI Personalisation', 'Follow-up Sequences', 'Priority Support'],
+    features: ['Unlimited campaigns', 'Unlimited leads', '50000 emails per mo', 'Unlimited accounts', 'AI email writer', 'A/B testing', 'Priority support'],
     highlighted: true, cta_label: 'Start Free Trial',
   },
   {
     id: 'agency', name: 'Agency', tagline: 'For high-volume outreach teams',
     monthly_price: 149, annual_price: 119,
-    features: ['Everything in Pro', 'Unlimited Contacts', '500,000 Emails / Month', 'Multi-workspace', 'White-label Reports', 'API Access', 'Dedicated CSM', 'SLA Guarantee'],
-    highlighted: false, cta_label: 'Start Free Trial',
+    features: ['Everything in Pro', 'Multi-workspace', 'White-label reports', 'Dedicated CSM', 'SLA guarantee', 'Onboarding session'],
+    highlighted: false, cta_label: 'Contact Sales',
   },
 ];
 
@@ -49,17 +50,21 @@ const faqs = [
 
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
-  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/pricing')
+    fetch('/api/pricing', { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setPlans(data.filter((p: Plan) => p.id !== 'free'));
+          setPlans(data);
+        } else {
+          setPlans(FALLBACK_PLANS);
         }
       })
-      .catch(() => {});
+      .catch(() => setPlans(FALLBACK_PLANS))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -96,6 +101,19 @@ export default function PricingPage() {
         {/* Plans */}
         <section className="py-16">
           <div className="container">
+            {loading ? (
+              <div className="grid gap-5 sm:grid-cols-3 max-w-5xl mx-auto">
+                {[1,2,3].map(i => (
+                  <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4 animate-pulse">
+                    <div className="h-5 w-20 bg-gray-100 rounded"/>
+                    <div className="h-3 w-32 bg-gray-100 rounded"/>
+                    <div className="h-10 w-24 bg-gray-100 rounded"/>
+                    <div className="h-10 bg-gray-100 rounded-full"/>
+                    {[1,2,3,4,5].map(j => <div key={j} className="h-3 bg-gray-100 rounded w-full"/>)}
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className={`grid gap-5 items-start mx-auto max-w-5xl ${plans.length <= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
               {plans.map((plan, i) => (
                 <motion.div key={plan.id}
@@ -150,7 +168,7 @@ export default function PricingPage() {
                 </motion.div>
               ))}
             </div>
-
+            )}
             <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-400">
               {['14-day free trial', 'No credit card required', 'Cancel anytime', 'Instant setup'].map(item => (
                 <span key={item} className="flex items-center gap-2">

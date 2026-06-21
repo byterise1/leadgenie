@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { email, smtp_host, smtp_port, smtp_user, smtp_pass, warmup_target } = body;
+  const { email, type, smtp_host, smtp_port, smtp_user, smtp_pass, warmup_target } = body;
 
   if (!email || !smtp_host || !smtp_user || !smtp_pass) {
     return NextResponse.json({ error: 'email, smtp_host, smtp_user and smtp_pass are required' }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id: admin.id,
       email,
-      type: 'smtp',
+      type: type || 'smtp',
       status: 'warming',
       smtp_host,
       smtp_port: smtp_port || 587,

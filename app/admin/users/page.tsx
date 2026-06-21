@@ -55,8 +55,40 @@ function SkeletonRow() {
   );
 }
 
-function EditModal({ user, onClose, onSave }: {
+function ConfirmAdminModal({ email, enabling, onConfirm, onClose }: {
+  email: string; enabling: boolean; onConfirm: () => void; onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-6 py-5">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 ${enabling ? 'bg-red-50' : 'bg-amber-50'}`}>
+            <svg className={`w-5 h-5 ${enabling ? 'text-red-500' : 'text-amber-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+          </div>
+          <h3 className="text-base font-bold text-gray-900 mb-1">{enabling ? 'Grant admin access?' : 'Remove admin access?'}</h3>
+          <p className="text-sm text-gray-500">
+            {enabling
+              ? <><span className="font-semibold text-gray-800">{email}</span> will get full access to the admin panel including all user data and settings.</>
+              : <><span className="font-semibold text-gray-800">{email}</span> will no longer be able to access the admin panel.</>}
+          </p>
+        </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
+          <button onClick={onConfirm}
+            className={`px-4 py-2 text-sm font-semibold text-white rounded-xl transition-colors ${enabling ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'}`}>
+            {enabling ? 'Yes, grant access' : 'Yes, remove access'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditModal({ user, isLastAdmin, onClose, onSave }: {
   user: User;
+  isLastAdmin: boolean;
   onClose: () => void;
   onSave: (updates: Partial<User>) => Promise<void>;
 }) {
@@ -65,6 +97,7 @@ function EditModal({ user, onClose, onSave }: {
   const [creditsUsed, setCreditsUsed] = useState(user.credits_used);
   const [isAdmin, setIsAdmin] = useState(user.is_admin);
   const [saving, setSaving] = useState(false);
+  const [confirmAdmin, setConfirmAdmin] = useState<boolean | null>(null);
 
   const handlePlanChange = (p: string) => {
     setPlan(p);
@@ -79,6 +112,15 @@ function EditModal({ user, onClose, onSave }: {
   };
 
   return (
+    <>
+    {confirmAdmin !== null && (
+      <ConfirmAdminModal
+        email={user.email}
+        enabling={confirmAdmin}
+        onConfirm={() => { setIsAdmin(confirmAdmin); setConfirmAdmin(null); }}
+        onClose={() => setConfirmAdmin(null)}
+      />
+    )}
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
@@ -118,13 +160,22 @@ function EditModal({ user, onClose, onSave }: {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
+          <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${isLastAdmin && isAdmin ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
             <div>
               <p className="text-sm font-semibold text-gray-900">Admin Access</p>
-              <p className="text-xs text-gray-400 mt-0.5">Grant full admin panel access</p>
+              {isLastAdmin && isAdmin
+                ? <p className="text-xs text-amber-600 mt-0.5 font-medium">Last admin — add another before removing</p>
+                : <p className="text-xs text-gray-400 mt-0.5">Grant full admin panel access</p>
+              }
             </div>
-            <button type="button" onClick={() => setIsAdmin(v => !v)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${isAdmin ? 'bg-red-500' : 'bg-gray-200'}`}>
+            <button
+              type="button"
+              disabled={isLastAdmin && isAdmin}
+              onClick={() => setConfirmAdmin(!isAdmin)}
+              title={isLastAdmin && isAdmin ? 'Cannot remove the last admin' : undefined}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
+                isLastAdmin && isAdmin ? 'bg-red-300 cursor-not-allowed' : isAdmin ? 'bg-red-500' : 'bg-gray-200'
+              }`}>
               <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${isAdmin ? 'translate-x-4' : 'translate-x-0.5'}`}/>
             </button>
           </div>
@@ -138,6 +189,7 @@ function EditModal({ user, onClose, onSave }: {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -246,13 +298,13 @@ function AdminUsersInner() {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null);
 
   const focusId = searchParams.get('focus');
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+  const showToast = (msg: string, error = false) => {
+    setToast({ msg, error });
+    setTimeout(() => setToast(null), 4000);
   };
 
   const loadUsers = useCallback(() => {
@@ -280,7 +332,9 @@ function AdminUsersInner() {
       body: JSON.stringify(updates),
     });
     const data = await res.json();
-    if (!data.error) {
+    if (data.error) {
+      showToast(data.error, true);
+    } else {
       setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
       showToast('User updated successfully');
     }
@@ -292,15 +346,16 @@ function AdminUsersInner() {
   return (
     <main className="flex-1 p-6 space-y-6">
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 text-white text-sm font-semibold rounded-xl px-5 py-3 shadow-xl z-50 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/>
-          {toast}
+        <div className={`fixed bottom-6 right-6 text-white text-sm font-semibold rounded-xl px-5 py-3 shadow-xl z-50 flex items-center gap-2 ${toast.error ? 'bg-red-600' : 'bg-gray-900'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${toast.error ? 'bg-red-300' : 'bg-emerald-400'}`}/>
+          {toast.msg}
         </div>
       )}
 
       {editUser && (
         <EditModal
           user={editUser}
+          isLastAdmin={editUser.is_admin && users.filter(u => u.is_admin).length <= 1}
           onClose={() => setEditUser(null)}
           onSave={updates => saveUser(editUser.id, updates)}
         />

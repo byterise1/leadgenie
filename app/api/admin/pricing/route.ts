@@ -50,5 +50,12 @@ export async function PUT(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Sync credits_total for all users currently on this plan
+  await supabaseAdmin
+    .from('profiles')
+    .update({ credits_total: Number(credits_per_month) })
+    .eq('plan', id);
+
   return NextResponse.json(data);
 }

@@ -43,6 +43,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
+
+  // Block removing admin if this is the last admin
+  if ('is_admin' in body && body.is_admin === false) {
+    const { count } = await supabaseAdmin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_admin', true);
+    if ((count ?? 0) <= 1) {
+      return NextResponse.json(
+        { error: 'Cannot remove the last admin. Add another admin first.' },
+        { status: 400 }
+      );
+    }
+  }
+
   const allowed = ['plan', 'credits_total', 'credits_used', 'is_admin', 'full_name'];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {

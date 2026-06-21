@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 type WarmupAccount = {
   id: string;
@@ -51,23 +53,35 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: PoolAccount) => void }) {
+  const [accountType, setAccountType] = useState<'gmail-oauth' | 'gmail-app' | 'smtp'>('gmail-oauth');
   const [email, setEmail] = useState('');
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('587');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
+  const [appPass, setAppPass] = useState('');
   const [warmupTarget, setWarmupTarget] = useState('40');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const handleOAuth = () => {
+    window.location.href = '/api/admin/warmup/oauth/google';
+  };
+
   const handleAdd = async () => {
-    if (!email || !smtpHost || !smtpUser || !smtpPass) { setError('All fields are required.'); return; }
+    if (accountType === 'gmail-oauth') { handleOAuth(); return; }
+    if (!email) { setError('Email address is required.'); return; }
+    if (accountType === 'gmail-app' && !appPass) { setError('App password is required.'); return; }
+    if (accountType === 'smtp' && (!smtpHost || !smtpUser || !smtpPass)) { setError('All SMTP fields are required.'); return; }
     setSaving(true);
     setError('');
+    const payload = accountType === 'gmail-app'
+      ? { email, type: 'gmail-app', smtp_host: 'smtp.gmail.com', smtp_port: 587, smtp_user: email, smtp_pass: appPass, warmup_target: Number(warmupTarget) }
+      : { email, type: 'smtp', smtp_host: smtpHost, smtp_port: Number(smtpPort), smtp_user: smtpUser, smtp_pass: smtpPass, warmup_target: Number(warmupTarget) };
     const res = await fetch('/api/admin/warmup/pool', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, smtp_host: smtpHost, smtp_port: Number(smtpPort), smtp_user: smtpUser, smtp_pass: smtpPass, warmup_target: Number(warmupTarget) }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.error) { setError(data.error); setSaving(false); return; }
@@ -81,7 +95,7 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-gray-900">Add Pool Account</h2>
-            <p className="text-xs text-gray-400 mt-0.5">This account will be added to the shared warmup pool.</p>
+            <p className="text-xs text-gray-400 mt-0.5">This account joins the shared warmup pool.</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -90,52 +104,113 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
         <div className="px-6 py-5 space-y-4">
           {error && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Email Address</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="pool@yourdomain.com"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Host</label>
-              <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Port</label>
-              <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Username</label>
-              <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="user@domain.com"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Password</label>
-              <input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            </div>
-            <div className="col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Warmup Target (emails/day)</label>
-              <input type="number" value={warmupTarget} onChange={e => setWarmupTarget(e.target.value)} min={5} max={100}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          {/* Account type selector */}
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Account Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                ['gmail-oauth', 'Gmail OAuth'],
+                ['gmail-app', 'Gmail App Pass'],
+                ['smtp', 'Custom SMTP'],
+              ] as const).map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setAccountType(val)}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                    accountType === val ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                  }`}>
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
+
+          {accountType === 'gmail-oauth' ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-900">Connect Gmail with OAuth</p>
+                <p className="text-xs text-gray-400 mt-1">You'll be redirected to Google to authorize access. The account will be added to the pool automatically.</p>
+              </div>
+              <button onClick={handleOAuth}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Sign in with Google
+              </button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Email Address</label>
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder={accountType === 'gmail-app' ? 'you@gmail.com' : 'pool@yourdomain.com'}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+
+              {accountType === 'gmail-app' ? (
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">App Password</label>
+                  <input type="password" value={appPass} onChange={e => setAppPass(e.target.value)} placeholder="xxxx xxxx xxxx xxxx"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  <p className="text-[10px] text-gray-400 mt-1">Generate at myaccount.google.com → Security → App Passwords</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Host</label>
+                    <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.yourdomain.com"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Port</label>
+                    <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Username</label>
+                    <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="user@domain.com"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Password</label>
+                    <input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Warmup Target (emails/day)</label>
+                <input type="number" value={warmupTarget} onChange={e => setWarmupTarget(e.target.value)} min={5} max={100}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+            </>
+          )}
         </div>
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
           <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700">Cancel</button>
-          <button onClick={handleAdd} disabled={saving}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60">
-            {saving ? 'Adding…' : 'Add to Pool'}
-          </button>
+          {accountType !== 'gmail-oauth' && (
+            <button onClick={handleAdd} disabled={saving}
+              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60">
+              {saving ? 'Adding…' : 'Add to Pool'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default function AdminWarmupPage() {
+function AdminWarmupPageInner() {
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
   const [poolAccounts, setPoolAccounts] = useState<PoolAccount[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, warming: 0, healthy: 0, at_risk: 0 });
@@ -144,8 +219,22 @@ export default function AdminWarmupPage() {
   const [filter, setFilter] = useState<'all' | 'warming' | 'healthy' | 'at_risk'>('all');
   const [showAddPool, setShowAddPool] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
+
+  useEffect(() => {
+    if (searchParams.get('connected') === 'gmail') {
+      showToast('Gmail account connected and added to warmup pool!');
+      // Clean up URL
+      window.history.replaceState({}, '', '/admin/warmup');
+    }
+    if (searchParams.get('error') === 'oauth_failed') {
+      showToast('Google OAuth failed — please try again.');
+      window.history.replaceState({}, '', '/admin/warmup');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -367,5 +456,13 @@ export default function AdminWarmupPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AdminWarmupPage() {
+  return (
+    <Suspense fallback={<main className="flex-1 p-6"><div className="h-8 w-48 bg-gray-100 rounded animate-pulse"/></main>}>
+      <AdminWarmupPageInner />
+    </Suspense>
   );
 }

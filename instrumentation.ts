@@ -577,21 +577,28 @@ export async function register() {
     await warmupQueue.upsertJobScheduler('warmup-daily', { every: 6 * 60 * 60_000 }, { name: 'warmup', data: {} });
 
     const WARMUP_SUBJECTS = [
-      'Quick follow-up',
-      'Checking in',
-      'Thoughts on this?',
-      'Following up from our conversation',
-      'Hope this finds you well',
-      'A question for you',
-      'Reaching out',
-      'Wanted to connect',
+      'Quick follow-up', 'Checking in', 'Thoughts on this?',
+      'Following up from our conversation', 'Hope this finds you well',
+      'A question for you', 'Reaching out', 'Wanted to connect',
+      'Re: our conversation', 'Just circling back',
     ];
     const WARMUP_BODIES = [
       'Hi,\n\nJust wanted to follow up and see if you had a chance to look at my previous message.\n\nBest regards',
       'Hello,\n\nHope you are having a great week. I wanted to touch base regarding our previous discussion.\n\nThank you',
-      'Hi there,\n\nI hope this email finds you well. I wanted to check in and see how things are going on your end.\n\nBest',
+      'Hi there,\n\nI hope this email finds you well. I wanted to check in and see how things are going.\n\nBest',
       'Hello,\n\nThanks for your time. I wanted to reach out and continue our conversation from last week.\n\nRegards',
       'Hi,\n\nI wanted to follow up on my earlier email. Please let me know if you have any questions.\n\nBest wishes',
+      'Hey,\n\nJust checking in to see if everything is going well on your end. Let me know if there is anything I can help with.\n\nCheers',
+    ];
+    const WARMUP_REPLIES = [
+      'Thanks, I\'ll take a look at this.',
+      'Got it, thanks for reaching out!',
+      'Appreciate the follow-up.',
+      'Thanks for the message, will circle back soon.',
+      'Noted, I\'ll get back to you shortly.',
+      'Received, thank you!',
+      'Thanks for checking in.',
+      'I appreciate you following up.',
     ];
 
     function warmupDailyTarget(day: number, target: number): number {
@@ -600,10 +607,33 @@ export async function register() {
       return Math.max(2, Math.min(ramp, target));
     }
 
+    async function gmailModify(msgId: string, addLabels: string[], removeLabels: string[], token: string) {
+      try {
+        await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msgId}/modify`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addLabelIds: addLabels, removeLabelIds: removeLabels }),
+          signal: AbortSignal.timeout(8000),
+        });
+      } catch { /* non-fatal */ }
+    }
+
+    async function gmailSearch(q: string, token: string): Promise<{ id: string }[]> {
+      try {
+        const res = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(q)}&maxResults=20`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) },
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.messages || [];
+      } catch { return []; }
+    }
+
     new SyncWorker('warmup', async () => {
       const { data: allWarmupAccounts } = await supabase
         .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, access_token, refresh_token, warmup_day, warmup_target, health_score, sent_today')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today')
         .eq('warmup_enabled', true)
         .neq('status', 'error');
 
@@ -611,8 +641,9 @@ export async function register() {
 
       console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts`);
 
-      const { sendEmail } = await import('./lib/mailer');
+      const { sendEmail, getAccessToken } = await import('./lib/mailer');
 
+      // ── PHASE 1: SEND warmup emails ──────────────────────────────────────
       for (const account of allWarmupAccounts) {
         try {
           const day = (account.warmup_day ?? 0) + 1;
@@ -630,35 +661,17 @@ export async function register() {
 
             try {
               await sendEmail(
-                {
-                  id: account.id,
-                  type: account.type,
-                  email: account.email,
-                  smtp_host: account.smtp_host,
-                  smtp_port: account.smtp_port,
-                  smtp_user: account.smtp_user,
-                  smtp_pass: account.smtp_pass,
-                },
-                {
-                  from: `"LeadGenie Warmup" <${account.email}>`,
-                  to: toAccount.email,
-                  subject: `[warmup] ${subject}`,
-                  text: body,
-                  html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
-                }
+                { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
+                { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n/g, '<br>')}</p>` }
               );
-
-              await supabase.from('warmup_emails').insert({
-                from_account_id: account.id,
-                to_account_id: toAccount.id,
-                subject,
-                body,
-                sent_at: new Date().toISOString(),
-              });
-
+              await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
               sent++;
             } catch (e: any) {
-              console.error(`[warmup] send failed ${account.email} → ${toAccount.email}: ${e.message}`);
+              console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
+              if (e.responseCode === 535 || e.code === 'EAUTH') {
+                await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', account.id);
+                break;
+              }
             }
           }
 
@@ -666,13 +679,126 @@ export async function register() {
           await supabase.from('email_accounts').update({
             warmup_day: day,
             health_score: newHealth,
+            sent_today: (account.sent_today ?? 0) + sent,
           }).eq('id', account.id);
 
-          console.log(`[warmup] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
+          console.log(`[warmup-send] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
         } catch (e: any) {
-          console.error(`[warmup] account error ${account.email}: ${e.message}`);
+          console.error(`[warmup-send] ${account.email}: ${e.message}`);
         }
       }
+
+      // ── PHASE 2: RECEIVE — rescue from spam, mark-read, auto-reply ───────
+      for (const account of allWarmupAccounts) {
+        try {
+          if (account.type === 'gmail-oauth') {
+            // Gmail API path
+            let token: string;
+            try { token = await getAccessToken({ id: account.id, type: account.type, email: account.email, smtp_pass: account.smtp_pass }); }
+            catch { continue; }
+
+            const messages = await gmailSearch('subject:[warmup] newer_than:2d', token);
+            for (const msg of messages) {
+              try {
+                const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
+                if (!detail) continue;
+                const isSent = detail.labelIds?.includes('SENT');
+                if (isSent) continue;
+                const inSpam = detail.labelIds?.includes('SPAM');
+                const unread = detail.labelIds?.includes('UNREAD');
+                const addLabels = inSpam ? ['INBOX'] : [];
+                const removeLabels = [...(inSpam ? ['SPAM'] : []), ...(unread ? ['UNREAD'] : [])];
+                if (addLabels.length || removeLabels.length) await gmailModify(msg.id, addLabels, removeLabels, token);
+
+                if (unread && Math.random() < 0.25) {
+                  const hdrs = detail.payload?.headers || [];
+                  const fromH = hdrs.find((h: any) => h.name === 'From')?.value || '';
+                  const subjH = hdrs.find((h: any) => h.name === 'Subject')?.value || '';
+                  const toEmail = fromH.match(/<(.+?)>/)?.at(1) || fromH.trim();
+                  if (toEmail && toEmail !== account.email) {
+                    const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
+                    await sendEmail(
+                      { id: account.id, type: account.type, email: account.email, smtp_pass: account.smtp_pass },
+                      { from: account.email, to: toEmail, subject: `Re: ${subjH}`, text: replyText, html: `<p>${replyText}</p>` }
+                    );
+                  }
+                }
+              } catch { /* skip single message error */ }
+            }
+
+          } else {
+            // IMAP path (gmail-app, smtp)
+            const imapHost = account.imap_host || (account.type === 'gmail-app' ? 'imap.gmail.com' : null);
+            if (!imapHost) continue;
+
+            const { ImapFlow } = await import('imapflow');
+            const imapConfig: any = {
+              host: imapHost, port: account.imap_port || 993, secure: true,
+              auth: { user: account.smtp_user || account.email, pass: account.smtp_pass },
+              logger: false, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, socketTimeout: 20000,
+            };
+            if (process.env.SMTP_PROXY) imapConfig.proxy = process.env.SMTP_PROXY;
+
+            const client = new ImapFlow(imapConfig);
+            let replyTarget: { toEmail: string; subject: string } | null = null;
+
+            try {
+              await client.connect();
+
+              // Rescue from spam
+              const spamFolders = account.type === 'gmail-app' ? ['[Gmail]/Spam'] : ['Junk', 'Spam', '[Gmail]/Spam'];
+              for (const folder of spamFolders) {
+                try {
+                  const spamLock = await client.getMailboxLock(folder);
+                  try {
+                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), subject: '[warmup]' }, { uid: true });
+                    if (uids && (uids as number[]).length > 0) {
+                      await client.messageMove(uids as number[], 'INBOX', { uid: true });
+                      console.log(`[warmup-receive] rescued ${(uids as number[]).length} from spam: ${account.email}`);
+                    }
+                  } finally { spamLock.release(); }
+                  break;
+                } catch { /* folder not found, try next */ }
+              }
+
+              // Mark inbox warmup emails as read + grab reply candidate
+              const inboxLock = await client.getMailboxLock('INBOX');
+              try {
+                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), subject: '[warmup]', seen: false }, { uid: true });
+                if (uids && (uids as number[]).length > 0) {
+                  await client.messageFlagsAdd(uids as number[], ['\\Seen'], { uid: true });
+                  if (Math.random() < 0.25) {
+                    for await (const msg of client.fetch((uids as number[]).slice(0, 1), { envelope: true }, { uid: true })) {
+                      const from = msg.envelope?.from?.[0];
+                      const fromEmail = from?.address || '';
+                      const subject = msg.envelope?.subject || '';
+                      if (fromEmail && fromEmail !== account.email) replyTarget = { toEmail: fromEmail, subject };
+                    }
+                  }
+                }
+              } finally { inboxLock.release(); }
+
+              await client.logout();
+            } catch (e: any) {
+              console.error(`[warmup-receive] IMAP ${account.email}: ${e.message}`);
+              try { await client.logout(); } catch { }
+            }
+
+            if (replyTarget) {
+              const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
+              try {
+                await sendEmail(
+                  { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
+                  { from: account.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: replyText, html: `<p>${replyText}</p>` }
+                );
+              } catch { /* non-fatal */ }
+            }
+          }
+        } catch (e: any) {
+          console.error(`[warmup-receive] ${account.email}: ${e.message}`);
+        }
+      }
+
     }, { connection, concurrency: 1 });
 
     console.log('✅ Warmup worker started (every 6h)');
