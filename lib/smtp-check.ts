@@ -160,8 +160,13 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
 
     // Local dev: direct TCP connection
     return doSmtpConversation(new net.Socket(), email, domain, { host: mxHost, port: 25 });
-  } catch {
-    return 'unknown'; // domain_does_not_exist (DNS resolution failed)
+  } catch (err: unknown) {
+    // DNS errors that confirm the domain/MX doesn't exist → hard invalid
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === 'ENOTFOUND' || code === 'ENODATA' || code === 'ENOENT' || code === 'ESERVFAIL') {
+      return 'invalid'; // domain_does_not_exist
+    }
+    return 'unknown'; // network error, timeout, etc.
   }
 }
 
