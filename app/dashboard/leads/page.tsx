@@ -71,6 +71,7 @@ export default function LeadsPage() {
   };
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null); // set when validating a single add
   const [includeCrossList, setIncludeCrossList] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
@@ -234,6 +235,7 @@ export default function LeadsPage() {
     }
     setValidationResult(null);
     setPendingFile(null);
+    setPendingLead(null);
     setImporting(false);
   };
 
@@ -274,31 +276,20 @@ export default function LeadsPage() {
       const d = await res.json();
       if (res.ok) { setLeads(p => p.map(l => l.id === editingLead.id ? d : l)); setShowForm(false); }
       else showMsg(`Error: ${d.error}`);
+      setSaving(false);
     } else {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, first_name: form.first_name || null, last_name: form.last_name || null, company: form.company || null, title: form.title || null, website: form.website || null, phone: form.phone || null }),
-      });
-      const d = await res.json();
-      if (res.ok) {
-        // Always add to current list (picker ensures a list is selected)
-        if (selectedList) {
-          await fetch(`/api/lead-lists/${selectedList}/members`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lead_ids: [d.id] }),
-          });
-          fetchLists();
-        }
-        setLeads(p => [d, ...p]);
-        setTotalCount(c => c + 1);
-        setForm(EMPTY_FORM);
-        setShowForm(false);
-        showMsg('✓ Lead added');
-      } else showMsg(`Error: ${d.error}`);
+      // New lead: run same 2-step validation as bulk import (bounce + unsub + dupe check)
+      const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
+      const csvContent = [
+        'email,first_name,last_name,company,title,website,phone',
+        [form.email, form.first_name, form.last_name, form.company, form.title, form.website, form.phone].map(esc).join(','),
+      ].join('\n');
+      const csvFile = new File([new Blob([csvContent], { type: 'text/csv' })], `lead_${Date.now()}.csv`, { type: 'text/csv' });
+      setSaving(false);
+      setShowForm(false); // close form — modal replaces it
+      setPendingLead(form);
+      await handleImport(csvFile);
     }
-    setSaving(false);
   };
 
   const handleDeleteLead = (leadId: string) => {
@@ -759,9 +750,9 @@ export default function LeadsPage() {
             </div>
             <div className="px-6 pb-6 flex gap-2">
               <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50">Cancel</button>
-              <button disabled={!form.email || saving} onClick={handleSave}
+              <button disabled={!form.email || saving || validating} onClick={handleSave}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                {saving ? 'Saving…' : editingLead ? 'Save Changes' : 'Add Lead'}
+                {saving ? 'Saving…' : validating && !editingLead ? 'Checking email…' : editingLead ? 'Save Changes' : 'Add Lead'}
               </button>
             </div>
           </div>
@@ -786,10 +777,10 @@ export default function LeadsPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Import Preview</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{validationResult.total} rows in file</p>
+                <h2 className="text-base font-bold text-gray-900">{pendingLead ? 'Add Lead — Check' : 'Import Preview'}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{pendingLead ? 'Email scanned below' : `${validationResult.total} rows in file`}</p>
               </div>
-              <button onClick={() => { setValidationResult(null); setPendingFile(null); }}
+              <button onClick={() => { setValidationResult(null); setPendingFile(null); if (pendingLead) setShowForm(true); setPendingLead(null); }}
                 className="text-gray-400 hover:text-gray-700 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
@@ -912,14 +903,20 @@ export default function LeadsPage() {
             </div>
 
             <div className="px-5 pb-5 flex gap-2 shrink-0">
-              <button onClick={() => { setValidationResult(null); setPendingFile(null); }}
+              <button onClick={() => {
+                  setValidationResult(null); setPendingFile(null);
+                  if (pendingLead) { setShowForm(true); } // reopen form
+                  setPendingLead(null);
+                }}
                 className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
-                Cancel
+                {pendingLead ? 'Go Back' : 'Cancel'}
               </button>
               <button onClick={confirmImport}
                 disabled={validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0) === 0}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                Import {validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)} Leads
+                {pendingLead
+                  ? (validationResult.clean_count > 0 ? 'Add Lead' : 'Add to This List')
+                  : `Import ${validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)} Leads`}
               </button>
             </div>
           </div>
