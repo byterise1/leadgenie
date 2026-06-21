@@ -90,9 +90,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => {});
   };
 
+  // Refetch whenever admin navigates to a new page
+  useEffect(() => { fetchNotifs(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     fetchNotifs();
-    const id = setInterval(fetchNotifs, 10000);
+    const id = setInterval(fetchNotifs, 5000);
 
     // Realtime: instant push when a new notification is inserted for this admin user
     const supabase = createClient();
@@ -112,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return () => {
       clearInterval(id);
-      if (channel) createClient().removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

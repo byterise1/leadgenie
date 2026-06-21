@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { NavigationProgress } from '@/components/NavigationProgress';
@@ -20,6 +20,7 @@ type Notification = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [credits, setCredits] = useState(100);
   const [usedCredits, setUsedCredits] = useState(0);
@@ -52,11 +53,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {});
   };
 
+  // Refetch on every page navigation
+  useEffect(() => { fetchNotifications(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     // Initial load
     fetchNotifications();
-    // Polling fallback every 10s (catches anything Realtime misses)
-    const interval = setInterval(fetchNotifications, 10000);
+    // Polling fallback every 5s (catches anything Realtime misses)
+    const interval = setInterval(fetchNotifications, 5000);
 
     // Supabase Realtime — instant push when a new notification row is inserted
     const supabase = createClient();
