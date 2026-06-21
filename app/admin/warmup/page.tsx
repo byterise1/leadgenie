@@ -316,7 +316,7 @@ function AdminWarmupPageInner() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-gray-900">Platform Pool Accounts</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Admin-owned SMTP accounts dedicated to the warmup pool. These boost the pool size for all users.</p>
+            <p className="text-xs text-gray-400 mt-0.5">Admin-owned accounts (Gmail OAuth, Gmail App Password, or custom SMTP) dedicated to the warmup pool.</p>
           </div>
           <button onClick={() => setShowAddPool(true)}
             className="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold rounded-xl px-3 py-2 hover:bg-blue-700">
@@ -328,7 +328,7 @@ function AdminWarmupPageInner() {
         {poolAccounts.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center">
             <p className="text-sm font-semibold text-gray-500 mb-1">No pool accounts yet</p>
-            <p className="text-xs text-gray-400 mb-3">Add SMTP accounts here to seed the warmup pool for all users.</p>
+            <p className="text-xs text-gray-400 mb-3">Add Gmail or SMTP accounts here to seed the warmup pool for all users.</p>
             <button onClick={() => setShowAddPool(true)} className="text-sm font-bold text-blue-600 hover:text-blue-700">+ Add pool account</button>
           </div>
         ) : (
