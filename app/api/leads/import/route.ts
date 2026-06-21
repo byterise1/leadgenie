@@ -19,9 +19,7 @@ function isValidEmail(email: string): boolean {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
   const lower = email.toLowerCase();
   if (FAKE_EMAILS.has(lower)) return false;
-  const domain = lower.split('@')[1];
-  if (FAKE_DOMAINS.has(domain)) return false;
-  return true;
+  return !FAKE_DOMAINS.has(lower.split('@')[1]);
 }
 
 function clean(v: string | undefined): string | null {
@@ -52,6 +50,16 @@ export async function POST(req: NextRequest) {
   const campaign_id = formData.get('campaign_id') as string | null;
   const list_id = formData.get('list_id') as string | null;
 
+  // From validate step: emails confirmed as bounced/unsubscribed by client
+  let excludeEmails = new Set<string>();
+  const excludeRaw = formData.get('exclude_emails') as string | null;
+  if (excludeRaw) {
+    try { excludeEmails = new Set(JSON.parse(excludeRaw) as string[]); } catch {}
+  }
+
+  // Whether to add cross-list duplicates (existing leads in other lists) to this list
+  const includeCrossList = formData.get('include_cross_list') !== 'false';
+
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
 
   const fileName = file.name.toLowerCase();
@@ -59,65 +67,74 @@ export async function POST(req: NextRequest) {
 
   if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
     const { read, utils } = await import('xlsx');
-    const buffer = await file.arrayBuffer();
-    const wb = read(buffer, { type: 'array' });
+    const wb = read(await file.arrayBuffer(), { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     rawRows = utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
   } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) {
     const text = await file.text();
     const { data, errors } = Papa.parse<Record<string, string>>(text, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: h => h.trim(),
+      header: true, skipEmptyLines: true, transformHeader: h => h.trim(),
     });
-    if (errors.length && !data.length) {
-      return NextResponse.json({ error: 'Could not parse CSV' }, { status: 400 });
-    }
+    if (errors.length && !data.length) return NextResponse.json({ error: 'Could not parse CSV' }, { status: 400 });
     rawRows = data;
   } else {
     return NextResponse.json({ error: 'Unsupported file type. Use CSV, XLSX, or XLS.' }, { status: 400 });
   }
 
   const totalRows = rawRows.length;
-  const leads = rawRows
+  const normalized = rawRows
     .map(normalizeRow)
-    .filter(r => isValidEmail(r.email))
+    .filter(r => isValidEmail(r.email) && !excludeEmails.has(r.email))
     .map(r => ({ ...r, user_id: user.id }));
-  const invalid = totalRows - leads.length;
+  const invalid = totalRows - normalized.length;
 
-  if (!leads.length) {
+  if (!normalized.length) {
     return NextResponse.json({ error: 'No valid email addresses found in file' }, { status: 400 });
   }
 
-  // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
-  // Deduplicate within the file itself
+  // Deduplicate within file
   const seenInFile = new Set<string>();
-  const uniqueLeads = leads.filter(l => {
+  const unique = normalized.filter(l => {
     if (seenInFile.has(l.email)) return false;
     seenInFile.add(l.email);
     return true;
   });
-  const duplicatesInFile = leads.length - uniqueLeads.length;
+  const duplicatesInFile = normalized.length - unique.length;
 
-  // Fetch ALL existing emails for this user in one query (avoids URL length limits)
-  const { data: allExisting } = await supabaseAdmin
-    .from('leads')
-    .select('email')
-    .eq('user_id', user.id);
-  const existingSet = new Set((allExisting || []).map((r: { email: string }) => r.email));
+  // Fetch all existing emails for this user
+  const { data: allExisting } = await supabaseAdmin.from('leads').select('id, email').eq('user_id', user.id);
+  const existingMap = new Map<string, string>((allExisting || []).map((r: { id: string; email: string }) => [r.email, r.id]));
 
-  const newLeads = uniqueLeads.filter(l => !existingSet.has(l.email));
-  const duplicatesInDB = uniqueLeads.length - newLeads.length;
+  const trulyNew = unique.filter(l => !existingMap.has(l.email));
+  const alreadyInAccount = unique.length - trulyNew.length;
 
-  if (!newLeads.length) {
+  // For list import: if include_cross_list=true, add existing leads (from other lists) as members
+  let crossListAdded = 0;
+  if (list_id && includeCrossList) {
+    const existingToAdd = unique.filter(l => existingMap.has(l.email));
+    if (existingToAdd.length) {
+      const memberRows = existingToAdd
+        .map(l => ({ list_id, lead_id: existingMap.get(l.email)! }))
+        .filter(r => r.lead_id);
+      if (memberRows.length) {
+        await supabaseAdmin
+          .from('lead_list_members')
+          .upsert(memberRows, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
+        crossListAdded = memberRows.length;
+      }
+    }
+  }
+
+  if (!trulyNew.length) {
     return NextResponse.json({
       imported: 0,
+      added_to_list: crossListAdded,
       total_in_file: totalRows,
       invalid,
       duplicates_in_file: duplicatesInFile,
-      already_in_db: duplicatesInDB,
+      already_in_db: alreadyInAccount,
       list_id: list_id || null,
       enrolled: 0,
     });
@@ -125,25 +142,21 @@ export async function POST(req: NextRequest) {
 
   const { data: inserted, error } = await supabaseAdmin
     .from('leads')
-    .insert(newLeads)
+    .insert(trulyNew)
     .select('id');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Add imported leads to the chosen list
   if (list_id && inserted?.length) {
-    const memberRows = (inserted as { id: string }[]).map((l) => ({ list_id, lead_id: l.id }));
+    const memberRows = (inserted as { id: string }[]).map(l => ({ list_id, lead_id: l.id }));
     await supabaseAdmin
       .from('lead_list_members')
       .upsert(memberRows, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
   }
 
-  // Also enroll in campaign if provided
   if (campaign_id && inserted?.length) {
     const enrollRows = inserted.map((l: { id: string }) => ({
-      campaign_id,
-      lead_id: l.id,
-      status: 'pending',
+      campaign_id, lead_id: l.id, status: 'pending',
     }));
     await supabaseAdmin
       .from('campaign_leads')
@@ -152,11 +165,12 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     imported: inserted?.length ?? 0,
+    added_to_list: crossListAdded,
     total_in_file: totalRows,
     invalid,
     duplicates_in_file: duplicatesInFile,
-    already_in_db: duplicatesInDB,
+    already_in_db: alreadyInAccount,
     list_id: list_id || null,
-    enrolled: campaign_id ? inserted.length : 0,
+    enrolled: campaign_id ? (inserted?.length ?? 0) : 0,
   });
 }

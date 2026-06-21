@@ -51,8 +51,27 @@ export default function LeadsPage() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [importing, setImporting] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [msg, setMsg] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  type ValidationResult = {
+    total: number;
+    invalid_format: number;
+    file_duplicates: number;
+    already_in_account: number;
+    unsubscribed: number;
+    unsubscribed_emails: string[];
+    cross_list_dupes: { email: string; lists: string[] }[];
+    cross_list_count: number;
+    bounced: number;
+    bounced_emails: string[];
+    bounce_unknown: number;
+    clean_count: number;
+  };
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [includeCrossList, setIncludeCrossList] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -159,34 +178,62 @@ export default function LeadsPage() {
     // User lands on the empty list page — they choose to Import or Add Manually from there
   };
 
-  // ── Import ────────────────────────────────────────────────────────────
+  // ── Import (2-step: validate → confirm → import) ──────────────────────
   const handleImport = async (file: File) => {
-    setImporting(true);
+    setValidating(true);
+    setPendingFile(file);
+    setIncludeCrossList(true);
     const fd = new FormData();
     fd.append('file', file);
-    // Always pass the currently selected list
     if (selectedList) fd.append('list_id', selectedList);
-
-    const res = await fetch('/api/leads/import', { method: 'POST', body: fd });
-    const d = await res.json();
-    if (res.ok) {
-      const skipped = (d.invalid || 0) + (d.duplicates_in_file || 0) + (d.already_in_db || 0);
-      const parts = [`✓ ${d.imported} leads imported`];
-      if (skipped > 0) {
-        const skipDetails = [];
-        if (d.already_in_db > 0) skipDetails.push(`${d.already_in_db} already in account`);
-        if (d.duplicates_in_file > 0) skipDetails.push(`${d.duplicates_in_file} file duplicate`);
-        if (d.invalid > 0) skipDetails.push(`${d.invalid} invalid`);
-        parts.push(`${skipped} skipped (${skipDetails.join(', ')})`);
+    try {
+      const res = await fetch('/api/leads/validate', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (res.ok) {
+        setValidationResult(d);
+      } else {
+        showMsg(`Error: ${d.error}`);
+        setPendingFile(null);
       }
-      if (d.list_id) parts.push(`added to list`);
-      showMsg(parts.join(' · '));
-      fetchLeads('', selectedList);
-      fetchLists();
-      fetch('/api/leads?search=').then(r => r.json()).then(data => { if (Array.isArray(data)) setTotalCount(data.length); });
-    } else {
-      showMsg(`Error: ${d.error}`);
+    } catch {
+      showMsg('Validation failed. Please try again.');
+      setPendingFile(null);
     }
+    setValidating(false);
+  };
+
+  const confirmImport = async () => {
+    if (!pendingFile) return;
+    setImporting(true);
+    const excluded = [
+      ...(validationResult?.bounced_emails ?? []),
+      ...(validationResult?.unsubscribed_emails ?? []),
+      ...(!includeCrossList ? validationResult?.cross_list_dupes.map(d => d.email) ?? [] : []),
+    ];
+    const fd = new FormData();
+    fd.append('file', pendingFile);
+    if (selectedList) fd.append('list_id', selectedList);
+    if (excluded.length) fd.append('exclude_emails', JSON.stringify(excluded));
+    fd.append('include_cross_list', includeCrossList ? 'true' : 'false');
+    try {
+      const res = await fetch('/api/leads/import', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (res.ok) {
+        const total = (d.imported || 0) + (d.added_to_list || 0);
+        const parts = [`✓ ${total} lead${total !== 1 ? 's' : ''} ${d.imported > 0 ? 'imported' : 'added'}`];
+        if (d.added_to_list > 0 && d.imported > 0) parts[0] = `✓ ${d.imported} imported, ${d.added_to_list} added to list`;
+        showMsg(parts.join(' · '));
+        fetchLeads('', selectedList);
+        fetchLists();
+        fetch('/api/leads?search=').then(r => r.json()).then(data => { if (Array.isArray(data)) setTotalCount(data.length); });
+      } else {
+        showMsg(`Error: ${d.error}`);
+      }
+    } catch {
+      showMsg('Import failed. Please try again.');
+    }
+    setValidationResult(null);
+    setPendingFile(null);
     setImporting(false);
   };
 
@@ -367,10 +414,10 @@ export default function LeadsPage() {
           </a>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
-          <button onClick={handleImportClick} disabled={importing}
+          <button onClick={handleImportClick} disabled={importing || validating}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            {importing ? 'Importing…' : 'Import'}
+            {validating ? 'Validating…' : importing ? 'Importing…' : 'Import'}
           </button>
           <button onClick={handleAddClick}
             className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl px-3 py-2 hover:bg-blue-700 transition-colors">
@@ -731,6 +778,148 @@ export default function LeadsPage() {
           secondLabel={confirmModal.secondLabel}
           onSecond={confirmModal.onSecond}
         />
+      )}
+
+      {/* Validation Preview Modal */}
+      {validationResult && !importing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Import Preview</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{validationResult.total} rows found in file</p>
+              </div>
+              <button onClick={() => { setValidationResult(null); setPendingFile(null); }}
+                className="text-gray-400 hover:text-gray-700 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-2.5">
+              {/* Excluded rows breakdown */}
+              <div className="space-y-1.5">
+                {validationResult.invalid_format > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-gray-300 shrink-0"/>
+                      Invalid / fake emails
+                    </span>
+                    <span className="font-semibold text-gray-400">−{validationResult.invalid_format}</span>
+                  </div>
+                )}
+                {validationResult.file_duplicates > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-gray-300 shrink-0"/>
+                      Duplicate in file
+                    </span>
+                    <span className="font-semibold text-gray-400">−{validationResult.file_duplicates}</span>
+                  </div>
+                )}
+                {validationResult.already_in_account > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span className="w-2 h-2 rounded-full bg-gray-300 shrink-0"/>
+                      Already in your account
+                    </span>
+                    <span className="font-semibold text-gray-400">−{validationResult.already_in_account}</span>
+                  </div>
+                )}
+                {validationResult.unsubscribed > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-amber-600">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"/>
+                      Unsubscribed (excluded)
+                    </span>
+                    <span className="font-semibold text-amber-600">−{validationResult.unsubscribed}</span>
+                  </div>
+                )}
+                {validationResult.bounced > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-red-500">
+                      <span className="w-2 h-2 rounded-full bg-red-400 shrink-0"/>
+                      Bounced / invalid mailbox
+                    </span>
+                    <span className="font-semibold text-red-500">−{validationResult.bounced}</span>
+                  </div>
+                )}
+                {validationResult.bounce_unknown > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-400">
+                      <span className="w-2 h-2 rounded-full bg-gray-200 shrink-0"/>
+                      SMTP check inconclusive
+                    </span>
+                    <span className="text-xs text-gray-400">{validationResult.bounce_unknown} (will import)</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cross-list section */}
+              {validationResult.cross_list_count > 0 && (
+                <div className="border border-amber-100 bg-amber-50 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">
+                        {validationResult.cross_list_count} email{validationResult.cross_list_count !== 1 ? 's' : ''} already in other lists
+                      </p>
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        {validationResult.cross_list_dupes.slice(0, 2).map(d => `${d.email} (in ${d.lists.join(', ')})`).join(' · ')}
+                        {validationResult.cross_list_count > 2 ? ` · +${validationResult.cross_list_count - 2} more` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm font-semibold">
+                    <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg transition-all ${includeCrossList ? 'bg-amber-200 text-amber-900' : 'text-amber-700 hover:bg-amber-100'}`}>
+                      <input type="radio" name="cross_list" checked={includeCrossList} onChange={() => setIncludeCrossList(true)} className="accent-amber-600"/>
+                      Add to this list too
+                    </label>
+                    <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg transition-all ${!includeCrossList ? 'bg-amber-200 text-amber-900' : 'text-amber-700 hover:bg-amber-100'}`}>
+                      <input type="radio" name="cross_list" checked={!includeCrossList} onChange={() => setIncludeCrossList(false)} className="accent-amber-600"/>
+                      Skip them
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Clean count */}
+              <div className="border border-emerald-100 bg-emerald-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                  Ready to import
+                </span>
+                <span className="text-lg font-bold text-emerald-700">
+                  {validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)} leads
+                </span>
+              </div>
+            </div>
+
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={() => { setValidationResult(null); setPendingFile(null); }}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={confirmImport}
+                disabled={validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0) === 0}
+                className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                Import {validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)} Leads
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validating overlay */}
+      {validating && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-7 flex flex-col items-center gap-4 max-w-xs w-full">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"/>
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-900">Validating emails…</p>
+              <p className="text-xs text-gray-400 mt-1">Checking for bounces, duplicates & unsubscribes</p>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
