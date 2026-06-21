@@ -135,9 +135,10 @@ export async function POST(req: NextRequest) {
   const toCheck = afterUnsub.slice(0, 500);
   const bounceResults = await batchSmtp(toCheck);
   const bouncedSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'invalid'));
+  const unknownSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'unknown'));
   const bounced_emails = [...bouncedSet];
-  const bounce_unknown = toCheck.filter(e => bounceResults.get(e) === 'unknown').length;
-  // clean = brand new, not unsubscribed, not bounced (unknown still gets imported)
+  const unknown_emails = [...unknownSet];
+  // clean = not bounced (unknown = server blocked probe, import anyway)
   const clean_count = afterUnsub.filter(e => !bouncedSet.has(e)).length;
 
   return NextResponse.json({
@@ -151,7 +152,8 @@ export async function POST(req: NextRequest) {
     unsubscribed_emails,
     bounced: bounced_emails.length,
     bounced_emails,
-    bounce_unknown,          // SMTP probe inconclusive — will be imported
-    clean_count,             // brand new, confirmed valid (or unverified), ready to insert
+    bounce_unknown: unknown_emails.length,
+    unknown_emails,          // probe inconclusive — user decides include or skip
+    clean_count,             // confirmed valid only
   });
 }

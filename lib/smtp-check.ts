@@ -4,6 +4,25 @@ import { SocksClient } from 'socks';
 
 export type SmtpResult = 'valid' | 'invalid' | 'unknown';
 
+// If the MX host belongs to a major provider, RCPT TO probes are always blocked.
+// These providers are legitimate — treat 'unknown' probe results as 'valid'.
+const MAJOR_MX_PATTERNS = [
+  'google.com', 'googlemail.com',          // Gmail + Google Workspace
+  'outlook.com', 'hotmail.com',            // Outlook / Office 365
+  'protection.outlook.com',               // Microsoft 365
+  'yahoodns.net', 'yahoo.com',             // Yahoo
+  'icloud.com', 'me.com',                  // Apple iCloud
+  'protonmail.ch', 'proton.me',            // ProtonMail
+  'zoho.com',                              // Zoho Mail
+  'mailgun.org', 'sendgrid.net',           // Transactional but common in B2B
+  'amazonses.com',                         // AWS SES
+];
+
+function isMajorProvider(mxHost: string): boolean {
+  const h = mxHost.toLowerCase();
+  return MAJOR_MX_PATTERNS.some(p => h.endsWith(p) || h.includes('.' + p));
+}
+
 function getProxy(): { host: string; port: number } | null {
   const raw = process.env.SMTP_PROXY;
   if (!raw) return null;
@@ -75,6 +94,9 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
     ]) as Awaited<ReturnType<typeof dns.resolveMx>>;
     if (!mxRecords?.length) return 'invalid';
     const mxHost = mxRecords.sort((a, b) => a.priority - b.priority)[0].exchange;
+
+    // Major providers block all RCPT TO probes — skip the probe and trust the MX record
+    if (isMajorProvider(mxHost)) return 'valid';
 
     const proxy = getProxy();
 

@@ -59,19 +59,20 @@ export default function LeadsPage() {
     total: number;
     invalid_format: number;
     file_duplicates: number;
-    already_in_this_list: number;   // already a member of target list — skip
+    already_in_this_list: number;
     cross_list_dupes: { email: string; lists: string[] }[];
     cross_list_count: number;
     unsubscribed: number;
     unsubscribed_emails: string[];
     bounced: number;
     bounced_emails: string[];
-    bounce_unknown: number;         // SMTP probe inconclusive — will import anyway
-    clean_count: number;            // brand new, valid, ready to import
+    bounce_unknown: number;
+    unknown_emails: string[];       // probe inconclusive — user decides
+    clean_count: number;            // confirmed valid only
   };
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null); // set when validating a single add
+  const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const [includeCrossList, setIncludeCrossList] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
@@ -816,13 +817,12 @@ export default function LeadsPage() {
               {/* ── Excluded from import (red / amber) ─────────────────── */}
               {(validationResult.bounced > 0 || validationResult.unsubscribed > 0) && (
                 <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Excluded from import</p>
+                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Excluded — will not be imported</p>
                   {validationResult.bounced > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-red-600 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"/>
-                        Bounced — invalid mailbox
-                        <span title="SMTP port 25 probe returned permanent 5xx rejection" className="text-red-300 cursor-help text-xs">(?)</span>
+                        Bounced — confirmed invalid mailbox
                       </span>
                       <span className="font-bold text-red-600">{validationResult.bounced}</span>
                     </div>
@@ -836,16 +836,17 @@ export default function LeadsPage() {
                 </div>
               )}
 
-              {/* ── Bounce strategy note ────────────────────────────────── */}
+              {/* ── Unverifiable info (gray note, still imported) ──────── */}
               {validationResult.bounce_unknown > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 flex items-start gap-2">
-                  <svg className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
-                  <div>
-                    <p className="text-xs font-semibold text-blue-700">{validationResult.bounce_unknown} emails could not be verified</p>
-                    <p className="text-[11px] text-blue-500 mt-0.5">Gmail, Outlook and some servers block SMTP probes. These will be imported — invalid ones will bounce later and auto-mark as bounced.</p>
-                  </div>
+                <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>
+                    Probe blocked — server didn't respond (will be imported)
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">{validationResult.bounce_unknown}</span>
                 </div>
               )}
+
 
               {/* ── Cross-list section ──────────────────────────────────── */}
               {validationResult.cross_list_count > 0 && (
@@ -883,23 +884,26 @@ export default function LeadsPage() {
               )}
 
               {/* ── Ready to import (green) ─────────────────────────────── */}
-              <div className="border border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
-                    Ready to import
-                  </span>
-                  <span className="text-xl font-bold text-emerald-700">
-                    {validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)}
-                  </span>
-                </div>
-                {validationResult.clean_count > 0 && validationResult.cross_list_count > 0 && (
-                  <p className="text-[11px] text-emerald-600 mt-1">
-                    {validationResult.clean_count} new leads
-                    {includeCrossList ? ` + ${validationResult.cross_list_count} from other lists` : ''}
-                  </p>
-                )}
-              </div>
+              {(() => {
+                const total = validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0);
+                const parts = [];
+                if (validationResult.clean_count > 0) parts.push(`${validationResult.clean_count} verified`);
+                if (includeCrossList && validationResult.cross_list_count > 0) parts.push(`${validationResult.cross_list_count} from other lists`);
+                return (
+                  <div className="border border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                        Ready to import
+                      </span>
+                      <span className="text-xl font-bold text-emerald-700">{total}</span>
+                    </div>
+                    {parts.length > 1 && (
+                      <p className="text-[11px] text-emerald-600 mt-1">{parts.join(' + ')}</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="px-5 pb-5 flex gap-2 shrink-0">
