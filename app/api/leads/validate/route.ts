@@ -3,25 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import Papa from 'papaparse';
 import { batchSmtp } from '@/lib/smtp-check';
-
-const FAKE_DOMAINS = new Set([
-  'example.com','test.com','website.com','domain.com','email.com',
-  'mailinator.com','guerrillamail.com','tempmail.com','throwaway.email',
-  'yopmail.com','sharklasers.com','spam4.me','trashmail.com',
-  'doe.com','smith.com','foo.com','bar.com','placeholder.com',
-]);
-const FAKE_EMAILS = new Set([
-  'your@email.com','john@doe.com','john@smith.com','info@website.com',
-  'test@test.com','user@domain.com','name@email.com','me@example.com',
-  'email@email.com','admin@example.com','no@email.com','noemail@noemail.com',
-]);
-
-function isValidFormat(email: string): boolean {
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-  const lower = email.toLowerCase();
-  if (FAKE_EMAILS.has(lower)) return false;
-  return !FAKE_DOMAINS.has(lower.split('@')[1]);
-}
+import { batchPreCheck } from '@/lib/email-validate';
 
 export const maxDuration = 60;
 
@@ -50,33 +32,58 @@ export async function POST(req: NextRequest) {
   const total = rawRows.length;
   const allEmails = rawRows.map(r => (r.email || r.Email || r.EMAIL || '').trim().toLowerCase());
 
-  // 1. Format filter
-  const formatValid = allEmails.filter(isValidFormat);
-  const invalid_format = total - formatValid.length;
+  // ── 1. Pre-check: syntax / typos / disposable / role-based ──────────────
+  const preChecks = batchPreCheck(allEmails);
 
-  // 2. In-file dedup
+  const domain_typo_emails: { email: string; suggestion: string }[] = [];
+  const disposable_emails: string[] = [];
+  const role_based_emails: string[] = [];
+  const invalid_syntax_emails: string[] = [];
+  const preValid: string[] = [];
+
+  for (const email of allEmails) {
+    const check = preChecks.get(email)!;
+    switch (check.status) {
+      case 'invalid_syntax':
+        invalid_syntax_emails.push(email);
+        break;
+      case 'domain_typo':
+        domain_typo_emails.push({ email, suggestion: check.suggestion! });
+        break;
+      case 'disposable':
+        disposable_emails.push(email);
+        break;
+      case 'role_based':
+        role_based_emails.push(email);
+        break;
+      default:
+        preValid.push(email);
+    }
+  }
+
+  const invalid_format = invalid_syntax_emails.length;
+
+  // ── 2. In-file dedup (from pre-valid only) ───────────────────────────────
   const seen = new Set<string>();
   const unique: string[] = [];
-  for (const e of formatValid) {
+  for (const e of preValid) {
     if (!seen.has(e)) { seen.add(e); unique.push(e); }
   }
-  const file_duplicates = formatValid.length - unique.length;
+  const file_duplicates = preValid.length - unique.length;
   const uniqueSet = new Set(unique);
 
   // ── Fetch all user's existing leads ─────────────────────────────────────
   const { data: allLeads } = await supabaseAdmin
     .from('leads').select('id, email').eq('user_id', user.id);
-  // Map<email, lead_id> for all existing leads
   const existingMap = new Map<string, string>(
     (allLeads || []).map((r: { id: string; email: string }) => [r.email, r.id])
   );
 
-  // ── Membership categorisation (only when importing to a specific list) ───
-  const inThisListSet = new Set<string>();               // already in target list
-  const inOtherListsMap = new Map<string, string[]>();   // email → list names
+  // ── 3. Membership categorisation ─────────────────────────────────────────
+  const inThisListSet = new Set<string>();
+  const inOtherListsMap = new Map<string, string[]>();
 
   if (list_id) {
-    // Members already in THIS list
     const { data: thisMembers } = await supabaseAdmin
       .from('lead_list_members')
       .select('leads!inner(email)')
@@ -86,7 +93,6 @@ export async function POST(req: NextRequest) {
       if (e && uniqueSet.has(e)) inThisListSet.add(e);
     }
 
-    // Other lists belonging to this user
     const { data: userLists } = await supabaseAdmin
       .from('lead_lists').select('id, name').eq('user_id', user.id).neq('id', list_id);
 
@@ -101,7 +107,6 @@ export async function POST(req: NextRequest) {
 
       for (const m of otherMembers || []) {
         const email = (m.leads as any)?.email as string;
-        // Only include if: in the file, in account, NOT already in this list
         if (!email || !uniqueSet.has(email) || !existingMap.has(email) || inThisListSet.has(email)) continue;
         const listName = listIdToName.get(m.list_id as string) || 'Another list';
         if (!inOtherListsMap.has(email)) inOtherListsMap.set(email, []);
@@ -110,20 +115,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Categorise each email ────────────────────────────────────────────────
-  // already_in_this_list: already a member of target list → always skip
   const already_in_this_list = unique.filter(e => inThisListSet.has(e)).length;
-
-  // cross_list_dupes: in another list (and in leads table) but NOT in this list
-  // User decides whether to add them to this list too
-  const cross_list_dupes = Array.from(inOtherListsMap.entries())
-    .map(([email, lists]) => ({ email, lists }));
+  const cross_list_dupes = Array.from(inOtherListsMap.entries()).map(([email, lists]) => ({ email, lists }));
   const cross_list_count = cross_list_dupes.length;
 
-  // brand_new: not in leads table at all (also not in this list, not in other lists)
+  // ── 4. Unsubscribe check ─────────────────────────────────────────────────
   const brand_new = unique.filter(e => !existingMap.has(e));
-
-  // ── Unsubscribe check (brand new only — existing leads already have status) ─
   const { data: unsubLeads } = await supabaseAdmin
     .from('sent_emails').select('leads!inner(email)')
     .not('unsubscribed_at', 'is', null).eq('user_id', user.id);
@@ -131,29 +128,44 @@ export async function POST(req: NextRequest) {
   const unsubscribed_emails = brand_new.filter(e => unsubSet.has(e));
   const afterUnsub = brand_new.filter(e => !unsubSet.has(e));
 
-  // ── Port 25 SMTP bounce check (brand new, after unsub filter, cap 500) ──
+  // ── 5. SMTP bounce check (brand new, non-disposable, non-typo, after unsub) ─
   const toCheck = afterUnsub.slice(0, 500);
   const bounceResults = await batchSmtp(toCheck);
   const bouncedSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'invalid'));
   const unknownSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'unknown'));
+  const catchallSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'catchall'));
   const bounced_emails = [...bouncedSet];
   const unknown_emails = [...unknownSet];
-  // clean = not bounced (unknown = server blocked probe, import anyway)
+  const catchall_emails = [...catchallSet];
+  // clean = not bounced (unknown/catchall imported with caution info)
   const clean_count = afterUnsub.filter(e => !bouncedSet.has(e)).length;
 
   return NextResponse.json({
     total,
+    // Pre-check categories (all excluded from import)
     invalid_format,
+    domain_typo: domain_typo_emails.length,
+    domain_typo_emails,         // [{ email, suggestion }]
+    disposable: disposable_emails.length,
+    disposable_emails,
+    role_based: role_based_emails.length,
+    role_based_emails,
+    // File-level
     file_duplicates,
-    already_in_this_list,   // skip silently — already a member of the target list
-    cross_list_dupes,        // in OTHER lists — ask user include or skip
+    // List membership
+    already_in_this_list,
+    cross_list_dupes,
     cross_list_count,
+    // Unsub
     unsubscribed: unsubscribed_emails.length,
     unsubscribed_emails,
+    // SMTP probe results
     bounced: bounced_emails.length,
     bounced_emails,
     bounce_unknown: unknown_emails.length,
-    unknown_emails,          // probe inconclusive — user decides include or skip
-    clean_count,             // confirmed valid only
+    unknown_emails,
+    bounce_catchall: catchall_emails.length,
+    catchall_emails,
+    clean_count,
   });
 }

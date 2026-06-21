@@ -2,24 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import Papa from 'papaparse';
+import { preCheckEmail } from '@/lib/email-validate';
 
-const FAKE_DOMAINS = new Set([
-  'example.com', 'test.com', 'website.com', 'domain.com', 'email.com',
-  'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwaway.email',
-  'yopmail.com', 'sharklasers.com', 'spam4.me', 'trashmail.com',
-  'doe.com', 'smith.com', 'foo.com', 'bar.com', 'placeholder.com',
-]);
-const FAKE_EMAILS = new Set([
-  'your@email.com', 'john@doe.com', 'john@smith.com', 'info@website.com',
-  'test@test.com', 'user@domain.com', 'name@email.com', 'me@example.com',
-  'email@email.com', 'admin@example.com', 'no@email.com', 'noemail@noemail.com',
-]);
-
-function isValidEmail(email: string): boolean {
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-  const lower = email.toLowerCase();
-  if (FAKE_EMAILS.has(lower)) return false;
-  return !FAKE_DOMAINS.has(lower.split('@')[1]);
+// Only allow emails that pass pre-check (valid syntax, not disposable, not typo)
+// role_based emails are allowed through import — they're a soft warning only
+function isImportable(email: string): boolean {
+  const result = preCheckEmail(email);
+  return result.status === 'valid' || result.status === 'role_based';
 }
 
 function clean(v: string | undefined): string | null {
@@ -84,7 +73,7 @@ export async function POST(req: NextRequest) {
   const totalRows = rawRows.length;
   const normalized = rawRows
     .map(normalizeRow)
-    .filter(r => isValidEmail(r.email) && !excludeEmails.has(r.email))
+    .filter(r => isImportable(r.email) && !excludeEmails.has(r.email))
     .map(r => ({ ...r, user_id: user.id }));
   const invalid = totalRows - normalized.length;
 

@@ -57,18 +57,32 @@ export default function LeadsPage() {
 
   type ValidationResult = {
     total: number;
+    // Pre-check: syntax/typo/disposable (all excluded)
     invalid_format: number;
+    domain_typo: number;
+    domain_typo_emails: { email: string; suggestion: string }[];
+    disposable: number;
+    disposable_emails: string[];
+    role_based: number;
+    role_based_emails: string[];
+    // File-level
     file_duplicates: number;
     already_in_this_list: number;
+    // Cross-list
     cross_list_dupes: { email: string; lists: string[] }[];
     cross_list_count: number;
+    // Unsub
     unsubscribed: number;
     unsubscribed_emails: string[];
+    // SMTP probe
     bounced: number;
     bounced_emails: string[];
     bounce_unknown: number;
-    unknown_emails: string[];       // probe inconclusive — user decides
-    clean_count: number;            // confirmed valid only
+    unknown_emails: string[];
+    bounce_catchall: number;
+    catchall_emails: string[];
+    // Ready
+    clean_count: number;
   };
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -210,6 +224,8 @@ export default function LeadsPage() {
     const excluded = [
       ...(validationResult?.bounced_emails ?? []),
       ...(validationResult?.unsubscribed_emails ?? []),
+      ...(validationResult?.domain_typo_emails?.map(d => d.email) ?? []),
+      ...(validationResult?.disposable_emails ?? []),
       ...(!includeCrossList ? validationResult?.cross_list_dupes.map(d => d.email) ?? [] : []),
     ];
     const fd = new FormData();
@@ -789,14 +805,35 @@ export default function LeadsPage() {
 
             <div className="p-5 space-y-3 overflow-y-auto flex-1">
 
-              {/* ── Skipped rows (gray) ─────────────────────────────────── */}
-              {(validationResult.invalid_format > 0 || validationResult.file_duplicates > 0 || validationResult.already_in_this_list > 0) && (
+              {/* ── Skipped rows (gray) — syntax errors, typos, disposable, dupes ── */}
+              {(validationResult.invalid_format > 0 || validationResult.domain_typo > 0 || validationResult.disposable > 0 || validationResult.file_duplicates > 0 || validationResult.already_in_this_list > 0) && (
                 <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skipped — no action</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skipped — not imported</p>
                   {validationResult.invalid_format > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>Invalid / fake emails</span>
+                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>Invalid syntax</span>
                       <span className="font-bold text-gray-400">{validationResult.invalid_format}</span>
+                    </div>
+                  )}
+                  {validationResult.domain_typo > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0"/>Likely typo in domain</span>
+                        <span className="font-bold text-gray-400">{validationResult.domain_typo}</span>
+                      </div>
+                      {validationResult.domain_typo_emails.slice(0, 3).map((d, i) => (
+                        <p key={i} className="text-[10px] text-gray-400 ml-3.5 truncate">
+                          <span className="line-through">{d.email}</span>
+                          <span className="text-blue-400 not-italic"> → {d.suggestion}</span>
+                        </p>
+                      ))}
+                      {validationResult.domain_typo > 3 && <p className="text-[10px] text-gray-400 ml-3.5">+{validationResult.domain_typo - 3} more…</p>}
+                    </div>
+                  )}
+                  {validationResult.disposable > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"/>Disposable / temp email</span>
+                      <span className="font-bold text-gray-400">{validationResult.disposable}</span>
                     </div>
                   )}
                   {validationResult.file_duplicates > 0 && (
@@ -814,39 +851,61 @@ export default function LeadsPage() {
                 </div>
               )}
 
-              {/* ── Excluded from import (red / amber) ─────────────────── */}
+              {/* ── Excluded from import (red) — bounced, unsubscribed ────── */}
               {(validationResult.bounced > 0 || validationResult.unsubscribed > 0) && (
                 <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Excluded — will not be imported</p>
+                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Excluded — confirmed bad</p>
                   {validationResult.bounced > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-red-600 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"/>
-                        Bounced — confirmed invalid mailbox
+                        Bounced — mailbox confirmed invalid
                       </span>
                       <span className="font-bold text-red-600">{validationResult.bounced}</span>
                     </div>
                   )}
                   {validationResult.unsubscribed > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-amber-600 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"/>Unsubscribed</span>
-                      <span className="font-bold text-amber-600">{validationResult.unsubscribed}</span>
+                      <span className="text-red-600 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"/>Unsubscribed</span>
+                      <span className="font-bold text-red-600">{validationResult.unsubscribed}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ── Unverifiable info (gray note, still imported) ──────── */}
-              {validationResult.bounce_unknown > 0 && (
-                <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>
-                    Probe blocked — server didn't respond (will be imported)
-                  </span>
-                  <span className="text-xs font-bold text-gray-400">{validationResult.bounce_unknown}</span>
+              {/* ── Caution info (gray note) — unknowns, catchall, role-based — still imported ── */}
+              {(validationResult.bounce_unknown > 0 || validationResult.bounce_catchall > 0 || validationResult.role_based > 0) && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-2">
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Use caution — will be imported</p>
+                  {validationResult.bounce_unknown > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-600 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0"/>
+                        Inconclusive — server didn&apos;t respond
+                      </span>
+                      <span className="font-bold text-blue-500">{validationResult.bounce_unknown}</span>
+                    </div>
+                  )}
+                  {validationResult.bounce_catchall > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-600 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"/>
+                        Catch-all domain — accepts all addresses
+                      </span>
+                      <span className="font-bold text-blue-500">{validationResult.bounce_catchall}</span>
+                    </div>
+                  )}
+                  {validationResult.role_based > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-600 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0"/>
+                        Role-based email (info@, admin@…)
+                      </span>
+                      <span className="font-bold text-blue-500">{validationResult.role_based}</span>
+                    </div>
+                  )}
                 </div>
               )}
-
 
               {/* ── Cross-list section ──────────────────────────────────── */}
               {validationResult.cross_list_count > 0 && (
@@ -894,9 +953,9 @@ export default function LeadsPage() {
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2 text-sm font-bold text-emerald-700">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
-                        Ready to import
+                        {total === 0 ? 'Nothing to import' : 'Ready to import'}
                       </span>
-                      <span className="text-xl font-bold text-emerald-700">{total}</span>
+                      <span className={`text-xl font-bold ${total === 0 ? 'text-gray-400' : 'text-emerald-700'}`}>{total}</span>
                     </div>
                     {parts.length > 1 && (
                       <p className="text-[11px] text-emerald-600 mt-1">{parts.join(' + ')}</p>

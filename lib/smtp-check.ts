@@ -2,20 +2,19 @@ import * as dns from 'dns/promises';
 import * as net from 'net';
 import { SocksClient } from 'socks';
 
-export type SmtpResult = 'valid' | 'invalid' | 'unknown';
+export type SmtpResult = 'valid' | 'invalid' | 'unknown' | 'catchall';
 
-// If the MX host belongs to a major provider, RCPT TO probes are always blocked.
-// These providers are legitimate — treat 'unknown' probe results as 'valid'.
+// Major providers always block RCPT TO probes — trust the MX record, classify as 'valid'.
 const MAJOR_MX_PATTERNS = [
-  'google.com', 'googlemail.com',          // Gmail + Google Workspace
-  'outlook.com', 'hotmail.com',            // Outlook / Office 365
-  'protection.outlook.com',               // Microsoft 365
-  'yahoodns.net', 'yahoo.com',             // Yahoo
-  'icloud.com', 'me.com',                  // Apple iCloud
-  'protonmail.ch', 'proton.me',            // ProtonMail
-  'zoho.com',                              // Zoho Mail
-  'mailgun.org', 'sendgrid.net',           // Transactional but common in B2B
-  'amazonses.com',                         // AWS SES
+  'google.com', 'googlemail.com',       // Gmail + Google Workspace
+  'outlook.com', 'hotmail.com',         // Outlook / Office 365
+  'protection.outlook.com',            // Microsoft 365
+  'yahoodns.net', 'yahoo.com',          // Yahoo
+  'icloud.com', 'me.com',               // Apple iCloud
+  'protonmail.ch', 'proton.me',         // ProtonMail
+  'zoho.com',                           // Zoho Mail
+  'mailgun.org', 'sendgrid.net',        // Transactional providers
+  'amazonses.com',                      // AWS SES
 ];
 
 function isMajorProvider(mxHost: string): boolean {
@@ -32,13 +31,21 @@ function getProxy(): { host: string; port: number } | null {
   } catch { return null; }
 }
 
-// Runs the SMTP conversation on an already-created socket.
-// Pass connectTo to have it dial first (direct path); omit if socket is already connected (SOCKS5 path).
+// SMTP conversation with catch-all detection:
+// Step 0: wait for 220 greeting
+// Step 1: EHLO → wait for 250
+// Step 2: MAIL FROM → wait for 250
+// Step 3: RCPT TO with fake address (catch-all probe) → if 250 = catch-all
+// Step 4: RCPT TO with real address → 250=valid, 452=invalid(full), 5xx=invalid(no mailbox)
 function doSmtpConversation(
   socket: net.Socket,
   email: string,
+  domain: string,
   connectTo?: { host: string; port: number },
 ): Promise<SmtpResult> {
+  // Random fake address to detect catch-all domains
+  const fakeRcpt = `_probe_${Math.random().toString(36).slice(2, 8)}@${domain}`;
+
   return new Promise<SmtpResult>((resolve) => {
     let settled = false;
     const done = (r: SmtpResult) => {
@@ -51,7 +58,7 @@ function doSmtpConversation(
     let buf = '';
     let step = 0;
 
-    socket.setTimeout(8000);
+    socket.setTimeout(10000);
     socket.once('timeout', () => done('unknown'));
     socket.once('error', () => done('unknown'));
 
@@ -61,20 +68,50 @@ function doSmtpConversation(
       buf = lines.pop() ?? '';
       for (const line of lines) {
         const t = line.trim();
-        if (!t || t[3] === '-') continue; // skip SMTP continuation lines
+        if (!t || t[3] === '-') continue; // skip SMTP multi-line continuation
         const code = parseInt(t.slice(0, 3));
+
         if (step === 0 && code === 220) {
+          // Server greeting received
           socket.write('EHLO leadgenie.app\r\n'); step = 1;
+
         } else if (step === 1 && code === 250) {
-          socket.write('MAIL FROM:<verify@leadgenie.app>\r\n'); step = 2;
+          // EHLO accepted — start transaction
+          socket.write('MAIL FROM:<probe@leadgenie.app>\r\n'); step = 2;
+
         } else if (step === 2 && code === 250) {
-          socket.write(`RCPT TO:<${email}>\r\n`); step = 3;
+          // MAIL FROM accepted — probe with fake address first (catch-all detection)
+          socket.write(`RCPT TO:<${fakeRcpt}>\r\n`); step = 3;
+
         } else if (step === 3) {
+          if (code === 250 || code === 251) {
+            // is_catchall: server accepted a completely fake address → accepts everything
+            // Cannot confirm specific mailbox exists → let caller decide (caution, not blocked)
+            socket.write('QUIT\r\n');
+            done('catchall');
+          } else {
+            // Server rejected fake address → NOT a catch-all; check the real email
+            socket.write(`RCPT TO:<${email}>\r\n`); step = 4;
+          }
+
+        } else if (step === 4) {
           socket.write('QUIT\r\n');
-          if (code === 250 || code === 251) done('valid');
-          else if (code >= 500) done('invalid');
-          else done('unknown');
+          if (code === 250 || code === 251) {
+            // mailbox_exists — confirmed valid
+            done('valid');
+          } else if (code === 452) {
+            // mailbox_full — will hard bounce for cold email, treat as invalid
+            done('invalid');
+          } else if (code >= 500) {
+            // mailbox_does_not_exist (550, 551, 553, 554) — confirmed invalid
+            done('invalid');
+          } else {
+            // is_greylisting (451) or inconclusive (other 4xx) — unknown, use caution
+            done('unknown');
+          }
+
         } else if (code >= 500 && step < 3) {
+          // Server rejected EHLO or MAIL FROM entirely (misconfigured or blocking us)
           done('unknown');
         }
       }
@@ -88,20 +125,22 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
   const domain = email.split('@')[1];
   if (!domain) return 'invalid';
   try {
+    // mxserver_does_not_exist / domain_does_not_exist — DNS checks
     const mxRecords = await Promise.race([
       dns.resolveMx(domain),
       new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 5000)),
     ]) as Awaited<ReturnType<typeof dns.resolveMx>>;
-    if (!mxRecords?.length) return 'invalid';
+    if (!mxRecords?.length) return 'invalid'; // mxserver_does_not_exist
+
     const mxHost = mxRecords.sort((a, b) => a.priority - b.priority)[0].exchange;
 
-    // Major providers block all RCPT TO probes — skip the probe and trust the MX record
+    // Major providers block all RCPT TO probes — skip probe, trust MX record → valid
     if (isMajorProvider(mxHost)) return 'valid';
 
     const proxy = getProxy();
 
     if (proxy) {
-      // Route through Hetzner SOCKS5 proxy — same as email sending, bypasses Railway port 25 block
+      // Route through Hetzner SOCKS5 proxy (bypasses Railway's port 25 outbound block)
       let socket: net.Socket;
       try {
         const conn = await (Promise.race([
@@ -116,13 +155,13 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
       } catch {
         return 'unknown';
       }
-      return doSmtpConversation(socket, email); // already connected — don't pass connectTo
+      return doSmtpConversation(socket, email, domain);
     }
 
     // Local dev: direct TCP connection
-    return doSmtpConversation(new net.Socket(), email, { host: mxHost, port: 25 });
+    return doSmtpConversation(new net.Socket(), email, domain, { host: mxHost, port: 25 });
   } catch {
-    return 'unknown';
+    return 'unknown'; // domain_does_not_exist (DNS resolution failed)
   }
 }
 
@@ -140,7 +179,8 @@ export async function batchSmtp(emails: string[], concurrency = 8): Promise<Map<
       }
       const result = await smtpCheck(email);
       results.set(email, result);
-      if (result === 'invalid') domainCache.set(domain, 'invalid');
+      // Cache 'invalid' and 'catchall' domain-wide — both are structural, not per-email
+      if (result === 'invalid' || result === 'catchall') domainCache.set(domain, result);
     }));
   }
   return results;
