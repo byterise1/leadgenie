@@ -43,15 +43,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Mark as seen (user opened ticket with admin reply)
   if (body.mark_seen) {
     updates.user_seen_at = new Date().toISOString();
+    // Also mark the corresponding bell notification as read
+    void supabaseAdmin.from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .eq('link', `/dashboard/support/${id}`)
+      .eq('read', false);
   }
 
-  // User sending a follow-up message
+  // User sending a follow-up message (attachments are stored inside the message object)
   if (body.follow_up) {
     const existing = Array.isArray(ticket.messages) ? ticket.messages : [];
-    updates.messages = [
-      ...existing,
-      { role: 'user', body: body.follow_up, ts: new Date().toISOString() },
-    ];
+    const newMsg: Record<string, unknown> = {
+      role: 'user',
+      body: body.follow_up,
+      ts: new Date().toISOString(),
+    };
+    if (Array.isArray(body.attachments) && body.attachments.length) {
+      newMsg.attachments = body.attachments;
+    }
+    updates.messages = [...existing, newMsg];
     // Reopen ticket if it was closed
     if (ticket.status === 'closed') updates.status = 'open';
 
@@ -68,12 +79,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }))
       );
     }
-  }
-
-  // File attachments
-  if (Array.isArray(body.attachments)) {
-    const existing = Array.isArray(ticket.attachments) ? ticket.attachments : [];
-    updates.attachments = [...existing, ...body.attachments];
   }
 
   const { data, error } = await supabaseAdmin

@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id, status, priority, admin_reply } = await req.json();
+  const { id, status, priority, admin_reply, new_reply } = await req.json();
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const { data: existing } = await supabaseAdmin
@@ -56,18 +56,45 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (status !== undefined) updates.status = status;
   if (priority !== undefined) updates.priority = priority;
-  if (admin_reply !== undefined) {
+
+  // new_reply: always appends a fresh admin message to the thread and always notifies user
+  if (new_reply?.trim()) {
+    const existingMsgs = Array.isArray(existing?.messages) ? existing.messages : [];
+    updates.messages = [
+      ...existingMsgs,
+      { role: 'admin', body: new_reply.trim(), ts: new Date().toISOString() },
+    ];
+    updates.admin_reply = new_reply.trim();
+    updates.user_seen_at = null;
+
+    if (existing?.user_id) {
+      void supabaseAdmin.from('notifications').insert({
+        user_id: existing.user_id,
+        message: `Support reply: your ticket "${existing.subject}" has been updated`,
+        type: 'info',
+        read: false,
+        link: `/dashboard/support/${id}`,
+      });
+    }
+  } else if (admin_reply !== undefined) {
+    // Legacy path: editing admin_reply field directly
     updates.admin_reply = admin_reply;
-    // Append to messages thread if reply is new or changed
     if (admin_reply && admin_reply !== existing?.admin_reply) {
       const existingMsgs = Array.isArray(existing?.messages) ? existing.messages : [];
-      const withoutOldAdminReplies = existingMsgs.filter((m: {role: string}) => m.role !== 'admin_latest');
       updates.messages = [
-        ...withoutOldAdminReplies,
+        ...existingMsgs,
         { role: 'admin', body: admin_reply, ts: new Date().toISOString() },
       ];
-      // Clear user_seen_at so user sees the new reply
       updates.user_seen_at = null;
+      if (existing?.user_id) {
+        void supabaseAdmin.from('notifications').insert({
+          user_id: existing.user_id,
+          message: `Support reply: your ticket "${existing.subject}" has been answered`,
+          type: 'info',
+          read: false,
+          link: `/dashboard/support/${id}`,
+        });
+      }
     }
   }
 
@@ -79,16 +106,5 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  if (admin_reply && existing?.user_id && admin_reply !== existing.admin_reply) {
-    void supabaseAdmin.from('notifications').insert({
-      user_id: existing.user_id,
-      message: `Support reply: your ticket "${existing.subject}" has been answered`,
-      type: 'info',
-      read: false,
-      link: `/dashboard/support/${id}`,
-    });
-  }
-
   return NextResponse.json(data);
 }

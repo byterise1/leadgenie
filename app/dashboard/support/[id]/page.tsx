@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-type Message = { role: 'user' | 'admin'; body: string; ts: string };
+type Attachment = { name: string; url: string };
+type Message = { role: 'user' | 'admin'; body: string; ts: string; attachments?: Attachment[] };
 
 type Ticket = {
   id: string;
@@ -16,7 +17,7 @@ type Ticket = {
   admin_reply: string | null;
   user_seen_at: string | null;
   messages: Message[] | null;
-  attachments: { name: string; url: string }[] | null;
+  attachments: Attachment[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -65,10 +66,13 @@ export default function UserTicketPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const buildThread = (): { role: 'user' | 'admin'; body: string; ts: string }[] => {
+  const buildThread = (): Message[] => {
     if (!ticket) return [];
-    const msgs: { role: 'user' | 'admin'; body: string; ts: string }[] = [];
-    msgs.push({ role: 'user', body: ticket.message, ts: ticket.created_at });
+    const msgs: Message[] = [];
+    // First message — original ticket message, with initial attachments
+    const first: Message = { role: 'user', body: ticket.message, ts: ticket.created_at };
+    if (ticket.attachments?.length) first.attachments = ticket.attachments;
+    msgs.push(first);
     const extras = Array.isArray(ticket.messages) ? ticket.messages : [];
     for (const m of extras) {
       if (m.role === 'user' && m.body === ticket.message) continue;
@@ -185,6 +189,19 @@ export default function UserTicketPage() {
                 <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3">
                   <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>
                 </div>
+                {msg.attachments?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {msg.attachments.map((a, j) => (
+                      <a key={j} href={a.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                        {a.name}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -219,24 +236,6 @@ export default function UserTicketPage() {
           </div>
         )}
       </div>
-
-      {/* Attachments */}
-      {ticket.attachments && ticket.attachments.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-4">
-          <p className="text-xs font-bold text-gray-400 uppercase mb-2">Attachments</p>
-          <div className="space-y-1">
-            {ticket.attachments.map((a, i) => (
-              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                </svg>
-                {a.name}
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Reply / follow-up box */}
       {ticket.status !== 'closed' ? (

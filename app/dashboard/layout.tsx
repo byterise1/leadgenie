@@ -80,9 +80,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .subscribe();
     });
 
+    // When user opens a support ticket, clear the related bell notification immediately
+    const onSupportSeen = () => fetchNotifications();
+    window.addEventListener('leadgenie:support-seen', onSupportSeen);
+
     return () => {
       clearInterval(interval);
       if (channel) supabase.removeChannel(channel);
+      window.removeEventListener('leadgenie:support-seen', onSupportSeen);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

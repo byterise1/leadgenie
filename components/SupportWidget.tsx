@@ -45,6 +45,13 @@ export default function SupportWidget() {
     if (open) loadTickets();
   }, [open]);
 
+  // When user opens ticket via full page (bell click), instantly clear widget badge
+  useEffect(() => {
+    const onSeen = () => setTickets(prev => prev.map(t => ({ ...t, user_seen_at: t.user_seen_at ?? new Date().toISOString() })));
+    window.addEventListener('leadgenie:support-seen', onSeen);
+    return () => window.removeEventListener('leadgenie:support-seen', onSeen);
+  }, []);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
