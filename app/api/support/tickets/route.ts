@@ -9,7 +9,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('support_tickets')
-    .select('id, subject, category, status, priority, admin_reply, created_at, updated_at')
+    .select('id, subject, message, category, status, priority, admin_reply, user_seen_at, messages, attachments, created_at, updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 

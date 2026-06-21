@@ -147,38 +147,61 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Conversation */}
-      <div className="space-y-5 mb-6">
-        {/* User message */}
-        <div className="flex gap-3 items-start">
-          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-bold text-gray-600">
-            {initials(ticket.user_email)}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm font-semibold text-gray-700">{ticket.user_email}</span>
-              <span className="text-xs text-gray-400">{fmtDate(ticket.created_at)}</span>
+      <div className="space-y-4 mb-6">
+        {/* Build thread: original + messages array */}
+        {(() => {
+          const msgs: {role: 'user'|'admin'; body: string; ts: string}[] = [];
+          msgs.push({ role: 'user', body: ticket.message, ts: ticket.created_at });
+          const extras = Array.isArray((ticket as any).messages) ? (ticket as any).messages : [];
+          for (const m of extras) {
+            if (m.role === 'user' && m.body === ticket.message) continue;
+            msgs.push(m);
+          }
+          if (extras.length === 0 && ticket.admin_reply) {
+            msgs.push({ role: 'admin', body: ticket.admin_reply, ts: ticket.updated_at });
+          }
+          return msgs.map((msg, i) => msg.role === 'user' ? (
+            <div key={i} className="flex gap-3 items-start">
+              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-bold text-gray-600">
+                {initials(ticket.user_email)}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm font-semibold text-gray-700">{ticket.user_email}</span>
+                  <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+                </div>
+              </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{ticket.message}</p>
+          ) : (
+            <div key={i} className="flex gap-3 items-start flex-row-reverse">
+              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-sm font-bold text-blue-600">A</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1.5 justify-end">
+                  <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
+                  <span className="text-sm font-semibold text-gray-700">Admin · LeadGenie</span>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          ));
+        })()}
 
-        {/* Admin reply bubble */}
-        {ticket.admin_reply && (
-          <div className="flex gap-3 items-start flex-row-reverse">
-            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-sm font-bold text-blue-600">
-              A
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1.5 justify-end">
-                <span className="text-xs text-gray-400">{fmtDate(ticket.updated_at)}</span>
-                <span className="text-sm font-semibold text-gray-700">Admin · LeadGenie</span>
-              </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{ticket.admin_reply}</p>
-              </div>
-            </div>
+        {/* User attachments */}
+        {(ticket as any).attachments?.length > 0 && (
+          <div className="ml-12 bg-gray-50 border border-gray-100 rounded-xl p-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Attachments</p>
+            {((ticket as any).attachments as {name:string;url:string}[]).map((a, i) => (
+              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 mt-1">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                {a.name}
+              </a>
+            ))}
           </div>
         )}
       </div>

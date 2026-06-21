@@ -39,14 +39,27 @@ export async function PATCH(req: NextRequest) {
 
   const { data: existing } = await supabaseAdmin
     .from('support_tickets')
-    .select('user_email, subject, admin_reply, user_id')
+    .select('user_email, subject, admin_reply, user_id, messages')
     .eq('id', id)
     .single();
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (status !== undefined) updates.status = status;
   if (priority !== undefined) updates.priority = priority;
-  if (admin_reply !== undefined) updates.admin_reply = admin_reply;
+  if (admin_reply !== undefined) {
+    updates.admin_reply = admin_reply;
+    // Append to messages thread if reply is new or changed
+    if (admin_reply && admin_reply !== existing?.admin_reply) {
+      const existingMsgs = Array.isArray(existing?.messages) ? existing.messages : [];
+      const withoutOldAdminReplies = existingMsgs.filter((m: {role: string}) => m.role !== 'admin_latest');
+      updates.messages = [
+        ...withoutOldAdminReplies,
+        { role: 'admin', body: admin_reply, ts: new Date().toISOString() },
+      ];
+      // Clear user_seen_at so user sees the new reply
+      updates.user_seen_at = null;
+    }
+  }
 
   const { data, error } = await supabaseAdmin
     .from('support_tickets')

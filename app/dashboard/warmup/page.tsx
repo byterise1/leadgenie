@@ -189,8 +189,21 @@ export default function WarmupPage() {
                     <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400 animate-pulse' : 'bg-gray-300'}`}/>
-                    <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      acc.status === 'active' ? 'bg-emerald-400' :
+                      acc.status === 'warming' ? 'bg-amber-400 animate-pulse' :
+                      (acc.status === 'error' || acc.status === 'login') ? 'bg-red-400' : 'bg-gray-300'
+                    }`}/>
+                    {(acc.status === 'error' || acc.status === 'login') ? (
+                      <span className="text-xs text-red-600 font-semibold flex items-center gap-1.5">
+                        Auth Error
+                        {acc.type === 'gmail-oauth' && (
+                          <a href="/api/email-accounts/oauth/google" className="text-blue-600 hover:underline text-[10px]">Re-connect →</a>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
+                    )}
                   </div>
                   <ScoreRing score={acc.health_score || 0}/>
                   {acc.warmup_enabled ? (

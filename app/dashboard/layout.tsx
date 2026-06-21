@@ -244,7 +244,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </p>
                             {n.link && (
                               <p className="text-[10px] text-blue-500 font-semibold mt-0.5">
-                                {n.link.includes('inbox') ? 'View in Inbox →' : n.link.includes('leads') ? 'View Leads →' : n.link.includes('analytics') ? 'View Analytics →' : 'View →'}
+                                {n.link.includes('inbox') ? 'View in Inbox →' :
+                                 n.link.includes('support') ? 'View Support Ticket →' :
+                                 n.link.includes('campaigns') ? 'View Campaign →' :
+                                 n.link.includes('leads') ? 'View Leads →' :
+                                 n.link.includes('analytics') ? 'View Analytics →' : 'View →'}
                               </p>
                             )}
                           </div>

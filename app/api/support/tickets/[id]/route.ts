@@ -19,3 +19,56 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(data);
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const body = await req.json();
+
+  // Verify ticket belongs to this user
+  const { data: ticket } = await supabaseAdmin
+    .from('support_tickets')
+    .select('id, messages, subject, status, attachments')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+  // Mark as seen (user opened ticket with admin reply)
+  if (body.mark_seen) {
+    updates.user_seen_at = new Date().toISOString();
+  }
+
+  // User sending a follow-up message
+  if (body.follow_up) {
+    const existing = Array.isArray(ticket.messages) ? ticket.messages : [];
+    updates.messages = [
+      ...existing,
+      { role: 'user', body: body.follow_up, ts: new Date().toISOString() },
+    ];
+    // Reopen ticket if it was closed
+    if (ticket.status === 'closed') updates.status = 'open';
+  }
+
+  // File attachments
+  if (Array.isArray(body.attachments)) {
+    const existing = Array.isArray(ticket.attachments) ? ticket.attachments : [];
+    updates.attachments = [...existing, ...body.attachments];
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('support_tickets')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}

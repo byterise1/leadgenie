@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('notifications')
-    .select('id,message,type,read,created_at')
+    .select('id,message,type,read,link,created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(20);

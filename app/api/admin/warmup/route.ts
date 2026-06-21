@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
@@ -17,6 +17,7 @@ export async function GET() {
   const { data: accounts, error } = await supabaseAdmin
     .from('email_accounts')
     .select('id, user_id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, created_at')
+    .neq('is_pool_account', true)
     .order('warmup_enabled', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -48,4 +49,22 @@ export async function GET() {
   };
 
   return NextResponse.json({ accounts: enriched, stats });
+}
+
+export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { id, warmup_enabled } = await req.json();
+  if (!id || typeof warmup_enabled !== 'boolean') return NextResponse.json({ error: 'id and warmup_enabled required' }, { status: 400 });
+
+  const updates: Record<string, unknown> = { warmup_enabled };
+  if (warmup_enabled) { updates.status = 'warming'; updates.warmup_day = 0; }
+  else { updates.status = 'active'; }
+
+  const { data, error } = await supabaseAdmin
+    .from('email_accounts').update(updates).eq('id', id).neq('is_pool_account', true).select().single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }

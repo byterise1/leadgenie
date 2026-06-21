@@ -210,6 +210,15 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
   );
 }
 
+function Toggle({ on, onToggle, disabled }: { on: boolean; onToggle: () => void; disabled?: boolean }) {
+  return (
+    <button type="button" onClick={onToggle} disabled={disabled}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-blue-600' : 'bg-gray-200'}`}>
+      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`}/>
+    </button>
+  );
+}
+
 function AdminWarmupPageInner() {
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
   const [poolAccounts, setPoolAccounts] = useState<PoolAccount[]>([]);
@@ -219,6 +228,7 @@ function AdminWarmupPageInner() {
   const [filter, setFilter] = useState<'all' | 'warming' | 'healthy' | 'at_risk'>('all');
   const [showAddPool, setShowAddPool] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
@@ -245,6 +255,19 @@ function AdminWarmupPageInner() {
       if (Array.isArray(pool)) setPoolAccounts(pool);
     }).finally(() => setLoading(false));
   }, []);
+
+  const toggleWarmup = async (id: string, currentlyEnabled: boolean) => {
+    setTogglingId(id);
+    const enabled = !currentlyEnabled;
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' } : a));
+    await fetch('/api/admin/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, warmup_enabled: enabled }),
+    });
+    setTogglingId(null);
+    showToast(enabled ? 'Warmup enabled for account' : 'Warmup disabled');
+  };
 
   const handleDeletePool = async (id: string) => {
     if (!confirm('Remove this account from the warmup pool?')) return;
@@ -400,10 +423,10 @@ function AdminWarmupPageInner() {
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Account</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">User</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Health</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Warmup</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sent Today</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Warmup</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -426,9 +449,14 @@ function AdminWarmupPageInner() {
                       </td>
                       <td className="px-4 py-3"><ScoreRing score={a.health_score}/></td>
                       <td className="px-4 py-3">
-                        {a.warmup_enabled
-                          ? <span className="text-[11px] font-bold bg-amber-50 text-amber-700 rounded-full px-2.5 py-1">Active</span>
-                          : <span className="text-[11px] font-bold bg-gray-100 text-gray-500 rounded-full px-2.5 py-1">Off</span>}
+                        <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${
+                          a.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
+                          a.status === 'warming' ? 'bg-amber-50 text-amber-700' :
+                          (a.status === 'error' || a.status === 'login') ? 'bg-red-50 text-red-600' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {a.status === 'login' ? 'Login Error' : a.status}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -440,9 +468,7 @@ function AdminWarmupPageInner() {
                       </td>
                       <td className="px-4 py-3"><span className="text-sm font-semibold text-gray-700">{a.sent_today}</span></td>
                       <td className="px-4 py-3">
-                        <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${a.status === 'active' || a.status === 'warming' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {a.status}
-                        </span>
+                        <Toggle on={a.warmup_enabled} disabled={togglingId === a.id} onToggle={() => toggleWarmup(a.id, a.warmup_enabled)}/>
                       </td>
                     </tr>
                   ))

@@ -100,19 +100,22 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
 
   useEffect(() => {
     const fetchSupport = () => {
+      if (pathname.startsWith('/dashboard/support')) { setSupportBadge(0); return; }
       fetch('/api/support/tickets')
         .then(r => r.json())
-        .then((data: { admin_reply: string | null; status: string }[]) => {
+        .then((data: { admin_reply: string | null; status: string; user_seen_at?: string | null }[]) => {
           if (Array.isArray(data)) {
-            setSupportBadge(data.filter(t => t.admin_reply !== null && t.status !== 'closed').length);
+            setSupportBadge(data.filter(t => t.admin_reply !== null && t.status !== 'closed' && !t.user_seen_at).length);
           }
         })
         .catch(() => {});
     };
     fetchSupport();
     const id = setInterval(fetchSupport, 60000);
-    return () => clearInterval(id);
-  }, []);
+    const onSeen = () => setSupportBadge(0);
+    window.addEventListener('leadgenie:support-seen', onSeen);
+    return () => { clearInterval(id); window.removeEventListener('leadgenie:support-seen', onSeen); };
+  }, [pathname]);
 
   useEffect(() => {
     const fetchCredits = () => {
