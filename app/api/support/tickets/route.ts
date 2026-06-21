@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   // Notify all admins about the new ticket
   const { data: admins } = await supabaseAdmin.from('profiles').select('id').eq('is_admin', true);
   if (admins?.length) {
-    void supabaseAdmin.from('notifications').insert(
+    supabaseAdmin.from('notifications').insert(
       admins.map(a => ({
         user_id: a.id,
         message: `New support ticket from ${userEmail}: "${subject}"`,
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         read: false,
         link: `/admin/support/${data.id}`,
       }))
-    );
+    ).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
   }
 
   return NextResponse.json(data);

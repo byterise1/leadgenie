@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Notify all admins about the follow-up
     const { data: admins } = await supabaseAdmin.from('profiles').select('id').eq('is_admin', true);
     if (admins?.length) {
-      void supabaseAdmin.from('notifications').insert(
+      supabaseAdmin.from('notifications').insert(
         admins.map(a => ({
           user_id: a.id,
           message: `User replied on ticket: "${ticket.subject}"`,
@@ -77,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           read: false,
           link: `/admin/support/${id}`,
         }))
-      );
+      ).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
     }
   }
 

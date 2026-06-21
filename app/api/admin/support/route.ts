@@ -68,13 +68,13 @@ export async function PATCH(req: NextRequest) {
     updates.user_seen_at = null;
 
     if (existing?.user_id) {
-      void supabaseAdmin.from('notifications').insert({
+      supabaseAdmin.from('notifications').insert({
         user_id: existing.user_id,
         message: `Support reply: your ticket "${existing.subject}" has been updated`,
         type: 'info',
         read: false,
         link: `/dashboard/support/${id}`,
-      });
+      }).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
     }
   } else if (admin_reply !== undefined) {
     // Legacy path: editing admin_reply field directly
@@ -87,13 +87,13 @@ export async function PATCH(req: NextRequest) {
       ];
       updates.user_seen_at = null;
       if (existing?.user_id) {
-        void supabaseAdmin.from('notifications').insert({
+        supabaseAdmin.from('notifications').insert({
           user_id: existing.user_id,
           message: `Support reply: your ticket "${existing.subject}" has been answered`,
           type: 'info',
           read: false,
           link: `/dashboard/support/${id}`,
-        });
+        }).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
       }
     }
   }
