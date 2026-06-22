@@ -128,17 +128,34 @@ export async function POST(req: NextRequest) {
   const unsubscribed_emails = brand_new.filter(e => unsubSet.has(e));
   const afterUnsub = brand_new.filter(e => !unsubSet.has(e));
 
+  // ── 4b. Previously hard-bounced (real campaign sends) ────────────────────
+  // Must run before SMTP probe — catches Gmail/major-provider emails that
+  // can't be probed but have already bounced in a real send.
+  const { data: bouncedLeadRows } = await supabaseAdmin
+    .from('sent_emails').select('leads!inner(email)')
+    .eq('user_id', user.id).eq('bounced', true);
+  const prevBouncedSet = new Set<string>(
+    (bouncedLeadRows || []).map((r: any) => r.leads?.email as string).filter(Boolean)
+  );
+  // Remove previously bounced from SMTP probe queue and from cross-list offers
+  const afterPrevBounce = afterUnsub.filter(e => !prevBouncedSet.has(e));
+  const prev_bounced_emails = unique.filter(e => prevBouncedSet.has(e));
+
+  // Also strip previously bounced from cross_list_dupes (don't offer them as amber choice)
+  const cross_list_dupes_filtered = cross_list_dupes.filter(({ email }) => !prevBouncedSet.has(email));
+
   // ── 5. SMTP bounce check (brand new, non-disposable, non-typo, after unsub) ─
-  const toCheck = afterUnsub.slice(0, 500);
+  const toCheck = afterPrevBounce.slice(0, 500);
   const bounceResults = await batchSmtp(toCheck);
   const bouncedSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'invalid'));
   const unknownSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'unknown'));
   const catchallSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'catchall'));
-  const bounced_emails = [...bouncedSet];
+  // Merge SMTP-detected bounces with previously known bounces
+  const bounced_emails = [...new Set([...bouncedSet, ...prev_bounced_emails])];
   const unknown_emails = [...unknownSet];
   const catchall_emails = [...catchallSet];
   // clean = not bounced (unknown/catchall imported with caution info)
-  const clean_count = afterUnsub.filter(e => !bouncedSet.has(e)).length;
+  const clean_count = afterPrevBounce.filter(e => !bouncedSet.has(e)).length;
 
   return NextResponse.json({
     total,
@@ -154,12 +171,12 @@ export async function POST(req: NextRequest) {
     file_duplicates,
     // List membership
     already_in_this_list,
-    cross_list_dupes,
-    cross_list_count,
+    cross_list_dupes: cross_list_dupes_filtered,
+    cross_list_count: cross_list_dupes_filtered.length,
     // Unsub
     unsubscribed: unsubscribed_emails.length,
     unsubscribed_emails,
-    // SMTP probe results
+    // SMTP probe results (includes previously hard-bounced campaign emails)
     bounced: bounced_emails.length,
     bounced_emails,
     bounce_unknown: unknown_emails.length,
