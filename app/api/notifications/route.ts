@@ -52,7 +52,8 @@ export async function PATCH(req: NextRequest) {
   if (ids?.length) {
     query = query.in('id', ids) as typeof query;
   } else {
-    query = query.eq('read', false) as typeof query;
+    // neq catches both read=false AND read=NULL (old rows without default)
+    query = query.neq('read', true) as typeof query;
   }
 
   const { error } = await query;
