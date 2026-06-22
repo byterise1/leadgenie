@@ -81,6 +81,9 @@ export default function LeadsPage() {
     unknown_emails: string[];
     bounce_catchall: number;
     catchall_emails: string[];
+    // Major providers (Gmail/Outlook/Yahoo) — inbox cannot be probed
+    major_provider: number;
+    major_provider_emails: string[];
     // Ready
     clean_count: number;
   };
@@ -873,10 +876,27 @@ export default function LeadsPage() {
                 </div>
               )}
 
-              {/* ── Caution info (gray note) — unknowns, catchall, role-based — still imported ── */}
-              {(validationResult.bounce_unknown > 0 || validationResult.bounce_catchall > 0 || validationResult.role_based > 0) && (
+              {/* ── Caution info — unknowns, catchall, role-based, major providers — still imported ── */}
+              {(validationResult.bounce_unknown > 0 || validationResult.bounce_catchall > 0 || validationResult.role_based > 0 || validationResult.major_provider > 0) && (
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-2">
                   <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Use caution — will be imported</p>
+                  {validationResult.major_provider > 0 && (
+                    <div className="flex items-start justify-between text-sm gap-2">
+                      <span className="text-blue-600 flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"/>
+                        <span>
+                          Gmail / Outlook / Yahoo — inbox existence <span className="font-semibold">cannot be verified</span>. If the address is fake it will hard bounce.
+                          {validationResult.major_provider_emails.length > 0 && (
+                            <span className="block text-[11px] text-blue-400 mt-0.5">
+                              {validationResult.major_provider_emails.slice(0, 3).join(', ')}
+                              {validationResult.major_provider > 3 && ` +${validationResult.major_provider - 3} more`}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="font-bold text-blue-500 shrink-0">{validationResult.major_provider}</span>
+                    </div>
+                  )}
                   {validationResult.bounce_unknown > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-blue-600 flex items-center gap-2">

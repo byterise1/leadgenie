@@ -150,11 +150,13 @@ export async function POST(req: NextRequest) {
   const bouncedSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'invalid'));
   const unknownSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'unknown'));
   const catchallSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'catchall'));
+  const majorProviderSet = new Set(toCheck.filter(e => bounceResults.get(e) === 'valid_major'));
   // Merge SMTP-detected bounces with previously known bounces
   const bounced_emails = [...new Set([...bouncedSet, ...prev_bounced_emails])];
   const unknown_emails = [...unknownSet];
   const catchall_emails = [...catchallSet];
-  // clean = not bounced (unknown/catchall imported with caution info)
+  const major_provider_emails = [...majorProviderSet];
+  // clean = not bounced (unknown/catchall/major-provider all imported with caution info)
   const clean_count = afterPrevBounce.filter(e => !bouncedSet.has(e)).length;
 
   return NextResponse.json({
@@ -183,6 +185,9 @@ export async function POST(req: NextRequest) {
     unknown_emails,
     bounce_catchall: catchall_emails.length,
     catchall_emails,
+    // Major providers (Gmail/Outlook/Yahoo) — inbox existence cannot be probed
+    major_provider: major_provider_emails.length,
+    major_provider_emails,
     clean_count,
   });
 }

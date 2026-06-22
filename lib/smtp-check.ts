@@ -2,7 +2,7 @@ import * as dns from 'dns/promises';
 import * as net from 'net';
 import { SocksClient } from 'socks';
 
-export type SmtpResult = 'valid' | 'invalid' | 'unknown' | 'catchall';
+export type SmtpResult = 'valid' | 'valid_major' | 'invalid' | 'unknown' | 'catchall';
 
 // Major providers always block RCPT TO probes — trust the MX record, classify as 'valid'.
 const MAJOR_MX_PATTERNS = [
@@ -134,8 +134,8 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
 
     const mxHost = mxRecords.sort((a, b) => a.priority - b.priority)[0].exchange;
 
-    // Major providers block all RCPT TO probes — skip probe, trust MX record → valid
-    if (isMajorProvider(mxHost)) return 'valid';
+    // Major providers block all RCPT TO probes — skip probe, trust MX record → valid_major
+    if (isMajorProvider(mxHost)) return 'valid_major';
 
     const proxy = getProxy();
 
@@ -184,8 +184,8 @@ export async function batchSmtp(emails: string[], concurrency = 8): Promise<Map<
       }
       const result = await smtpCheck(email);
       results.set(email, result);
-      // Cache 'invalid' and 'catchall' domain-wide — both are structural, not per-email
-      if (result === 'invalid' || result === 'catchall') domainCache.set(domain, result);
+      // Cache structural domain-level results — same for every address on that domain
+      if (result === 'invalid' || result === 'catchall' || result === 'valid_major') domainCache.set(domain, result);
     }));
   }
   return results;
