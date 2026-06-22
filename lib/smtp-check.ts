@@ -24,11 +24,14 @@ function isMajorProvider(mxHost: string): boolean {
 
 function getProxy(): { host: string; port: number } | null {
   const raw = process.env.SMTP_PROXY;
-  if (!raw) return null;
-  try {
-    const u = new URL(raw);
-    return { host: u.hostname, port: Number(u.port) || 1080 };
-  } catch { return null; }
+  if (raw) {
+    try {
+      const u = new URL(raw);
+      return { host: u.hostname, port: Number(u.port) || 1080 };
+    } catch { /* fall through to hardcoded */ }
+  }
+  // Hetzner CX23 SOCKS5 — hardcoded fallback so port 25 works on Railway without env var
+  return { host: '157.180.121.10', port: 443 };
 }
 
 // SMTP conversation with catch-all detection:

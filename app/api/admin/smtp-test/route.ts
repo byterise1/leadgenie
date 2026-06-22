@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as dns from 'dns/promises';
 import * as net from 'net';
 import { SocksClient } from 'socks';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const PROXY_HOST = '157.180.121.10';
-const PROXY_PORT = 1080;
+const PROXY_PORT = 443;
 
 async function runSmtpTest(email: string): Promise<{
   email: string;
   domain: string;
+  mx: string;
   result: 'valid' | 'invalid' | 'unknown';
   verdict: string;
   dialog: string[];
@@ -22,14 +24,33 @@ async function runSmtpTest(email: string): Promise<{
   dialog.push(`Email    : ${email}`);
   dialog.push(`Domain   : ${domain || '(missing)'}`);
   dialog.push(`Proxy    : socks5://${PROXY_HOST}:${PROXY_PORT}`);
-  dialog.push(`Dest     : ${domain}:25`);
   dialog.push('');
 
   if (!domain) {
-    return { email, domain, result: 'invalid', verdict: "INVALID: missing '@' or domain part", dialog, duration_ms: 0 };
+    return { email, domain, mx: '', result: 'invalid', verdict: "INVALID: missing '@' or domain part", dialog, duration_ms: 0 };
   }
 
-  dialog.push(`Connecting to ${domain}:25 via Hetzner SOCKS5...`);
+  // MX lookup — connect to the actual mail server, not the domain root
+  let mxHost = domain;
+  try {
+    dialog.push(`MX lookup: ${domain}...`);
+    const mxRecords = await Promise.race([
+      dns.resolveMx(domain),
+      new Promise<never>((_, r) => setTimeout(() => r(new Error('DNS timeout')), 5000)),
+    ]) as Awaited<ReturnType<typeof dns.resolveMx>>;
+    if (mxRecords?.length) {
+      mxHost = mxRecords.sort((a, b) => a.priority - b.priority)[0].exchange;
+      dialog.push(`MX found  : ${mxHost}`);
+    } else {
+      dialog.push(`MX        : none found, using domain directly`);
+    }
+  } catch (e: unknown) {
+    dialog.push(`MX error  : ${e instanceof Error ? e.message : String(e)} — using domain directly`);
+  }
+
+  dialog.push(`Dest     : ${mxHost}:25`);
+  dialog.push('');
+  dialog.push(`Connecting to ${mxHost}:25 via Hetzner SOCKS5...`);
 
   let socket: net.Socket;
   try {
@@ -37,7 +58,7 @@ async function runSmtpTest(email: string): Promise<{
       SocksClient.createConnection({
         proxy: { host: PROXY_HOST, port: PROXY_PORT, type: 5 },
         command: 'connect',
-        destination: { host: domain, port: 25 },
+        destination: { host: mxHost, port: 25 },
       }),
       new Promise<never>((_, r) => setTimeout(() => r(new Error('proxy connect timeout (12s)')), 12000)),
     ]) as Promise<Awaited<ReturnType<typeof SocksClient.createConnection>>>);
@@ -47,11 +68,11 @@ async function runSmtpTest(email: string): Promise<{
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     dialog.push(`ERROR: ${msg}`);
-    return { email, domain, result: 'unknown', verdict: `ERROR connecting: ${msg}`, dialog, duration_ms: Date.now() - t0 };
+    return { email, domain, mx: mxHost, result: 'unknown', verdict: `ERROR connecting: ${msg}`, dialog, duration_ms: Date.now() - t0 };
   }
 
   return new Promise<{
-    email: string; domain: string; result: 'valid' | 'invalid' | 'unknown'; verdict: string; dialog: string[]; duration_ms: number;
+    email: string; domain: string; mx: string; result: 'valid' | 'invalid' | 'unknown'; verdict: string; dialog: string[]; duration_ms: number;
   }>((resolve) => {
     let settled = false;
     let buf = '';
@@ -63,7 +84,7 @@ async function runSmtpTest(email: string): Promise<{
       dialog.push('');
       dialog.push(`Duration : ${Date.now() - t0}ms`);
       try { socket.destroy(); } catch {}
-      resolve({ email, domain, result, verdict, dialog, duration_ms: Date.now() - t0 });
+      resolve({ email, domain, mx: mxHost, result, verdict, dialog, duration_ms: Date.now() - t0 });
     };
 
     const send = (cmd: string) => {
