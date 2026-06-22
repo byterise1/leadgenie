@@ -13,3 +13,4 @@ function redisOpts() {
 
 export const emailQueue = new Queue('email-sending', { connection: redisOpts() });
 export const warmupQueue = new Queue('warmup', { connection: redisOpts() });
+export const validationQueue = new Queue('lead-validation', { connection: redisOpts() });

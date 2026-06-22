@@ -4,9 +4,9 @@ import { SocksClient } from 'socks';
 
 export type SmtpResult = 'valid' | 'valid_major' | 'invalid' | 'unknown' | 'catchall';
 
-// Major providers always block RCPT TO probes — trust the MX record, classify as 'valid'.
+// Providers that block all RCPT TO probes — cannot determine individual mailbox validity.
+// NOTE: Google/Gmail removed — Hetzner IP gets real 250/550 responses from gmail-smtp-in.l.google.com
 const MAJOR_MX_PATTERNS = [
-  'google.com', 'googlemail.com',       // Gmail + Google Workspace
   'outlook.com', 'hotmail.com',         // Outlook / Office 365
   'protection.outlook.com',            // Microsoft 365
   'yahoodns.net', 'yahoo.com',          // Yahoo

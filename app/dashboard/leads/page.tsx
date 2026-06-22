@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Skeleton } from '@/components/Skeleton';
+import type { EmailResult, JobSummary, EmailDecision } from '@/lib/score-engine';
 
 type Lead = {
   id: string;
@@ -13,7 +14,6 @@ type Lead = {
   title: string | null;
   website: string | null;
   phone: string | null;
-  linkedin: string | null;
   status: string | null;
   created_at: string;
 };
@@ -22,6 +22,20 @@ type LeadList = {
   id: string;
   name: string;
   count: number;
+};
+
+type ImportJob = {
+  id: string;
+  status: 'processing' | 'done' | 'failed' | 'imported';
+  progress: number;
+  total_emails: number;
+  filename: string | null;
+  list_id: string | null;
+  list_name: string | null;
+  results: EmailResult[] | null;
+  summary: JobSummary | null;
+  created_at: string;
+  completed_at: string | null;
 };
 
 const EMPTY_FORM = { email: '', first_name: '', last_name: '', company: '', title: '', website: '', phone: '' };
@@ -34,6 +48,12 @@ const FORM_FIELDS = [
   { key: 'website', label: 'Website', type: 'url', ph: 'https://acme.com' },
   { key: 'phone', label: 'Phone', type: 'text', ph: '+1234567890' },
 ];
+
+function decisionStyle(d: EmailDecision) {
+  if (d === 'safe') return { badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', score: 'text-emerald-700' };
+  if (d === 'caution') return { badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400', score: 'text-amber-600' };
+  return { badge: 'bg-red-100 text-red-600', bar: 'bg-red-400', score: 'text-red-500' };
+}
 
 export default function LeadsPage() {
   const [lists, setLists] = useState<LeadList[]>([]);
@@ -50,47 +70,19 @@ export default function LeadsPage() {
   const [search, setSearch] = useState('');
   const [totalCount, setTotalCount] = useState(0);
 
-  const [importing, setImporting] = useState(false);
   const [validating, setValidating] = useState(false);
   const [msg, setMsg] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  type ValidationResult = {
-    total: number;
-    // Pre-check: syntax/typo/disposable (all excluded)
-    invalid_format: number;
-    domain_typo: number;
-    domain_typo_emails: { email: string; suggestion: string }[];
-    disposable: number;
-    disposable_emails: string[];
-    role_based: number;
-    role_based_emails: string[];
-    // File-level
-    file_duplicates: number;
-    already_in_this_list: number;
-    // Cross-list
-    cross_list_dupes: { email: string; lists: string[] }[];
-    cross_list_count: number;
-    // Unsub
-    unsubscribed: number;
-    unsubscribed_emails: string[];
-    // SMTP probe
-    bounced: number;
-    bounced_emails: string[];
-    bounce_unknown: number;
-    unknown_emails: string[];
-    bounce_catchall: number;
-    catchall_emails: string[];
-    // Major providers (Gmail/Outlook/Yahoo) — inbox cannot be probed
-    major_provider: number;
-    major_provider_emails: string[];
-    // Ready
-    clean_count: number;
-  };
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // ── Job-based validation state ─────────────────────────────────────
+  const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [includeCaution, setIncludeCaution] = useState(true);
+  const [includeCrossListJob, setIncludeCrossListJob] = useState(true);
+  const [jobFilter, setJobFilter] = useState<'all' | EmailDecision>('all');
+  const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
-  const [includeCrossList, setIncludeCrossList] = useState(true);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -102,7 +94,6 @@ export default function LeadsPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; confirmLabel?: string; onConfirm: () => void; secondLabel?: string; onSecond?: () => void } | null>(null);
 
-  // List picker modal — shown before Add Lead or Import when no list is selected
   const [showPicker, setShowPicker] = useState(false);
   const [pickerListId, setPickerListId] = useState('');
   const [pickerNewName, setPickerNewName] = useState('');
@@ -121,6 +112,54 @@ export default function LeadsPage() {
       if (Array.isArray(d)) setLeads(d);
     }).finally(() => setLoading(false));
   }, []);
+
+  const loadJobById = useCallback(async (id: string): Promise<ImportJob | null> => {
+    const res = await fetch(`/api/leads/import-jobs/${id}`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.job || null;
+  }, []);
+
+  const loadActiveJob = useCallback(async (listId: string | null) => {
+    const p = listId ? `?list_id=${listId}` : '';
+    const res = await fetch(`/api/leads/import-jobs${p}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    const jobs: ImportJob[] = d.jobs || [];
+    const pending = jobs.find(j => j.status === 'processing' || j.status === 'done');
+    if (pending) setActiveJob(pending);
+  }, []);
+
+  // On mount: check URL for ?job= (from notification link)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('job');
+    if (jobId) {
+      loadJobById(jobId).then(job => {
+        if (job) { setActiveJob(job); if (job.status === 'done') setShowJobModal(true); }
+      });
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [loadJobById]);
+
+  // Load active jobs when selected list changes
+  useEffect(() => {
+    loadActiveJob(selectedList);
+  }, [selectedList, loadActiveJob]);
+
+  // Poll when job is processing
+  useEffect(() => {
+    if (activeJob?.status !== 'processing') return;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      const job = await loadJobById(activeJob.id);
+      if (!job) return;
+      setActiveJob(job);
+      if (job.status !== 'processing') clearInterval(pollRef.current!);
+    }, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [activeJob?.id, activeJob?.status, loadJobById]);
 
   useEffect(() => {
     fetchLists();
@@ -149,7 +188,105 @@ export default function LeadsPage() {
     (window as any)._lSearch = setTimeout(() => fetchLeads(q, selectedList), 350);
   };
 
-  // ── List Picker helpers ──────────────────────────────────────────────
+  // ── Job-computed values ────────────────────────────────────────────
+  const filteredResults = useMemo(() => {
+    if (!activeJob?.results) return [];
+    const arr = jobFilter === 'all' ? activeJob.results : activeJob.results.filter(r => r.decision === jobFilter);
+    return arr.slice(0, 200);
+  }, [activeJob?.results, jobFilter]);
+
+  const importCount = useMemo(() => {
+    if (!activeJob?.results) return 0;
+    return activeJob.results.filter(r => {
+      if (r.decision === 'block') return false;
+      if (r.decision === 'caution' && !includeCaution) return false;
+      if (r.dupe_lists.length > 0 && !includeCrossListJob) return false;
+      return true;
+    }).length;
+  }, [activeJob?.results, includeCaution, includeCrossListJob]);
+
+  // ── Import (validate → job) ────────────────────────────────────────
+  const handleImport = async (file: File, isSingleLead = false) => {
+    setValidating(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    if (selectedList) fd.append('list_id', selectedList);
+    try {
+      const res = await fetch('/api/leads/validate', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (res.ok) {
+        const job: ImportJob = {
+          id: d.job_id,
+          status: d.status,
+          progress: d.status === 'done' ? 100 : 0,
+          total_emails: d.quick_summary?.total ?? 0,
+          filename: file.name,
+          list_id: selectedList,
+          list_name: null,
+          results: d.results ?? null,
+          summary: d.summary ?? null,
+          created_at: new Date().toISOString(),
+          completed_at: d.status === 'done' ? new Date().toISOString() : null,
+        };
+        setActiveJob(job);
+        setJobFilter('all');
+        setIncludeCaution(true);
+        setIncludeCrossListJob(true);
+        // Auto-open modal for sync results or single lead
+        if (d.status === 'done') setShowJobModal(true);
+      } else {
+        showMsg(`Error: ${d.error}`);
+        setPendingLead(null);
+      }
+    } catch {
+      showMsg('Validation failed. Please try again.');
+      setPendingLead(null);
+    }
+    setValidating(false);
+  };
+
+  const executeImport = async () => {
+    if (!activeJob || activeJob.status !== 'done') return;
+    setExecuting(true);
+    try {
+      const res = await fetch(`/api/leads/import-jobs/${activeJob.id}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include_caution: includeCaution, include_cross_list: includeCrossListJob }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        const count = d.imported || 0;
+        showMsg(pendingLead
+          ? (count > 0 ? '✓ Lead added' : '✗ Email is blocked — not added')
+          : `✓ ${count} lead${count !== 1 ? 's' : ''} imported`
+        );
+        setActiveJob(null);
+        setShowJobModal(false);
+        setPendingLead(null);
+        fetchLeads('', selectedList);
+        fetchLists();
+        fetch('/api/leads?search=').then(r => r.json()).then(data => {
+          if (Array.isArray(data)) setTotalCount(data.length);
+        });
+      } else {
+        showMsg(`Error: ${d.error}`);
+      }
+    } catch {
+      showMsg('Import failed. Please try again.');
+    }
+    setExecuting(false);
+  };
+
+  const dismissJob = async () => {
+    if (!activeJob) return;
+    await fetch(`/api/leads/import-jobs/${activeJob.id}`, { method: 'DELETE' });
+    setActiveJob(null);
+    setShowJobModal(false);
+    setPendingLead(null);
+  };
+
+  // ── List Picker ────────────────────────────────────────────────────
   const openPicker = () => {
     setPickerListId('');
     setPickerNewName('');
@@ -185,97 +322,22 @@ export default function LeadsPage() {
       }
     }
 
-    if (!listId) {
-      showMsg('Please select or create a list first');
-      setPickerSaving(false);
-      return;
-    }
+    if (!listId) { showMsg('Please select or create a list first'); setPickerSaving(false); return; }
 
     closePicker();
     setPickerSaving(false);
     selectList(listId);
-    // User lands on the empty list page — they choose to Import or Add Manually from there
   };
 
-  // ── Import (2-step: validate → confirm → import) ──────────────────────
-  const handleImport = async (file: File) => {
-    setValidating(true);
-    setPendingFile(file);
-    setIncludeCrossList(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    if (selectedList) fd.append('list_id', selectedList);
-    try {
-      const res = await fetch('/api/leads/validate', { method: 'POST', body: fd });
-      const d = await res.json();
-      if (res.ok) {
-        setValidationResult(d);
-      } else {
-        showMsg(`Error: ${d.error}`);
-        setPendingFile(null);
-      }
-    } catch {
-      showMsg('Validation failed. Please try again.');
-      setPendingFile(null);
-    }
-    setValidating(false);
-  };
-
-  const confirmImport = async () => {
-    if (!pendingFile) return;
-    setImporting(true);
-    const excluded = [
-      ...(validationResult?.bounced_emails ?? []),
-      ...(validationResult?.unsubscribed_emails ?? []),
-      ...(validationResult?.domain_typo_emails?.map(d => d.email) ?? []),
-      ...(validationResult?.disposable_emails ?? []),
-      ...(!includeCrossList ? validationResult?.cross_list_dupes.map(d => d.email) ?? [] : []),
-    ];
-    const fd = new FormData();
-    fd.append('file', pendingFile);
-    if (selectedList) fd.append('list_id', selectedList);
-    if (excluded.length) fd.append('exclude_emails', JSON.stringify(excluded));
-    fd.append('include_cross_list', includeCrossList ? 'true' : 'false');
-    try {
-      const res = await fetch('/api/leads/import', { method: 'POST', body: fd });
-      const d = await res.json();
-      if (res.ok) {
-        const total = (d.imported || 0) + (d.added_to_list || 0);
-        const parts = [`✓ ${total} lead${total !== 1 ? 's' : ''} ${d.imported > 0 ? 'imported' : 'added'}`];
-        if (d.added_to_list > 0 && d.imported > 0) parts[0] = `✓ ${d.imported} imported, ${d.added_to_list} added to list`;
-        showMsg(parts.join(' · '));
-        fetchLeads('', selectedList);
-        fetchLists();
-        fetch('/api/leads?search=').then(r => r.json()).then(data => { if (Array.isArray(data)) setTotalCount(data.length); });
-      } else {
-        showMsg(`Error: ${d.error}`);
-      }
-    } catch {
-      showMsg('Import failed. Please try again.');
-    }
-    setValidationResult(null);
-    setPendingFile(null);
-    setPendingLead(null);
-    setImporting(false);
-  };
-
-  // ── Add / Edit buttons ────────────────────────────────────────────────
+  // ── Add / Edit Lead ────────────────────────────────────────────────
   const handleAddClick = () => {
-    if (selectedList) {
-      setEditingLead(null);
-      setForm(EMPTY_FORM);
-      setShowForm(true);
-    } else {
-      openPicker();
-    }
+    if (selectedList) { setEditingLead(null); setForm(EMPTY_FORM); setShowForm(true); }
+    else openPicker();
   };
 
   const handleImportClick = () => {
-    if (selectedList) {
-      fileRef.current?.click();
-    } else {
-      openPicker();
-    }
+    if (selectedList) fileRef.current?.click();
+    else openPicker();
   };
 
   const openEdit = (lead: Lead) => {
@@ -298,24 +360,24 @@ export default function LeadsPage() {
       else showMsg(`Error: ${d.error}`);
       setSaving(false);
     } else {
-      // New lead: run same 2-step validation as bulk import (bounce + unsub + dupe check)
+      // Single lead: wrap as CSV → validate → job modal
       const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
       const csvContent = [
         'email,first_name,last_name,company,title,website,phone',
         [form.email, form.first_name, form.last_name, form.company, form.title, form.website, form.phone].map(esc).join(','),
       ].join('\n');
-      const csvFile = new File([new Blob([csvContent], { type: 'text/csv' })], `lead_${Date.now()}.csv`, { type: 'text/csv' });
+      const csvFile = new File([new Blob([csvContent], { type: 'text/csv' })], `lead_${Date.now()}.csv`);
       setSaving(false);
-      setShowForm(false); // close form — modal replaces it
+      setShowForm(false);
       setPendingLead(form);
-      await handleImport(csvFile);
+      await handleImport(csvFile, true);
     }
   };
 
   const handleDeleteLead = (leadId: string) => {
     setConfirmModal({
       title: 'Delete lead?',
-      message: 'This lead will be permanently removed. This cannot be undone.',
+      message: 'This lead will be permanently removed.',
       onConfirm: () => {
         setConfirmModal(null);
         setLeads(p => p.filter(l => l.id !== leadId));
@@ -330,7 +392,7 @@ export default function LeadsPage() {
     if (!selected.size) return;
     setConfirmModal({
       title: `Delete ${selected.size} lead${selected.size !== 1 ? 's' : ''}?`,
-      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be permanently removed. This cannot be undone.`,
+      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be permanently removed.`,
       onConfirm: async () => {
         setConfirmModal(null);
         setDeleting(true);
@@ -357,7 +419,7 @@ export default function LeadsPage() {
     const list = lists.find(l => l.id === selectedList);
     setConfirmModal({
       title: `Remove ${selected.size} lead${selected.size !== 1 ? 's' : ''} from list?`,
-      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be removed from "${list?.name ?? 'this list'}". The leads themselves won't be deleted.`,
+      message: `${selected.size} lead${selected.size !== 1 ? 's' : ''} will be removed from "${list?.name ?? 'this list'}".`,
       onConfirm: async () => {
         setConfirmModal(null);
         await fetch(`/api/lead-lists/${selectedList}/members`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_ids: [...selected] }) });
@@ -382,7 +444,7 @@ export default function LeadsPage() {
     setCtxMenu(null);
     setConfirmModal({
       title: 'Delete list?',
-      message: `"${list?.name ?? 'This list'}" and all leads that are only in this list will be permanently deleted.`,
+      message: `"${list?.name ?? 'This list'}" and leads only in this list will be permanently deleted.`,
       confirmLabel: 'Delete',
       onConfirm: () => {
         setConfirmModal(null);
@@ -396,7 +458,7 @@ export default function LeadsPage() {
   const saveRename = async () => {
     if (!renamingList || !renameVal.trim()) return;
     const res = await fetch(`/api/lead-lists/${renamingList.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: renameVal.trim() }) });
-    if (res.ok) { setLists(p => p.map(l => l.id === renamingList.id ? { ...l, name: renameVal.trim() } : l)); }
+    if (res.ok) setLists(p => p.map(l => l.id === renamingList.id ? { ...l, name: renameVal.trim() } : l));
     setRenamingList(null);
     setCtxMenu(null);
   };
@@ -425,10 +487,10 @@ export default function LeadsPage() {
           </a>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
-          <button onClick={handleImportClick} disabled={importing || validating}
+          <button onClick={handleImportClick} disabled={validating}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            {validating ? 'Validating…' : importing ? 'Importing…' : 'Import'}
+            {validating ? 'Validating…' : 'Import'}
           </button>
           <button onClick={handleAddClick}
             className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl px-3 py-2 hover:bg-blue-700 transition-colors">
@@ -441,6 +503,54 @@ export default function LeadsPage() {
       {msg && (
         <div className={`mx-6 mb-3 rounded-xl px-4 py-2.5 text-sm font-medium ${msg.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
           {msg}
+        </div>
+      )}
+
+      {/* ── Import job banner ────────────────────────────────────────── */}
+      {activeJob && !showJobModal && (
+        <div className={`mx-6 mb-3 rounded-xl border px-4 py-3 flex items-center gap-3 ${
+          activeJob.status === 'processing' ? 'bg-blue-50 border-blue-100' :
+          activeJob.status === 'done' ? 'bg-emerald-50 border-emerald-100' :
+          'bg-red-50 border-red-100'
+        }`}>
+          {activeJob.status === 'processing' ? (
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0"/>
+          ) : activeJob.status === 'done' ? (
+            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+          ) : (
+            <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          )}
+          <div className="flex-1 min-w-0">
+            {activeJob.status === 'processing' ? (
+              <>
+                <p className="text-sm font-semibold text-blue-800">
+                  Validating {activeJob.total_emails} emails{activeJob.filename ? ` from "${activeJob.filename}"` : ''}…
+                </p>
+                <div className="mt-1.5 h-1.5 bg-blue-100 rounded-full overflow-hidden w-48">
+                  <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${activeJob.progress}%` }}/>
+                </div>
+              </>
+            ) : activeJob.status === 'done' ? (
+              <p className="text-sm font-semibold text-emerald-800">
+                Validation complete
+                {activeJob.summary && ` — ${activeJob.summary.safe + activeJob.summary.caution} importable, ${activeJob.summary.block} blocked`}
+                {activeJob.filename && <span className="font-normal text-emerald-700"> · {activeJob.filename}</span>}
+              </p>
+            ) : (
+              <p className="text-sm font-semibold text-red-700">Validation failed</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {activeJob.status === 'done' && (
+              <button onClick={() => setShowJobModal(true)}
+                className="text-xs font-bold bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors">
+                View Results →
+              </button>
+            )}
+            <button onClick={dismissJob} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-white/60">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -535,7 +645,7 @@ export default function LeadsPage() {
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} className="border-b border-gray-100">
                         {Array.from({ length: 8 }).map((_, j) => (
-                          <td key={j} className="px-4 py-3.5"><Skeleton className={`h-3 ${j === 0 ? 'w-5' : j === 1 ? 'w-24' : j === 2 ? 'w-32' : 'w-16'}`} /></td>
+                          <td key={j} className="px-4 py-3.5"><Skeleton className={`h-3 ${j === 0 ? 'w-5' : j === 1 ? 'w-24' : j === 2 ? 'w-32' : 'w-16'}`}/></td>
                         ))}
                       </tr>
                     ))
@@ -660,18 +770,14 @@ export default function LeadsPage() {
           <div className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-44"
             style={{ top: ctxMenu.y, left: ctxMenu.x }}>
             <button onClick={() => { setRenamingList(ctxMenu.list); setRenameVal(ctxMenu.list.name); setCtxMenu(null); }}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-              Rename
-            </button>
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Rename</button>
             <button onClick={() => deleteList(ctxMenu.list.id)}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
-              Delete List
-            </button>
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">Delete List</button>
           </div>
         </>
       )}
 
-      {/* ── List Picker Modal ──────────────────────────────────────────── */}
+      {/* List Picker Modal */}
       {showPicker && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
@@ -681,7 +787,6 @@ export default function LeadsPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
-
             <div className="p-4 space-y-2 max-h-60 overflow-y-auto">
               {lists.length === 0 && !pickerShowNew && (
                 <p className="text-sm text-gray-400 text-center py-2">No lists yet — create one below.</p>
@@ -690,9 +795,7 @@ export default function LeadsPage() {
                 <label key={list.id}
                   className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-all ${pickerListId === list.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
                   <input type="radio" name="picker_list" value={list.id}
-                    checked={pickerListId === list.id}
-                    onChange={() => setPickerListId(list.id)}
-                    className="accent-blue-600"/>
+                    checked={pickerListId === list.id} onChange={() => setPickerListId(list.id)} className="accent-blue-600"/>
                   <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{list.name}</p>
@@ -703,7 +806,6 @@ export default function LeadsPage() {
                   )}
                 </label>
               ))}
-
               {pickerShowNew ? (
                 <div className="flex items-center gap-2 px-1">
                   <input autoFocus value={pickerNewName} placeholder="List name…"
@@ -724,15 +826,9 @@ export default function LeadsPage() {
                 </button>
               )}
             </div>
-
             <div className="px-4 pb-4 flex gap-2">
-              <button onClick={closePicker}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
-                Cancel
-              </button>
-              <button
-                disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())}
-                onClick={handlePickerConfirm}
+              <button onClick={closePicker} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())} onClick={handlePickerConfirm}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {pickerSaving ? 'Creating…' : 'Go to List →'}
               </button>
@@ -791,216 +887,162 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* Validation Preview Modal */}
-      {validationResult && !importing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-              <div>
-                <h2 className="text-base font-bold text-gray-900">{pendingLead ? 'Add Lead — Check' : 'Import Preview'}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{pendingLead ? 'Email scanned below' : `${validationResult.total} rows in file`}</p>
+      {/* ── Import Job Results Modal ────────────────────────────────── */}
+      {showJobModal && activeJob && activeJob.status === 'done' && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
+
+            {/* Modal header */}
+            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900">
+                  {pendingLead ? 'Add Lead — Validation Result' : 'Import Results'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {activeJob.filename && <span className="font-medium text-gray-500">{activeJob.filename}</span>}
+                  {activeJob.list_name && <span> → {activeJob.list_name}</span>}
+                  {activeJob.summary && (
+                    <span className="ml-2">{activeJob.summary.total} emails scanned</span>
+                  )}
+                </p>
               </div>
-              <button onClick={() => { setValidationResult(null); setPendingFile(null); if (pendingLead) setShowForm(true); setPendingLead(null); }}
-                className="text-gray-400 hover:text-gray-700 transition-colors">
+              <button onClick={() => { setShowJobModal(false); if (!pendingLead) setPendingLead(null); }}
+                className="text-gray-400 hover:text-gray-700 transition-colors ml-4 shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
 
-            <div className="p-5 space-y-3 overflow-y-auto flex-1">
+            {/* Summary cards */}
+            {activeJob.summary && (
+              <div className="px-6 pt-4 pb-3 grid grid-cols-3 gap-3 shrink-0">
+                {([
+                  { key: 'safe', label: 'Safe to send', color: 'emerald', count: activeJob.summary.safe },
+                  { key: 'caution', label: 'Use caution', color: 'amber', count: activeJob.summary.caution },
+                  { key: 'block', label: 'Blocked', color: 'red', count: activeJob.summary.block },
+                ] as const).map(card => (
+                  <button key={card.key}
+                    onClick={() => setJobFilter(f => f === card.key ? 'all' : card.key)}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      jobFilter === card.key
+                        ? card.color === 'emerald' ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400'
+                          : card.color === 'amber' ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-400'
+                          : 'bg-red-50 border-red-300 ring-1 ring-red-400'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}>
+                    <p className={`text-2xl font-bold ${
+                      card.color === 'emerald' ? 'text-emerald-600' :
+                      card.color === 'amber' ? 'text-amber-600' : 'text-red-500'
+                    }`}>{card.count}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5">{card.label}</p>
+                  </button>
+                ))}
+              </div>
+            )}
 
-              {/* ── Skipped rows (gray) — syntax errors, typos, disposable, dupes ── */}
-              {(validationResult.invalid_format > 0 || validationResult.domain_typo > 0 || validationResult.disposable > 0 || validationResult.file_duplicates > 0 || validationResult.already_in_this_list > 0) && (
-                <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skipped — not imported</p>
-                  {validationResult.invalid_format > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>Invalid syntax</span>
-                      <span className="font-bold text-gray-400">{validationResult.invalid_format}</span>
-                    </div>
-                  )}
-                  {validationResult.domain_typo > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0"/>Likely typo in domain</span>
-                        <span className="font-bold text-gray-400">{validationResult.domain_typo}</span>
-                      </div>
-                      {validationResult.domain_typo_emails.slice(0, 3).map((d, i) => (
-                        <p key={i} className="text-[10px] text-gray-400 ml-3.5 truncate">
-                          <span className="line-through">{d.email}</span>
-                          <span className="text-blue-400 not-italic"> → {d.suggestion}</span>
-                        </p>
-                      ))}
-                      {validationResult.domain_typo > 3 && <p className="text-[10px] text-gray-400 ml-3.5">+{validationResult.domain_typo - 3} more…</p>}
-                    </div>
-                  )}
-                  {validationResult.disposable > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"/>Disposable / temp email</span>
-                      <span className="font-bold text-gray-400">{validationResult.disposable}</span>
-                    </div>
-                  )}
-                  {validationResult.file_duplicates > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>Duplicates in file</span>
-                      <span className="font-bold text-gray-400">{validationResult.file_duplicates}</span>
-                    </div>
-                  )}
-                  {validationResult.already_in_this_list > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0"/>Already in this list</span>
-                      <span className="font-bold text-gray-400">{validationResult.already_in_this_list}</span>
-                    </div>
-                  )}
+            {/* Options */}
+            <div className="px-6 pb-3 flex items-center gap-4 shrink-0">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <div onClick={() => setIncludeCaution(v => !v)}
+                  className={`w-9 h-5 rounded-full transition-colors relative ${includeCaution ? 'bg-amber-400' : 'bg-gray-200'}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCaution ? 'left-4' : 'left-0.5'}`}/>
                 </div>
-              )}
-
-              {/* ── Excluded from import (red) — bounced, unsubscribed ────── */}
-              {(validationResult.bounced > 0 || validationResult.unsubscribed > 0) && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Excluded — confirmed bad</p>
-                  {validationResult.bounced > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-red-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"/>
-                        Bounced — mailbox confirmed invalid
-                      </span>
-                      <span className="font-bold text-red-600">{validationResult.bounced}</span>
-                    </div>
-                  )}
-                  {validationResult.unsubscribed > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-red-600 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"/>Unsubscribed</span>
-                      <span className="font-bold text-red-600">{validationResult.unsubscribed}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Caution info — unknowns, catchall, role-based, major providers — still imported ── */}
-              {(validationResult.bounce_unknown > 0 || validationResult.bounce_catchall > 0 || validationResult.role_based > 0 || validationResult.major_provider > 0) && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Use caution — will be imported</p>
-                  {validationResult.major_provider > 0 && (
-                    <div className="flex items-start justify-between text-sm gap-2">
-                      <span className="text-blue-600 flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"/>
-                        <span>
-                          Gmail / Outlook / Yahoo — inbox existence <span className="font-semibold">cannot be verified</span>. If the address is fake it will hard bounce.
-                          {validationResult.major_provider_emails.length > 0 && (
-                            <span className="block text-[11px] text-blue-400 mt-0.5">
-                              {validationResult.major_provider_emails.slice(0, 3).join(', ')}
-                              {validationResult.major_provider > 3 && ` +${validationResult.major_provider - 3} more`}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                      <span className="font-bold text-blue-500 shrink-0">{validationResult.major_provider}</span>
-                    </div>
-                  )}
-                  {validationResult.bounce_unknown > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0"/>
-                        Inconclusive — server didn&apos;t respond
-                      </span>
-                      <span className="font-bold text-blue-500">{validationResult.bounce_unknown}</span>
-                    </div>
-                  )}
-                  {validationResult.bounce_catchall > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"/>
-                        Catch-all domain — accepts all addresses
-                      </span>
-                      <span className="font-bold text-blue-500">{validationResult.bounce_catchall}</span>
-                    </div>
-                  )}
-                  {validationResult.role_based > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0"/>
-                        Role-based email (info@, admin@…)
-                      </span>
-                      <span className="font-bold text-blue-500">{validationResult.role_based}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Cross-list section ──────────────────────────────────── */}
-              {validationResult.cross_list_count > 0 && (
-                <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-amber-900">
-                        {validationResult.cross_list_count} email{validationResult.cross_list_count !== 1 ? 's' : ''} already exist in other lists
-                      </p>
-                      <div className="mt-1 space-y-0.5 max-h-20 overflow-y-auto">
-                        {validationResult.cross_list_dupes.slice(0, 5).map((d, i) => (
-                          <p key={i} className="text-[11px] text-amber-700 truncate">
-                            <span className="font-medium">{d.email}</span>
-                            <span className="text-amber-500"> · in {d.lists.join(', ')}</span>
-                          </p>
-                        ))}
-                        {validationResult.cross_list_count > 5 && (
-                          <p className="text-[11px] text-amber-500">+{validationResult.cross_list_count - 5} more…</p>
-                        )}
-                      </div>
-                    </div>
+                <span className="text-xs font-semibold text-gray-600">Include caution</span>
+              </label>
+              {activeJob.results?.some(r => r.dupe_lists.length > 0) && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div onClick={() => setIncludeCrossListJob(v => !v)}
+                    className={`w-9 h-5 rounded-full transition-colors relative ${includeCrossListJob ? 'bg-blue-500' : 'bg-gray-200'}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCrossListJob ? 'left-4' : 'left-0.5'}`}/>
                   </div>
-                  <div className="flex gap-2">
-                    <label className={`flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 rounded-lg text-sm font-bold border transition-all ${includeCrossList ? 'bg-amber-600 text-white border-amber-600' : 'border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-                      <input type="radio" name="cross_list" checked={includeCrossList} onChange={() => setIncludeCrossList(true)} className="hidden"/>
-                      Add to this list
-                    </label>
-                    <label className={`flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 rounded-lg text-sm font-bold border transition-all ${!includeCrossList ? 'bg-amber-600 text-white border-amber-600' : 'border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-                      <input type="radio" name="cross_list" checked={!includeCrossList} onChange={() => setIncludeCrossList(false)} className="hidden"/>
-                      Skip them
-                    </label>
-                  </div>
-                </div>
+                  <span className="text-xs font-semibold text-gray-600">Include cross-list duplicates</span>
+                </label>
               )}
-
-              {/* ── Ready to import (green) ─────────────────────────────── */}
-              {(() => {
-                const total = validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0);
-                const parts = [];
-                if (validationResult.clean_count > 0) parts.push(`${validationResult.clean_count} verified`);
-                if (includeCrossList && validationResult.cross_list_count > 0) parts.push(`${validationResult.cross_list_count} from other lists`);
-                return (
-                  <div className="border border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
-                        {total === 0 ? 'Nothing to import' : 'Ready to import'}
-                      </span>
-                      <span className={`text-xl font-bold ${total === 0 ? 'text-gray-400' : 'text-emerald-700'}`}>{total}</span>
-                    </div>
-                    {parts.length > 1 && (
-                      <p className="text-[11px] text-emerald-600 mt-1">{parts.join(' + ')}</p>
+              <div className="ml-auto flex items-center gap-1">
+                {(['all', 'safe', 'caution', 'block'] as const).map(f => (
+                  <button key={f} onClick={() => setJobFilter(f)}
+                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                    {f !== 'all' && activeJob.results && (
+                      <span className="ml-1 opacity-60">{activeJob.results.filter(r => r.decision === f).length}</span>
                     )}
-                  </div>
-                );
-              })()}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="px-5 pb-5 flex gap-2 shrink-0">
-              <button onClick={() => {
-                  setValidationResult(null); setPendingFile(null);
-                  if (pendingLead) { setShowForm(true); } // reopen form
-                  setPendingLead(null);
-                }}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
-                {pendingLead ? 'Go Back' : 'Cancel'}
+            {/* Results table */}
+            <div className="flex-1 overflow-auto border-t border-gray-100 min-h-0">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-gray-50">
+                  <tr className="border-b border-gray-100">
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-24">Score</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-20">Decision</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-20">Provider</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredResults.length === 0 ? (
+                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">No emails in this category</td></tr>
+                  ) : filteredResults.map((r, i) => {
+                    const style = decisionStyle(r.decision);
+                    return (
+                      <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-2.5 font-medium text-gray-800 text-xs truncate max-w-[200px]">{r.email}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold w-7 text-right ${style.score}`}>{r.score}</span>
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden w-14">
+                              <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${r.score}%` }}/>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex text-[10px] font-bold rounded-full px-2 py-0.5 ${style.badge}`}>
+                            {r.decision}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-[10px] text-gray-500 font-medium">{r.provider}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-[11px] text-gray-500 truncate max-w-[220px]" title={r.reasons[0]}>
+                          {r.reasons[0] ?? '—'}
+                          {r.dupe_lists.length > 0 && (
+                            <span className="ml-1 text-amber-500 font-semibold">· in {r.dupe_lists.join(', ')}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {activeJob.results && filteredResults.length < (jobFilter === 'all' ? activeJob.results.length : activeJob.results.filter(r => r.decision === jobFilter).length) && (
+                <p className="text-center text-xs text-gray-400 py-3 border-t border-gray-100">
+                  Showing first 200 of {jobFilter === 'all' ? activeJob.results.length : activeJob.results.filter(r => r.decision === jobFilter).length} — use filters to narrow down
+                </p>
+              )}
+            </div>
+
+            {/* Modal footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
+              <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                Dismiss
               </button>
-              <button onClick={confirmImport}
-                disabled={validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0) === 0}
-                className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                {pendingLead
-                  ? (validationResult.clean_count > 0 ? 'Add Lead' : 'Add to This List')
-                  : `Import ${validationResult.clean_count + (includeCrossList ? validationResult.cross_list_count : 0)} Leads`}
-              </button>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-gray-400 font-medium">
+                  {importCount} email{importCount !== 1 ? 's' : ''} will be imported
+                </p>
+                <button
+                  onClick={executeImport}
+                  disabled={executing || importCount === 0}
+                  className="py-2.5 px-6 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+                  {executing && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/>}
+                  {pendingLead
+                    ? (importCount > 0 ? 'Add Lead' : 'Email Blocked')
+                    : (importCount === 0 ? 'Nothing to Import' : `Import ${importCount} Lead${importCount !== 1 ? 's' : ''}`)}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1013,7 +1055,7 @@ export default function LeadsPage() {
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"/>
             <div className="text-center">
               <p className="text-sm font-bold text-gray-900">Validating emails…</p>
-              <p className="text-xs text-gray-400 mt-1">Checking for bounces, duplicates & unsubscribes</p>
+              <p className="text-xs text-gray-400 mt-1">Checking syntax, bounces, SMTP & duplicates</p>
             </div>
           </div>
         </div>
