@@ -40,10 +40,10 @@ export default function SupportWidget() {
       .catch(() => {});
   };
 
-  // Load on mount for badge count, and poll every 60s to stay fresh
+  // Load on mount for badge count, and poll every 30s to stay fresh
   useEffect(() => {
     fetchSilent();
-    const id = setInterval(fetchSilent, 60000);
+    const id = setInterval(fetchSilent, 30000);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -66,6 +66,14 @@ export default function SupportWidget() {
     window.addEventListener('leadgenie:support-seen', onSeen);
     return () => window.removeEventListener('leadgenie:support-seen', onSeen);
   }, []);
+
+  // When a new support notification arrives (Realtime push in layout), refresh ticket list immediately
+  useEffect(() => {
+    const onNotify = () => { if (!open) fetchSilent(); };
+    window.addEventListener('leadgenie:support-notify', onNotify);
+    return () => window.removeEventListener('leadgenie:support-notify', onNotify);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

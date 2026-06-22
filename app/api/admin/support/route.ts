@@ -18,13 +18,18 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status') || '';
 
   // Fast count for admin sidebar badge: ?count=1
+  // Counts: no reply yet OR user sent follow-up after last admin reply (last message role = 'user')
   if (searchParams.get('count') === '1') {
-    const { count } = await supabaseAdmin
+    const { data: open } = await supabaseAdmin
       .from('support_tickets')
-      .select('id', { count: 'exact', head: true })
-      .is('admin_reply', null)
+      .select('id, admin_reply, messages')
       .in('status', ['open', 'in_progress']);
-    return NextResponse.json({ unread: count ?? 0 });
+    const count = (open || []).filter(t => {
+      if (!t.admin_reply) return true;
+      const msgs = Array.isArray(t.messages) ? t.messages : [];
+      return msgs.length > 0 && msgs[msgs.length - 1]?.role === 'user';
+    }).length;
+    return NextResponse.json({ unread: count });
   }
 
   let query = supabaseAdmin

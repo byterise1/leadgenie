@@ -61,7 +61,7 @@ const navSections = [
   },
 ];
 
-type Notif = { id: string; message: string; type: string; read: boolean; link: string };
+type Notif = { id: string; message: string; type: string; read: boolean; link: string; created_at?: string };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -233,17 +233,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
                 ) : (
                   <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-                    {notifs.map(n => (
-                      <button key={n.id} onClick={() => dismissNotif(n)}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors">
-                        <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
-                        {n.link && (
-                          <p className="text-xs text-blue-500 font-semibold mt-0.5">
-                            {n.link.includes('support') ? 'View Support Ticket →' : 'View →'}
-                          </p>
-                        )}
-                      </button>
-                    ))}
+                    {notifs.map(n => {
+                      const isSupport = n.link?.includes('/support');
+                      const isCampaign = n.link?.includes('/campaigns');
+                      const category = isSupport ? 'Support' : isCampaign ? 'Campaign' : 'Notice';
+                      const categoryColor = isSupport ? 'bg-blue-100 text-blue-700' : isCampaign ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500';
+                      const dot = isSupport ? 'bg-blue-500' : isCampaign ? 'bg-emerald-500' : 'bg-gray-400';
+                      return (
+                        <button key={n.id} onClick={() => dismissNotif(n)}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start gap-2.5">
+                            <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${dot}`}/>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${categoryColor}`}>{category}</span>
+                                {n.created_at && (
+                                  <span className="text-[10px] text-gray-400">{new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                )}
+                              </div>
+                              <p className="text-xs font-semibold text-gray-800 leading-snug">{n.message}</p>
+                              {n.link && (
+                                <p className="text-[10px] text-blue-500 font-semibold mt-1">
+                                  {isSupport ? 'Open ticket →' : isCampaign ? 'View campaign →' : 'View →'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -43,8 +43,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Mark as seen (user opened ticket with admin reply)
   if (body.mark_seen) {
     updates.user_seen_at = new Date().toISOString();
-    // Also mark the corresponding bell notification as read
-    void supabaseAdmin.from('notifications')
+    // Await so that when client refetches notifications it's already marked read
+    await supabaseAdmin.from('notifications')
       .update({ read: true })
       .eq('user_id', user.id)
       .eq('link', `/dashboard/support/${id}`)

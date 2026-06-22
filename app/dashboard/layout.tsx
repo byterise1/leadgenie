@@ -75,10 +75,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
           (payload) => {
             setNotifications(prev => {
-              // Avoid duplicates if polling already added it
               if (prev.some(n => n.id === (payload.new as Notification).id)) return prev;
               return [payload.new as Notification, ...prev];
             });
+            // Tell SupportWidget to refresh immediately if this is a support notification
+            if ((payload.new as Notification).link?.includes('/support')) {
+              window.dispatchEvent(new Event('leadgenie:support-notify'));
+            }
           }
         )
         .subscribe();
@@ -240,24 +243,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ) : (
                   <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                     {notifications.map(n => {
-                      const dot = n.type === 'warning' ? 'bg-amber-400' : n.type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+                      const isSupport = n.link?.includes('/support');
+                      const isCampaign = n.link?.includes('/campaigns');
+                      const isInbox = n.link?.includes('/inbox');
+                      const category = isSupport ? 'Support' : isCampaign ? 'Campaign' : isInbox ? 'Inbox' : 'Notice';
+                      const categoryColor = isSupport ? 'bg-blue-100 text-blue-700' : isCampaign ? 'bg-emerald-100 text-emerald-700' : isInbox ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500';
+                      const dot = n.type === 'warning' ? 'bg-amber-400' : n.type === 'error' ? 'bg-red-500' : isSupport ? 'bg-blue-500' : 'bg-emerald-500';
                       return (
                         <div key={n.id}
                           className={`group flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${n.link ? 'cursor-pointer' : ''}`}
                           onClick={() => handleNotifClick(n)}>
-                          <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${dot}`}/>
+                          <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${dot}`}/>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-800 leading-relaxed">{n.message}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">
-                              {new Date(n.created_at).toLocaleString()}
-                            </p>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${categoryColor}`}>{category}</span>
+                              <span className="text-[10px] text-gray-400">{new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-xs font-semibold text-gray-800 leading-snug">{n.message}</p>
                             {n.link && (
-                              <p className="text-[10px] text-blue-500 font-semibold mt-0.5">
-                                {n.link.includes('inbox') ? 'View in Inbox →' :
-                                 n.link.includes('support') ? 'View Support Ticket →' :
-                                 n.link.includes('campaigns') ? 'View Campaign →' :
-                                 n.link.includes('leads') ? 'View Leads →' :
-                                 n.link.includes('analytics') ? 'View Analytics →' : 'View →'}
+                              <p className="text-[10px] text-blue-500 font-semibold mt-1">
+                                {isInbox ? 'View in Inbox →' : isSupport ? 'Open ticket →' : isCampaign ? 'View campaign →' : 'View →'}
                               </p>
                             )}
                           </div>
