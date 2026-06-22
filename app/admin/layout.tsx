@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/Logo';
 
@@ -69,6 +69,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [supportBadge, setSupportBadge] = useState(0);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [showBell, setShowBell] = useState(false);
+  // Prevents the 5s interval from re-populating notifs while a mark-all-read PATCH is in-flight
+  const clearingRef = useRef(false);
 
   useEffect(() => {
     const fetchUnread = () => {
@@ -84,6 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   const fetchNotifs = () => {
+    if (clearingRef.current) return; // don't re-populate while mark-all-read PATCH is in-flight
     fetch('/api/notifications')
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setNotifs(d.filter((n: Notif) => !n.read)); })
@@ -206,11 +209,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button onClick={() => {
               const opening = !showBell;
               setShowBell(v => !v);
-              // Mark all as read the moment admin opens the bell
               if (opening && notifs.length > 0) {
+                // Optimistically clear immediately — badge + dropdown go to 0 at once
+                setNotifs([]);
+                clearingRef.current = true;
                 fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-                  .then(() => fetchNotifs())
-                  .catch(() => {});
+                  .finally(() => { clearingRef.current = false; fetchNotifs(); });
               }
             }}
               className="relative p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
@@ -230,10 +234,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <p className="text-sm font-bold text-gray-900">Notifications</p>
                   {notifs.length > 0 && (
-                    <button onClick={async () => {
+                    <button onClick={() => {
                       setNotifs([]);
                       setShowBell(false);
-                      await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                      clearingRef.current = true;
+                      fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+                        .finally(() => { clearingRef.current = false; fetchNotifs(); });
                     }} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
                       Mark all read
                     </button>
