@@ -7,10 +7,10 @@ import { batchPreCheck } from '@/lib/email-validate';
 import { detectProvider, scoreEmail, EmailResult, JobSummary } from '@/lib/score-engine';
 import { validationQueue } from '@/lib/queue';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
-// Threshold: above this, use background BullMQ worker instead of inline probe
-const ASYNC_THRESHOLD = 50;
+// Run inline unless truly massive — Railway has no timeout so this is fine up to ~500 emails
+const ASYNC_THRESHOLD = 500;
 
 function normalizeRow(r: Record<string, string>) {
   const clean = (v: string | undefined) => (v || '').trim() || null;

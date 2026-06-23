@@ -61,7 +61,7 @@ function doSmtpConversation(
     let buf = '';
     let step = 0;
 
-    socket.setTimeout(10000);
+    socket.setTimeout(6000);
     socket.once('timeout', () => done('unknown'));
     socket.once('error', () => done('unknown'));
 
@@ -152,7 +152,7 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
             command: 'connect',
             destination: { host: mxHost, port: 25 },
           }),
-          new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 10000)),
+          new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 5000)),
         ]) as Promise<Awaited<ReturnType<typeof SocksClient.createConnection>>>);
         socket = conn.socket;
       } catch {
@@ -173,7 +173,7 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
   }
 }
 
-export async function batchSmtp(emails: string[], concurrency = 8): Promise<Map<string, SmtpResult>> {
+export async function batchSmtp(emails: string[], concurrency = 15): Promise<Map<string, SmtpResult>> {
   const results = new Map<string, SmtpResult>();
   const domainCache = new Map<string, SmtpResult>();
 

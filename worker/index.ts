@@ -176,13 +176,13 @@ async function processValidationJob(job: Job) {
   ];
 
   // SMTP probe in batches, updating progress
-  const BATCH_SIZE = 20;
+  const BATCH_SIZE = 50;
   const smtpMap = new Map<string, string>();
   let probed = 0;
 
   for (let i = 0; i < (emails_to_probe as string[]).length; i += BATCH_SIZE) {
     const batch = (emails_to_probe as string[]).slice(i, i + BATCH_SIZE);
-    const batchResult = await batchSmtp(batch, 10);
+    const batchResult = await batchSmtp(batch, 20);
     for (const [email, result] of batchResult) smtpMap.set(email, result);
     probed += batch.length;
 

@@ -83,6 +83,7 @@ export default function LeadsPage() {
   const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -148,11 +149,19 @@ export default function LeadsPage() {
     loadActiveJob(selectedList);
   }, [selectedList, loadActiveJob]);
 
-  // Poll when job is processing
+  // Poll when job is processing; auto-dismiss if stuck for >3 minutes
   useEffect(() => {
     if (activeJob?.status !== 'processing') return;
     if (pollRef.current) clearInterval(pollRef.current);
+    const startedAt = Date.now();
     pollRef.current = setInterval(async () => {
+      if (Date.now() - startedAt > 3 * 60 * 1000) {
+        clearInterval(pollRef.current!);
+        fetch(`/api/leads/import-jobs/${activeJob.id}`, { method: 'DELETE' }).catch(() => {});
+        setActiveJob(null);
+        showMsg('Validation timed out — please try again.');
+        return;
+      }
       const job = await loadJobById(activeJob.id);
       if (!job) return;
       setActiveJob(job);
@@ -547,7 +556,9 @@ export default function LeadsPage() {
                 View Results →
               </button>
             )}
-            <button onClick={dismissJob} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-white/60">
+            <button
+              onClick={() => activeJob?.status === 'done' ? setShowDiscardConfirm(true) : dismissJob()}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-white/60">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -1056,6 +1067,37 @@ export default function LeadsPage() {
             <div className="text-center">
               <p className="text-sm font-bold text-gray-900">Validating emails…</p>
               <p className="text-xs text-gray-400 mt-1">Checking syntax, bounces, SMTP & duplicates</p>
+              <p className="text-xs text-blue-500 mt-2 font-medium">Please wait, this may take a moment</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discard confirmation modal */}
+      {showDiscardConfirm && activeJob && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-bold text-gray-900">Validation Complete</p>
+              {activeJob.summary && (
+                <p className="text-sm text-gray-600 mt-1">
+                  {activeJob.summary.safe + activeJob.summary.caution} leads ready to import,{' '}
+                  {activeJob.summary.block} blocked.
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-2">Do you want to import the leads or discard this report?</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowDiscardConfirm(false); setShowJobModal(true); }}
+                className="flex-1 bg-blue-600 text-white text-sm font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors">
+                Import Leads
+              </button>
+              <button
+                onClick={() => { setShowDiscardConfirm(false); dismissJob(); }}
+                className="flex-1 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-4 py-2 hover:bg-gray-50 transition-colors">
+                Discard
+              </button>
             </div>
           </div>
         </div>
