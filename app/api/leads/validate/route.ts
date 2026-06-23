@@ -12,10 +12,12 @@ export const maxDuration = 300;
 // Run inline unless truly massive — Railway has no timeout so this is fine up to ~500 emails
 const ASYNC_THRESHOLD = 500;
 
-function normalizeRow(r: Record<string, string>) {
+function expandRow(r: Record<string, string>) {
   const clean = (v: string | undefined) => (v || '').trim() || null;
-  return {
-    email: (r.email || r.Email || r.EMAIL || '').trim().toLowerCase(),
+  const rawEmail = (r.email || r.Email || r.EMAIL || '').trim();
+  // Split cells that contain multiple emails separated by ; or ,
+  const emails = rawEmail.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(Boolean);
+  const base = {
     first_name: clean(r.first_name || r.firstname || r.first || r['First Name'] || r['First name']),
     last_name: clean(r.last_name || r.lastname || r.last || r['Last Name'] || r['Last name']),
     company: clean(r.company || r.company_name || r['Company'] || r['Company Name']),
@@ -24,6 +26,8 @@ function normalizeRow(r: Record<string, string>) {
     linkedin: clean(r.linkedin || r.linkedin_url || r['LinkedIn']),
     phone: clean(r.phone || r.phone_number || r['Phone']),
   };
+  if (emails.length === 0) return [{ email: '', ...base }];
+  return emails.map(email => ({ email, ...base }));
 }
 
 export async function POST(req: NextRequest) {
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
     rawRows = data;
   }
 
-  const allRows = rawRows.map(normalizeRow);
+  const allRows = rawRows.flatMap(expandRow);
   const total = allRows.length;
 
   // ── 1. Pre-check: syntax / disposable / typo / role-based ───────────────────

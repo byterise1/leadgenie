@@ -129,17 +129,14 @@ const DISPOSABLE_DOMAINS = new Set([
   'simplelogin.io','spamgourmet.com','spamfree24.org',
 ]);
 
-// ── 3. Role-based email prefixes (shared inboxes, low reply rate) ─────────────
+// ── 3. Role-based email prefixes — only truly non-human/automated addresses ────
+// Intentionally excludes info@, office@, contact@, sales@, hello@, support@ etc.
+// because those are common legitimate cold email targets for B2B outreach.
 const ROLE_PREFIXES = new Set([
-  'info','admin','support','contact','sales','hello','help','team',
-  'office','noreply','no-reply','donotreply','do-not-reply','postmaster',
-  'abuse','billing','legal','press','media','marketing','hr','jobs',
-  'careers','privacy','security','webmaster','service','services','mail',
-  'email','feedback','newsletter','enquiries','enquiry','inquiries',
-  'inquiry','customerservice','customer.service','customer-service',
-  'helpdesk','general','accounts','finance','invoices','reception',
-  'hq','headquarters','directory','list','lists','bounce','bounces',
-  'mailer','mailer-daemon','daemon','robot','automated','automailer',
+  'noreply','no-reply','donotreply','do-not-reply','postmaster',
+  'abuse','bounce','bounces','mailer','mailer-daemon','daemon',
+  'robot','automated','automailer','newsletter','list','lists',
+  'privacy','security','webmaster',
 ]);
 
 // ── Main validator ────────────────────────────────────────────────────────────
