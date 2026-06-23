@@ -79,7 +79,7 @@ export default function LeadsPage() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [includeCaution, setIncludeCaution] = useState(true);
   const [includeCrossListJob, setIncludeCrossListJob] = useState(true);
-  const [jobFilter, setJobFilter] = useState<'all' | EmailDecision>('all');
+  const [jobFilter, setJobFilter] = useState<'all' | EmailDecision | 'dupes'>('all');
   const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -210,7 +210,10 @@ export default function LeadsPage() {
   // ── Job-computed values ────────────────────────────────────────────
   const filteredResults = useMemo(() => {
     if (!activeJob?.results) return [];
-    const arr = jobFilter === 'all' ? activeJob.results : activeJob.results.filter(r => r.decision === jobFilter);
+    let arr: typeof activeJob.results;
+    if (jobFilter === 'all') arr = activeJob.results;
+    else if (jobFilter === 'dupes') arr = activeJob.results.filter(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list);
+    else arr = activeJob.results.filter(r => r.decision === jobFilter);
     return arr.slice(0, 200);
   }, [activeJob?.results, jobFilter]);
 
@@ -1006,6 +1009,15 @@ export default function LeadsPage() {
                     )}
                   </button>
                 ))}
+                {activeJob.results && activeJob.results.some(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list) && (
+                  <button onClick={() => setJobFilter(f => f === 'dupes' ? 'all' : 'dupes')}
+                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === 'dupes' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
+                    Dupes
+                    <span className="ml-1 opacity-60">
+                      {activeJob.results.filter(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list).length}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
 
