@@ -802,5 +802,15 @@ export async function register() {
     }, { connection, concurrency: 1 });
 
     console.log('✅ Warmup worker started (every 6h)');
+
+    // ── Validation worker ────────────────────────────────────────────────────────
+    new Worker('lead-validation', async (job) => {
+      const { runValidationJob } = await import('./lib/run-validation-job');
+      await runValidationJob(supabase, job.data.jobId, job.data.userId);
+    }, { connection, concurrency: 2 })
+      .on('completed', j => console.log(`✓ Validation job ${j.id} done`))
+      .on('failed', (j, err) => console.error(`✗ Validation job ${j?.id} failed:`, err.message));
+
+    console.log('✅ Validation worker started');
   }
 }

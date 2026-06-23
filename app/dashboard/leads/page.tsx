@@ -83,7 +83,9 @@ export default function LeadsPage() {
   const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wasProcessingRef = useRef(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -149,13 +151,21 @@ export default function LeadsPage() {
     loadActiveJob(selectedList);
   }, [selectedList, loadActiveJob]);
 
-  // Poll when job is processing; auto-dismiss if stuck for >3 minutes
+  // Poll when job is processing; auto-open modal on completion; auto-dismiss if stuck >5 min
+  useEffect(() => {
+    if (activeJob?.status === 'processing') wasProcessingRef.current = true;
+    if (activeJob?.status === 'done' && wasProcessingRef.current) {
+      wasProcessingRef.current = false;
+      setShowJobModal(true);
+    }
+  }, [activeJob?.status]);
+
   useEffect(() => {
     if (activeJob?.status !== 'processing') return;
     if (pollRef.current) clearInterval(pollRef.current);
     const startedAt = Date.now();
     pollRef.current = setInterval(async () => {
-      if (Date.now() - startedAt > 3 * 60 * 1000) {
+      if (Date.now() - startedAt > 5 * 60 * 1000) {
         clearInterval(pollRef.current!);
         fetch(`/api/leads/import-jobs/${activeJob.id}`, { method: 'DELETE' }).catch(() => {});
         setActiveJob(null);
@@ -166,7 +176,7 @@ export default function LeadsPage() {
       if (!job) return;
       setActiveJob(job);
       if (job.status !== 'processing') clearInterval(pollRef.current!);
-    }, 3000);
+    }, 2000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [activeJob?.id, activeJob?.status, loadJobById]);
 
@@ -252,6 +262,21 @@ export default function LeadsPage() {
       setPendingLead(null);
     }
     setValidating(false);
+  };
+
+  const retryBlocked = async () => {
+    if (!activeJob || activeJob.status !== 'done') return;
+    setRetrying(true);
+    try {
+      const res = await fetch(`/api/leads/import-jobs/${activeJob.id}/retry`, { method: 'POST' });
+      const d = await res.json();
+      if (res.ok) {
+        setActiveJob(j => j ? { ...j, results: d.results, summary: d.summary } : j);
+        if (d.retried === 0) showMsg('No retryable blocked emails found.');
+        else showMsg(`Re-checked ${d.retried} blocked email${d.retried !== 1 ? 's' : ''} — results updated.`);
+      }
+    } catch { showMsg('Retry failed. Please try again.'); }
+    setRetrying(false);
   };
 
   const executeImport = async () => {
@@ -535,8 +560,11 @@ export default function LeadsPage() {
                 <p className="text-sm font-semibold text-blue-800">
                   Validating {activeJob.total_emails} emails{activeJob.filename ? ` from "${activeJob.filename}"` : ''}…
                 </p>
-                <div className="mt-1.5 h-1.5 bg-blue-100 rounded-full overflow-hidden w-48">
-                  <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${activeJob.progress}%` }}/>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden w-40">
+                    <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${activeJob.progress}%` }}/>
+                  </div>
+                  <span className="text-xs text-blue-500 font-semibold tabular-nums">{activeJob.progress}%</span>
                 </div>
               </>
             ) : activeJob.status === 'done' ? (
@@ -1037,9 +1065,20 @@ export default function LeadsPage() {
 
             {/* Modal footer */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
-              <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
-                Dismiss
-              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                  Dismiss
+                </button>
+                {activeJob?.results?.some(r => r.decision === 'block' && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
+                  <button
+                    onClick={retryBlocked}
+                    disabled={retrying}
+                    className="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    {retrying && <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"/>}
+                    {retrying ? 'Retrying…' : 'Retry Blocked'}
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 <p className="text-xs text-gray-400 font-medium">
                   {importCount} email{importCount !== 1 ? 's' : ''} will be imported

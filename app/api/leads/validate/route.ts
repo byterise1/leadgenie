@@ -9,8 +9,8 @@ import { validationQueue } from '@/lib/queue';
 
 export const maxDuration = 300;
 
-// Run inline unless truly massive — Railway has no timeout so this is fine up to ~500 emails
-const ASYNC_THRESHOLD = 500;
+// Everything goes to background worker — UI polls for progress so user can navigate freely
+const ASYNC_THRESHOLD = 0;
 
 function expandRow(r: Record<string, string>) {
   const clean = (v: string | undefined) => (v || '').trim() || null;
