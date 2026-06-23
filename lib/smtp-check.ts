@@ -4,11 +4,10 @@ import { SocksClient } from 'socks';
 
 export type SmtpResult = 'valid' | 'valid_major' | 'invalid' | 'unknown' | 'catchall';
 
-// Providers that block all RCPT TO probes — skip probe, mark as valid_major.
-// Gmail re-added: Hetzner gets false 550s for real mailboxes (rate-limiting/IP reputation),
-// making SMTP probe unreliable. All other services skip Gmail probing for the same reason.
+// Providers whose MX servers block all RCPT TO probes — return valid_major.
+// Gmail is NOT here: we probe it and treat 550 as 'unknown' in the score engine
+// (Google returns false 550s from unknown IPs — the score engine handles this correctly).
 const MAJOR_MX_PATTERNS = [
-  'google.com', 'googlemail.com',       // Gmail + Google Workspace (all MX hosts end in google.com)
   'outlook.com', 'hotmail.com',         // Outlook / Office 365
   'protection.outlook.com',            // Microsoft 365
   'yahoodns.net', 'yahoo.com',          // Yahoo

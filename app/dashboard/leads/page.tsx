@@ -50,9 +50,14 @@ const FORM_FIELDS = [
 ];
 
 function decisionStyle(d: EmailDecision) {
-  if (d === 'safe') return { badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', score: 'text-emerald-700' };
-  if (d === 'caution') return { badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400', score: 'text-amber-600' };
-  return { badge: 'bg-red-100 text-red-600', bar: 'bg-red-400', score: 'text-red-500' };
+  if (d === 'safe')        return { badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', score: 'text-emerald-700', label: 'Safe' };
+  if (d === 'likely_safe') return { badge: 'bg-teal-100 text-teal-700',       bar: 'bg-teal-500',    score: 'text-teal-700',    label: 'Likely Safe' };
+  if (d === 'risky')       return { badge: 'bg-amber-100 text-amber-700',     bar: 'bg-amber-400',   score: 'text-amber-600',   label: 'Risky' };
+  if (d === 'catchall')    return { badge: 'bg-purple-100 text-purple-700',   bar: 'bg-purple-400',  score: 'text-purple-600',  label: 'Catch-All' };
+  if (d === 'unknown')     return { badge: 'bg-gray-100 text-gray-600',       bar: 'bg-gray-400',    score: 'text-gray-500',    label: 'Unknown' };
+  if (d === 'suppressed')  return { badge: 'bg-orange-100 text-orange-700',   bar: 'bg-orange-400',  score: 'text-orange-600',  label: 'Suppressed' };
+  if (d === 'unsafe')      return { badge: 'bg-red-100 text-red-600',         bar: 'bg-red-400',     score: 'text-red-500',     label: 'Unsafe' };
+  return                          { badge: 'bg-red-100 text-red-600',         bar: 'bg-red-500',     score: 'text-red-600',     label: 'Invalid' };
 }
 
 export default function LeadsPage() {
@@ -79,7 +84,7 @@ export default function LeadsPage() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [includeCaution, setIncludeCaution] = useState(true);
   const [includeCrossListJob, setIncludeCrossListJob] = useState(true);
-  const [jobFilter, setJobFilter] = useState<'all' | EmailDecision | 'dupes'>('all');
+  const [jobFilter, setJobFilter] = useState<'all' | 'importable' | 'blocked' | 'dupes' | EmailDecision>('all');
   const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -212,7 +217,9 @@ export default function LeadsPage() {
     if (!activeJob?.results) return [];
     let arr: typeof activeJob.results;
     if (jobFilter === 'all') arr = activeJob.results;
-    else if (jobFilter === 'dupes') arr = activeJob.results.filter(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list);
+    else if (jobFilter === 'dupes') arr = activeJob.results.filter(r => r.reasons.some(s => s.includes('Duplicate')) || r.is_dupe_this_list);
+    else if (jobFilter === 'importable') arr = activeJob.results.filter(r => ['safe','likely_safe','risky','catchall','unknown'].includes(r.decision));
+    else if (jobFilter === 'blocked') arr = activeJob.results.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision));
     else arr = activeJob.results.filter(r => r.decision === jobFilter);
     return arr.slice(0, 200);
   }, [activeJob?.results, jobFilter]);
@@ -220,8 +227,8 @@ export default function LeadsPage() {
   const importCount = useMemo(() => {
     if (!activeJob?.results) return 0;
     return activeJob.results.filter(r => {
-      if (r.decision === 'block') return false;
-      if (r.decision === 'caution' && !includeCaution) return false;
+      if (!['safe','likely_safe','risky','catchall','unknown'].includes(r.decision)) return false;
+      if (['risky','catchall','unknown'].includes(r.decision) && !includeCaution) return false;
       if (r.dupe_lists.length > 0 && !includeCrossListJob) return false;
       return true;
     }).length;
@@ -573,7 +580,7 @@ export default function LeadsPage() {
             ) : activeJob.status === 'done' ? (
               <p className="text-sm font-semibold text-emerald-800">
                 Validation complete
-                {activeJob.summary && ` — ${activeJob.summary.safe + activeJob.summary.caution} importable, ${activeJob.summary.block} blocked`}
+                {activeJob.summary && ` — ${activeJob.summary.importable ?? activeJob.summary.safe} importable, ${(activeJob.summary.invalid ?? 0) + (activeJob.summary.suppressed ?? 0) + (activeJob.summary.unsafe ?? 0)} blocked`}
                 {activeJob.filename && <span className="font-normal text-emerald-700"> · {activeJob.filename}</span>}
               </p>
             ) : (
@@ -956,25 +963,17 @@ export default function LeadsPage() {
 
             {/* Summary cards */}
             {activeJob.summary && (
-              <div className="px-6 pt-4 pb-3 grid grid-cols-3 gap-3 shrink-0">
-                {([
-                  { key: 'safe', label: 'Safe to send', color: 'emerald', count: activeJob.summary.safe },
-                  { key: 'caution', label: 'Use caution', color: 'amber', count: activeJob.summary.caution },
-                  { key: 'block', label: 'Blocked', color: 'red', count: activeJob.summary.block },
-                ] as const).map(card => (
+              <div className="px-6 pt-4 pb-3 grid grid-cols-4 gap-2 shrink-0">
+                {[
+                  { key: 'safe',        label: 'Safe',        count: activeJob.summary.safe,          cls: 'text-emerald-600', active: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400' },
+                  { key: 'likely_safe', label: 'Likely Safe', count: activeJob.summary.likely_safe,   cls: 'text-teal-600',    active: 'bg-teal-50 border-teal-300 ring-1 ring-teal-400' },
+                  { key: 'risky',       label: 'Risky',       count: activeJob.summary.risky,         cls: 'text-amber-600',   active: 'bg-amber-50 border-amber-300 ring-1 ring-amber-400' },
+                  { key: 'blocked',     label: 'Blocked',     count: (activeJob.summary.invalid ?? 0) + (activeJob.summary.suppressed ?? 0) + (activeJob.summary.unsafe ?? 0), cls: 'text-red-500', active: 'bg-red-50 border-red-300 ring-1 ring-red-400' },
+                ].map(card => (
                   <button key={card.key}
-                    onClick={() => setJobFilter(f => f === card.key ? 'all' : card.key)}
-                    className={`rounded-xl border p-3 text-left transition-all ${
-                      jobFilter === card.key
-                        ? card.color === 'emerald' ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400'
-                          : card.color === 'amber' ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-400'
-                          : 'bg-red-50 border-red-300 ring-1 ring-red-400'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}>
-                    <p className={`text-2xl font-bold ${
-                      card.color === 'emerald' ? 'text-emerald-600' :
-                      card.color === 'amber' ? 'text-amber-600' : 'text-red-500'
-                    }`}>{card.count}</p>
+                    onClick={() => setJobFilter(f => f === card.key as any ? 'all' : card.key as any)}
+                    className={`rounded-xl border p-3 text-left transition-all ${jobFilter === card.key ? card.active : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
+                    <p className={`text-2xl font-bold ${card.cls}`}>{card.count}</p>
                     <p className="text-xs font-semibold text-gray-500 mt-0.5">{card.label}</p>
                   </button>
                 ))}
@@ -988,7 +987,7 @@ export default function LeadsPage() {
                   className={`w-9 h-5 rounded-full transition-colors relative ${includeCaution ? 'bg-amber-400' : 'bg-gray-200'}`}>
                   <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCaution ? 'left-4' : 'left-0.5'}`}/>
                 </div>
-                <span className="text-xs font-semibold text-gray-600">Include caution</span>
+                <span className="text-xs font-semibold text-gray-600">Include risky / catch-all / unknown</span>
               </label>
               {activeJob.results?.some(r => r.dupe_lists.length > 0) && (
                 <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -1000,12 +999,22 @@ export default function LeadsPage() {
                 </label>
               )}
               <div className="ml-auto flex items-center gap-1">
-                {(['all', 'safe', 'caution', 'block'] as const).map(f => (
-                  <button key={f} onClick={() => setJobFilter(f)}
-                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                    {f !== 'all' && activeJob.results && (
-                      <span className="ml-1 opacity-60">{activeJob.results.filter(r => r.decision === f).length}</span>
+                {([
+                  { key: 'all',        label: 'All' },
+                  { key: 'importable', label: 'Importable' },
+                  { key: 'blocked',    label: 'Blocked' },
+                  { key: 'catchall',   label: 'Catch-All' },
+                  { key: 'unknown',    label: 'Unknown' },
+                ] as const).map(f => (
+                  <button key={f.key} onClick={() => setJobFilter(f.key)}
+                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f.key ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
+                    {f.label}
+                    {f.key !== 'all' && activeJob.results && (
+                      <span className="ml-1 opacity-60">
+                        {f.key === 'importable' ? activeJob.results.filter(r => ['safe','likely_safe','risky'].includes(r.decision)).length
+                         : f.key === 'blocked' ? activeJob.results.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision)).length
+                         : activeJob.results.filter(r => r.decision === f.key).length}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -1051,7 +1060,7 @@ export default function LeadsPage() {
                         </td>
                         <td className="px-4 py-2.5">
                           <span className={`inline-flex text-[10px] font-bold rounded-full px-2 py-0.5 ${style.badge}`}>
-                            {r.decision}
+                            {style.label}
                           </span>
                         </td>
                         <td className="px-4 py-2.5">
@@ -1081,7 +1090,7 @@ export default function LeadsPage() {
                 <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
                   Dismiss
                 </button>
-                {activeJob?.results?.some(r => r.decision === 'block' && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
+                {activeJob?.results?.some(r => (r.decision === 'invalid' || r.decision === 'unknown') && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
                   <button
                     onClick={retryBlocked}
                     disabled={retrying}
@@ -1132,8 +1141,8 @@ export default function LeadsPage() {
               <p className="text-sm font-bold text-gray-900">Validation Complete</p>
               {activeJob.summary && (
                 <p className="text-sm text-gray-600 mt-1">
-                  {activeJob.summary.safe + activeJob.summary.caution} leads ready to import,{' '}
-                  {activeJob.summary.block} blocked.
+                  {activeJob.summary.importable ?? activeJob.summary.safe} leads ready to import,{' '}
+                  {(activeJob.summary.invalid ?? 0) + (activeJob.summary.suppressed ?? 0) + (activeJob.summary.unsafe ?? 0)} blocked.
                 </p>
               )}
               <p className="text-sm text-gray-500 mt-2">Do you want to import the leads or discard this report?</p>

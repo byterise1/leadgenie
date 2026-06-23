@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import Papa from 'papaparse';
 import { batchSmtp } from '@/lib/smtp-check';
 import { batchPreCheck } from '@/lib/email-validate';
-import { detectProvider, scoreEmail, EmailResult, JobSummary } from '@/lib/score-engine';
+import { detectProvider, scoreEmail, buildSummary as buildSummaryEngine, EmailResult } from '@/lib/score-engine';
 import { validationQueue } from '@/lib/queue';
 
 export const maxDuration = 300;
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
   if (toProbe.length <= ASYNC_THRESHOLD) {
     const smtpMap = toProbe.length > 0 ? await batchSmtp(toProbe) : new Map();
     const results = buildResults({ unique, toProbe, preResults, smtpMap, prevBouncedSet, unsubSet, roleSet, crossListMap, inThisListSet, fileDupeEmails });
-    const summary = buildSummary(results, { pre_failed, file_dupes, in_this_list, cross_list, total });
+    const summary = buildSummaryEngine(results, { pre_failed, file_dupes, in_this_list, cross_list, total });
 
     await supabaseAdmin.from('lead_import_jobs').update({
       status: 'done', progress: 100, results, summary, probe_data: null, completed_at: new Date().toISOString(),
@@ -242,7 +242,7 @@ function buildResults(p: {
     results.push({
       email: pr.email,
       score: 0,
-      decision: 'block',
+      decision: 'invalid',
       provider: 'other',
       reasons: [pr.reason],
       smtp: 'skipped',
@@ -258,7 +258,7 @@ function buildResults(p: {
   // File dupes
   for (const e of fileDupeEmails) {
     results.push({
-      email: e, score: 0, decision: 'block', provider: detectProvider(e.split('@')[1] || ''),
+      email: e, score: 0, decision: 'invalid', provider: detectProvider(e.split('@')[1] || ''),
       reasons: ['Duplicate in uploaded file'],
       smtp: 'skipped', is_bounce: false, is_unsub: false,
       is_dupe_this_list: false, dupe_lists: [], pre_fail: null,
@@ -277,7 +277,7 @@ function buildResults(p: {
 
     if (isInList) {
       results.push({
-        email, score: 0, decision: 'block', provider,
+        email, score: 0, decision: 'invalid', provider,
         reasons: ['Already in this list'],
         smtp: 'skipped', is_bounce: false, is_unsub: false,
         is_dupe_this_list: true, dupe_lists: [], pre_fail: null,
@@ -306,18 +306,3 @@ function buildResults(p: {
   return results;
 }
 
-function buildSummary(
-  results: EmailResult[],
-  meta: { pre_failed: number; file_dupes: number; in_this_list: number; cross_list: number; total: number }
-): JobSummary {
-  return {
-    total: meta.total,
-    safe: results.filter(r => r.decision === 'safe').length,
-    caution: results.filter(r => r.decision === 'caution').length,
-    block: results.filter(r => r.decision === 'block').length,
-    pre_failed: meta.pre_failed,
-    file_dupes: meta.file_dupes,
-    in_this_list: meta.in_this_list,
-    cross_list: meta.cross_list,
-  };
-}

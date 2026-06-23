@@ -1,5 +1,5 @@
 import { batchSmtp } from './smtp-check';
-import { detectProvider, scoreEmail, EmailResult, JobSummary } from './score-engine';
+import { detectProvider, scoreEmail, buildSummary, EmailResult } from './score-engine';
 
 // Shared validation job runner — used by both instrumentation.ts worker and worker/index.ts
 export async function runValidationJob(supabase: any, jobId: string, userId: string): Promise<void> {
@@ -47,7 +47,7 @@ export async function runValidationJob(supabase: any, jobId: string, userId: str
 
   for (const pr of pre_results) {
     results.push({
-      email: pr.email, score: 0, decision: 'block', provider: 'other',
+      email: pr.email, score: 0, decision: 'invalid', provider: 'other',
       reasons: [pr.reason], smtp: 'skipped', is_bounce: false, is_unsub: false,
       is_dupe_this_list: false, dupe_lists: [], pre_fail: pr.pre_fail,
       typo_suggestion: pr.typo_suggestion,
@@ -56,7 +56,7 @@ export async function runValidationJob(supabase: any, jobId: string, userId: str
 
   for (const e of fileDupeEmails) {
     results.push({
-      email: e, score: 0, decision: 'block', provider: detectProvider(e.split('@')[1] || ''),
+      email: e, score: 0, decision: 'invalid', provider: detectProvider(e.split('@')[1] || ''),
       reasons: ['Duplicate in uploaded file'], smtp: 'skipped',
       is_bounce: false, is_unsub: false, is_dupe_this_list: false, dupe_lists: [], pre_fail: null,
     });
@@ -73,7 +73,7 @@ export async function runValidationJob(supabase: any, jobId: string, userId: str
 
     if (isInList) {
       results.push({
-        email, score: 0, decision: 'block', provider,
+        email, score: 0, decision: 'invalid', provider,
         reasons: ['Already in this list'], smtp: 'skipped',
         is_bounce: false, is_unsub: false, is_dupe_this_list: true, dupe_lists: [], pre_fail: null,
       });
@@ -89,16 +89,13 @@ export async function runValidationJob(supabase: any, jobId: string, userId: str
     });
   }
 
-  const summary: JobSummary = {
-    total: totalEmails,
-    safe: results.filter(r => r.decision === 'safe').length,
-    caution: results.filter(r => r.decision === 'caution').length,
-    block: results.filter(r => r.decision === 'block').length,
+  const summary = buildSummary(results, {
     pre_failed: pre_results.length,
     file_dupes: fileDupeEmails.length,
     in_this_list: inListEmails.length,
     cross_list: crossListMap.size,
-  };
+    total: totalEmails,
+  });
 
   await supabase.from('lead_import_jobs').update({
     status: 'done',
@@ -109,11 +106,10 @@ export async function runValidationJob(supabase: any, jobId: string, userId: str
     completed_at: new Date().toISOString(),
   }).eq('id', jobId);
 
-  const importedCount = summary.safe + summary.caution;
   await supabase.from('notifications').insert({
     user_id: userId,
     type: 'success',
-    message: `Validation complete: ${importedCount} importable, ${summary.block} blocked — ${jobRow.filename ?? 'file'}`,
+    message: `Validation complete: ${summary.importable} importable, ${summary.invalid + summary.suppressed + summary.unsafe} blocked — ${jobRow.filename ?? 'file'}`,
     link: `/dashboard/leads?job=${jobId}`,
     read: false,
   });

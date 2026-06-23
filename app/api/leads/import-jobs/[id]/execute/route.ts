@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { EmailResult } from '@/lib/score-engine';
+import { IMPORTABLE_DECISIONS } from '@/lib/score-engine';
 
 interface ExecuteBody {
   include_caution: boolean;
@@ -31,9 +32,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const rowData: Record<string, Record<string, string | null>> = job.probe_data?.row_data || {};
 
   // Determine which emails to import
+  // safe/likely_safe/risky always included; catchall/unknown toggled by include_caution
   const toImport = results.filter(r => {
-    if (r.decision === 'block') return false;
-    if (r.decision === 'caution' && !include_caution) return false;
+    if (!IMPORTABLE_DECISIONS.includes(r.decision)) return false;
+    if ((r.decision === 'catchall' || r.decision === 'unknown' || r.decision === 'risky') && !include_caution) return false;
     if (r.dupe_lists.length > 0 && !include_cross_list) return false;
     return true;
   });

@@ -182,7 +182,7 @@ export async function register() {
         return;
       }
 
-      // Credits check — read from profiles so top-ups are instantly honoured
+      // Credits check only on step 1 — follow-ups and warmup emails are free
       const { data: profileData } = await supabase
         .from('profiles')
         .select('credits_used, credits_total')
@@ -191,7 +191,7 @@ export async function register() {
       const creditsUsed = profileData?.credits_used ?? 0;
       const creditsTotal = profileData?.credits_total ?? 100;
 
-      if (creditsUsed >= creditsTotal) {
+      if (stepNumber === 1 && creditsUsed >= creditsTotal) {
         console.log(`⛔ User ${campaign.user_id} out of credits (${creditsUsed}/${creditsTotal})`);
         const { data: existingCreditNotif } = await supabase
           .from('notifications').select('id').eq('user_id', campaign.user_id)
@@ -344,9 +344,11 @@ export async function register() {
       const { data: campRow } = await supabase.from('campaigns').select('total_sent').eq('id', campaign.id).single();
       await supabase.from('campaigns').update({ total_sent: (campRow?.total_sent || 0) + 1 }).eq('id', campaign.id);
 
-      // Deduct 1 credit from profile — profiles is the source of truth for billing
-      const { data: profRow } = await supabase.from('profiles').select('credits_used').eq('id', campaign.user_id).single();
-      await supabase.from('profiles').update({ credits_used: (profRow?.credits_used || 0) + 1 }).eq('id', campaign.user_id);
+      // Deduct 1 credit only on step 1 (first email) — follow-ups are free
+      if (stepNumber === 1) {
+        const { data: profRow } = await supabase.from('profiles').select('credits_used').eq('id', campaign.user_id).single();
+        await supabase.from('profiles').update({ credits_used: (profRow?.credits_used || 0) + 1 }).eq('id', campaign.user_id);
+      }
 
       // Auto-complete campaign when all leads are in a terminal state
       if (!hasNextStep) {

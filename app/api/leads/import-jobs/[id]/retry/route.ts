@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { batchSmtp } from '@/lib/smtp-check';
-import { scoreEmail, EmailResult, JobSummary } from '@/lib/score-engine';
+import { scoreEmail, buildSummary, EmailResult } from '@/lib/score-engine';
 
 export const maxDuration = 300;
 
@@ -49,16 +49,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return { ...r, smtp: newSmtp, score: scored.score, decision: scored.decision, reasons: scored.reasons };
   });
 
-  const updatedSummary: JobSummary = {
+  const updatedSummary = buildSummary(updatedResults, {
     total: job.summary?.total ?? updatedResults.length,
-    safe: updatedResults.filter(r => r.decision === 'safe').length,
-    caution: updatedResults.filter(r => r.decision === 'caution').length,
-    block: updatedResults.filter(r => r.decision === 'block').length,
     pre_failed: job.summary?.pre_failed ?? 0,
     file_dupes: job.summary?.file_dupes ?? 0,
     in_this_list: job.summary?.in_this_list ?? 0,
     cross_list: job.summary?.cross_list ?? 0,
-  };
+  });
 
   await supabaseAdmin
     .from('lead_import_jobs')
