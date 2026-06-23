@@ -135,7 +135,12 @@ export function scoreEmail(params: {
     score += 10;
     reasons.push('Business domain (+10)');
   }
-  // Consumer providers get no bonus (can't probe reliably)
+  // Major consumer providers (Outlook, Yahoo, iCloud, ProtonMail) — trusted infrastructure
+  // Probe is blocked, but MX is confirmed and provider is globally recognised
+  if (smtp === 'valid_major' && CONSUMER_PROVIDERS.includes(provider)) {
+    score += 10;
+    reasons.push('Recognised major email provider (+10)');
+  }
 
   // Role-based penalty — only truly non-human prefixes remain in this set
   if (isRoleBased) {

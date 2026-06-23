@@ -5,7 +5,8 @@ import type { EmailResult } from '@/lib/score-engine';
 import { IMPORTABLE_DECISIONS } from '@/lib/score-engine';
 
 interface ExecuteBody {
-  include_caution: boolean;
+  include_risky: boolean;
+  include_catchall: boolean;
   include_cross_list: boolean;
 }
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { include_caution, include_cross_list }: ExecuteBody = await req.json();
+  const { include_risky, include_catchall, include_cross_list }: ExecuteBody = await req.json();
 
   // Load job
   const { data: job, error: jobErr } = await supabaseAdmin
@@ -32,10 +33,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const rowData: Record<string, Record<string, string | null>> = job.probe_data?.row_data || {};
 
   // Determine which emails to import
-  // safe/likely_safe/risky always included; catchall/unknown toggled by include_caution
+  // safe + likely_safe: always imported
+  // risky: toggled by include_risky (default true)
+  // catchall + unknown: toggled by include_catchall (default true)
+  // unsafe + invalid + suppressed: never imported
   const toImport = results.filter(r => {
     if (!IMPORTABLE_DECISIONS.includes(r.decision)) return false;
-    if ((r.decision === 'catchall' || r.decision === 'unknown' || r.decision === 'risky') && !include_caution) return false;
+    if (r.decision === 'risky' && !include_risky) return false;
+    if ((r.decision === 'catchall' || r.decision === 'unknown') && !include_catchall) return false;
     if (r.dupe_lists.length > 0 && !include_cross_list) return false;
     return true;
   });

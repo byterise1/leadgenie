@@ -82,7 +82,8 @@ export default function LeadsPage() {
   // ── Job-based validation state ─────────────────────────────────────
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
-  const [includeCaution, setIncludeCaution] = useState(true);
+  const [includeRisky, setIncludeRisky] = useState(true);
+  const [includeCatchall, setIncludeCatchall] = useState(true);
   const [includeCrossListJob, setIncludeCrossListJob] = useState(true);
   const [jobFilter, setJobFilter] = useState<'all' | 'importable' | 'blocked' | 'dupes' | EmailDecision>('all');
   const [executing, setExecuting] = useState(false);
@@ -228,11 +229,12 @@ export default function LeadsPage() {
     if (!activeJob?.results) return 0;
     return activeJob.results.filter(r => {
       if (!['safe','likely_safe','risky','catchall','unknown'].includes(r.decision)) return false;
-      if (['risky','catchall','unknown'].includes(r.decision) && !includeCaution) return false;
+      if (r.decision === 'risky' && !includeRisky) return false;
+      if ((r.decision === 'catchall' || r.decision === 'unknown') && !includeCatchall) return false;
       if (r.dupe_lists.length > 0 && !includeCrossListJob) return false;
       return true;
     }).length;
-  }, [activeJob?.results, includeCaution, includeCrossListJob]);
+  }, [activeJob?.results, includeRisky, includeCatchall, includeCrossListJob]);
 
   // ── Import (validate → job) ────────────────────────────────────────
   const handleImport = async (file: File, isSingleLead = false) => {
@@ -259,7 +261,8 @@ export default function LeadsPage() {
         };
         setActiveJob(job);
         setJobFilter('all');
-        setIncludeCaution(true);
+        setIncludeRisky(true);
+        setIncludeCatchall(true);
         setIncludeCrossListJob(true);
         // Auto-open modal for sync results or single lead
         if (d.status === 'done') setShowJobModal(true);
@@ -296,7 +299,7 @@ export default function LeadsPage() {
       const res = await fetch(`/api/leads/import-jobs/${activeJob.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ include_caution: includeCaution, include_cross_list: includeCrossListJob }),
+        body: JSON.stringify({ include_risky: includeRisky, include_catchall: includeCatchall, include_cross_list: includeCrossListJob }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -981,22 +984,27 @@ export default function LeadsPage() {
             )}
 
             {/* Options */}
-            <div className="px-6 pb-3 flex items-center gap-4 shrink-0">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <div onClick={() => setIncludeCaution(v => !v)}
-                  className={`w-9 h-5 rounded-full transition-colors relative ${includeCaution ? 'bg-amber-400' : 'bg-gray-200'}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCaution ? 'left-4' : 'left-0.5'}`}/>
-                </div>
-                <span className="text-xs font-semibold text-gray-600">Include risky / catch-all / unknown</span>
-              </label>
+            <div className="px-6 pb-3 flex items-center gap-4 shrink-0 flex-wrap">
+              {[
+                { label: 'Include Risky', val: includeRisky, set: setIncludeRisky, color: 'bg-amber-400' },
+                { label: 'Include Catch-All & Unknown', val: includeCatchall, set: setIncludeCatchall, color: 'bg-purple-500' },
+              ].map(t => (
+                <button key={t.label} type="button" onClick={() => t.set(v => !v)}
+                  className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${t.val ? t.color : 'bg-gray-200'}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${t.val ? 'left-4' : 'left-0.5'}`}/>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">{t.label}</span>
+                </button>
+              ))}
               {activeJob.results?.some(r => r.dupe_lists.length > 0) && (
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <div onClick={() => setIncludeCrossListJob(v => !v)}
-                    className={`w-9 h-5 rounded-full transition-colors relative ${includeCrossListJob ? 'bg-blue-500' : 'bg-gray-200'}`}>
+                <button type="button" onClick={() => setIncludeCrossListJob(v => !v)}
+                  className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${includeCrossListJob ? 'bg-blue-500' : 'bg-gray-200'}`}>
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCrossListJob ? 'left-4' : 'left-0.5'}`}/>
                   </div>
-                  <span className="text-xs font-semibold text-gray-600">Include cross-list duplicates</span>
-                </label>
+                  <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">Include cross-list dupes</span>
+                </button>
               )}
               <div className="ml-auto flex items-center gap-1">
                 {([
