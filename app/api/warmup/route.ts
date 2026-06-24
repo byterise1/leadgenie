@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { account_id, enabled, warmup_target, warmup_pool_mode } = body;
+  const { account_id, enabled, warmup_target } = body;
 
   if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 });
 
@@ -51,9 +51,6 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof warmup_target === 'number') {
     updates.warmup_target = warmup_target;
-  }
-  if (warmup_pool_mode && ['admin_pool', 'user_to_user', 'both'].includes(warmup_pool_mode)) {
-    updates.warmup_pool_mode = warmup_pool_mode;
   }
 
   const { data, error } = await supabaseAdmin

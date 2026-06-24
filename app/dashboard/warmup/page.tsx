@@ -117,16 +117,6 @@ export default function WarmupPage() {
     });
   };
 
-  const updatePoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
-    setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_pool_mode } : a));
-    await fetch('/api/warmup', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account_id: id, warmup_pool_mode }),
-    });
-    showToast('Pool mode updated');
-  };
-
   const warmingAccounts = accounts.filter(a => a.warmup_enabled || a.status === 'warming');
   const avgScore = accounts.length
     ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
@@ -298,22 +288,13 @@ export default function WarmupPage() {
                     <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
                   </div>
 
-                  {/* Pool mode */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-2">Warmup Pool Mode</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(Object.entries(POOL_MODE_LABELS) as [PoolMode, typeof POOL_MODE_LABELS[PoolMode]][]).map(([val, info]) => (
-                        <button key={val} type="button"
-                          onClick={() => updatePoolMode(acc.id, val)}
-                          className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
-                            mode === val ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50'
-                          }`}>
-                          <span className={`text-xs font-bold ${mode === val ? 'text-white' : 'text-gray-800'}`}>{info.label}</span>
-                          <span className={`text-[10px] leading-snug ${mode === val ? 'text-blue-100' : 'text-gray-400'}`}>{info.desc}</span>
-                        </button>
-                      ))}
+                  {/* Pool mode — read-only, set by admin */}
+                  <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${modeInfo.color}`}>
+                    <div>
+                      <p className="text-xs font-bold">Pool Mode: {modeInfo.label}</p>
+                      <p className="text-[10px] mt-0.5 opacity-80">{modeInfo.desc}</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1.5">Current: <span className={`font-semibold border rounded-full px-2 py-0.5 ${modeInfo.color}`}>{modeInfo.label}</span></p>
+                    <span className="text-[10px] font-semibold opacity-60 shrink-0 ml-2">Set by admin</span>
                   </div>
 
                   {/* Daily target */}
@@ -341,12 +322,12 @@ export default function WarmupPage() {
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <div>
-                <p className="text-sm font-bold text-blue-900 mb-1">About Pool Modes</p>
-                <ul className="text-xs text-blue-700 leading-relaxed space-y-1">
-                  <li><span className="font-semibold">Admin Pool</span> — your account warms against LeadGenie's platform accounts (default, most reliable)</li>
-                  <li><span className="font-semibold">User ↔ User</span> — warms with other users on the platform (larger pool, more organic)</li>
-                  <li><span className="font-semibold">Both</span> — maximum pool size, fastest warmup ramp</li>
-                </ul>
+                <p className="text-sm font-bold text-blue-900 mb-1">Your Warmup Pool</p>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  Your pool mode is configured by the platform admin and shown on each account above.
+                  By default all accounts use the <span className="font-semibold">Admin Pool</span> — platform-owned accounts that are always available.
+                  As the platform grows, admin may switch you to <span className="font-semibold">Both</span> for a larger, more organic warmup pool.
+                </p>
                 <p className="text-[11px] text-blue-600 mt-2">Warmup runs automatically every 6 hours.</p>
               </div>
             </div>
