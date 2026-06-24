@@ -2,16 +2,14 @@
 
 export type ProviderType = 'gmail' | 'outlook' | 'yahoo' | 'icloud' | 'protonmail' | 'business' | 'other';
 
-// Full status model — never just valid/invalid
+// 6-status model — clean and unambiguous
 export type EmailDecision =
-  | 'safe'        // 80-100  — high confidence, send freely
-  | 'likely_safe' // 65-79   — good signal, minor uncertainty
-  | 'risky'       // 50-64   — uncertain, user should include/exclude
-  | 'unsafe'      // 0-49    — low confidence, do not send
-  | 'catchall'    // domain accepts everything — cannot verify specific mailbox
-  | 'unknown'     // provider blocked probe OR consumer 550 (unreliable)
-  | 'invalid'     // hard failure — business 550, no MX, bad domain
-  | 'suppressed'; // previously bounced or unsubscribed — never contact
+  | 'safe'        // 80-100  — SMTP confirmed, high confidence
+  | 'likely_safe' // 65-79   — major provider or strong signals
+  | 'risky'       // all uncertain: catch-all, unknown probe, or scored 50-64
+  | 'invalid'     // hard failure — business 550, no MX, bad syntax, disposable
+  | 'suppressed'  // previously bounced or unsubscribed — never contact
+  | 'unsafe';     // scored 0-49 — very low confidence (edge case)
 
 export type SmtpCode = 'valid' | 'invalid' | 'unknown' | 'catchall' | 'valid_major' | 'skipped';
 export type PreFail = 'syntax' | 'disposable' | 'typo' | 'role' | null;
@@ -35,13 +33,11 @@ export interface JobSummary {
   total: number;
   safe: number;
   likely_safe: number;
-  risky: number;
-  unsafe: number;
-  catchall: number;
-  unknown_count: number;
+  risky: number;      // catch-all + unknown probe + scored-risky all counted here
   invalid: number;
   suppressed: number;
-  importable: number; // safe + likely_safe + risky + catchall + unknown
+  unsafe: number;
+  importable: number; // safe + likely_safe + risky
   pre_failed: number;
   file_dupes: number;
   in_this_list: number;
@@ -65,8 +61,8 @@ export function detectProvider(domain: string): ProviderType {
   return CONSUMER_DOMAINS[domain.toLowerCase()] ?? 'business';
 }
 
-// Importable decisions — used by execute route and UI toggle
-export const IMPORTABLE_DECISIONS: EmailDecision[] = ['safe', 'likely_safe', 'risky', 'catchall', 'unknown'];
+// safe + likely_safe always import; risky is toggled; rest are blocked
+export const IMPORTABLE_DECISIONS: EmailDecision[] = ['safe', 'likely_safe', 'risky'];
 export const BLOCKED_DECISIONS: EmailDecision[] = ['unsafe', 'invalid', 'suppressed'];
 
 export function scoreEmail(params: {
@@ -89,17 +85,17 @@ export function scoreEmail(params: {
     return { score: 0, decision: 'invalid', reasons: ['SMTP 550: mailbox confirmed does not exist'] };
   }
 
-  // Catch-all — own status, score reflects uncertainty
+  // Catch-all — cannot verify specific mailbox → Risky
   if (smtp === 'catchall') {
-    return { score: 40, decision: 'catchall', reasons: ['Domain accepts all addresses — cannot verify specific mailbox'] };
+    return { score: 45, decision: 'risky', reasons: ['Catch-All domain: accepts all addresses — specific mailbox unverifiable'] };
   }
 
-  // Unknown — timeout, blocked probe, OR consumer 550 (unreliable signal)
+  // Unknown — timeout, blocked probe, OR consumer 550 → Risky
   if (smtp === 'unknown' || (smtp === 'invalid' && isConsumer)) {
     const reason = (smtp === 'invalid' && isConsumer)
-      ? `${provider.charAt(0).toUpperCase() + provider.slice(1)} returned 550 — consumer providers return false 550s, treated as unknown`
-      : 'SMTP unreachable: provider blocked or timed out';
-    return { score: 40, decision: 'unknown', reasons: [reason] };
+      ? `${provider.charAt(0).toUpperCase() + provider.slice(1)} returned 550 — consumer providers give false 550s, treated as risky`
+      : 'SMTP probe blocked or timed out — could not verify mailbox';
+    return { score: 45, decision: 'risky', reasons: [reason] };
   }
 
   // ── Scored path ─────────────────────────────────────────────────────────────
@@ -163,8 +159,8 @@ export function scoreEmail(params: {
 
 export function decisionLabel(d: EmailDecision): string {
   const map: Record<EmailDecision, string> = {
-    safe: 'Safe', likely_safe: 'Likely Safe', risky: 'Risky', unsafe: 'Unsafe',
-    catchall: 'Catch-All', unknown: 'Unknown', invalid: 'Invalid', suppressed: 'Suppressed',
+    safe: 'Safe', likely_safe: 'Likely Safe', risky: 'Risky',
+    invalid: 'Invalid', suppressed: 'Suppressed', unsafe: 'Unsafe',
   };
   return map[d] ?? d;
 }
@@ -173,10 +169,8 @@ export function decisionColor(d: EmailDecision) {
   if (d === 'safe')        return { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' };
   if (d === 'likely_safe') return { bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' };
   if (d === 'risky')       return { bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-400' };
-  if (d === 'catchall')    return { bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-400' };
-  if (d === 'unknown')     return { bg: 'bg-gray-100',    text: 'text-gray-600',    dot: 'bg-gray-400' };
   if (d === 'suppressed')  return { bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-400' };
-  // unsafe, invalid
+  // invalid, unsafe
   return { bg: 'bg-red-100', text: 'text-red-600', dot: 'bg-red-500' };
 }
 
@@ -191,19 +185,17 @@ export function buildSummary(results: EmailResult[], extra: {
   pre_failed: number; file_dupes: number; in_this_list: number; cross_list: number; total: number;
 }): JobSummary {
   return {
-    total: extra.total,
-    safe:         results.filter(r => r.decision === 'safe').length,
-    likely_safe:  results.filter(r => r.decision === 'likely_safe').length,
-    risky:        results.filter(r => r.decision === 'risky').length,
-    unsafe:       results.filter(r => r.decision === 'unsafe').length,
-    catchall:     results.filter(r => r.decision === 'catchall').length,
-    unknown_count:results.filter(r => r.decision === 'unknown').length,
-    invalid:      results.filter(r => r.decision === 'invalid').length,
-    suppressed:   results.filter(r => r.decision === 'suppressed').length,
-    importable:   results.filter(r => IMPORTABLE_DECISIONS.includes(r.decision)).length,
-    pre_failed: extra.pre_failed,
-    file_dupes: extra.file_dupes,
+    total:       extra.total,
+    safe:        results.filter(r => r.decision === 'safe').length,
+    likely_safe: results.filter(r => r.decision === 'likely_safe').length,
+    risky:       results.filter(r => r.decision === 'risky').length,
+    invalid:     results.filter(r => r.decision === 'invalid').length,
+    suppressed:  results.filter(r => r.decision === 'suppressed').length,
+    unsafe:      results.filter(r => r.decision === 'unsafe').length,
+    importable:  results.filter(r => IMPORTABLE_DECISIONS.includes(r.decision)).length,
+    pre_failed:  extra.pre_failed,
+    file_dupes:  extra.file_dupes,
     in_this_list: extra.in_this_list,
-    cross_list: extra.cross_list,
+    cross_list:   extra.cross_list,
   };
 }

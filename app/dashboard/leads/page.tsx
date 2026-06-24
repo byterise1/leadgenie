@@ -53,8 +53,6 @@ function decisionStyle(d: EmailDecision) {
   if (d === 'safe')        return { badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', score: 'text-emerald-700', label: 'Safe' };
   if (d === 'likely_safe') return { badge: 'bg-teal-100 text-teal-700',       bar: 'bg-teal-500',    score: 'text-teal-700',    label: 'Likely Safe' };
   if (d === 'risky')       return { badge: 'bg-amber-100 text-amber-700',     bar: 'bg-amber-400',   score: 'text-amber-600',   label: 'Risky' };
-  if (d === 'catchall')    return { badge: 'bg-purple-100 text-purple-700',   bar: 'bg-purple-400',  score: 'text-purple-600',  label: 'Catch-All' };
-  if (d === 'unknown')     return { badge: 'bg-gray-100 text-gray-600',       bar: 'bg-gray-400',    score: 'text-gray-500',    label: 'Unknown' };
   if (d === 'suppressed')  return { badge: 'bg-orange-100 text-orange-700',   bar: 'bg-orange-400',  score: 'text-orange-600',  label: 'Suppressed' };
   if (d === 'unsafe')      return { badge: 'bg-red-100 text-red-600',         bar: 'bg-red-400',     score: 'text-red-500',     label: 'Unsafe' };
   return                          { badge: 'bg-red-100 text-red-600',         bar: 'bg-red-500',     score: 'text-red-600',     label: 'Invalid' };
@@ -82,10 +80,11 @@ export default function LeadsPage() {
   // ── Job-based validation state ─────────────────────────────────────
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [includeRisky, setIncludeRisky] = useState(true);
-  const [includeCatchall, setIncludeCatchall] = useState(true);
   const [includeCrossListJob, setIncludeCrossListJob] = useState(true);
   const [jobFilter, setJobFilter] = useState<'all' | 'importable' | 'blocked' | 'dupes' | EmailDecision>('all');
+  // Note: 'catchall' and 'unknown' no longer exist as EmailDecision types — all map to 'risky'
   const [executing, setExecuting] = useState(false);
   const [pendingLead, setPendingLead] = useState<typeof EMPTY_FORM | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -219,7 +218,7 @@ export default function LeadsPage() {
     let arr: typeof activeJob.results;
     if (jobFilter === 'all') arr = activeJob.results;
     else if (jobFilter === 'dupes') arr = activeJob.results.filter(r => r.reasons.some(s => s.includes('Duplicate')) || r.is_dupe_this_list);
-    else if (jobFilter === 'importable') arr = activeJob.results.filter(r => ['safe','likely_safe','risky','catchall','unknown'].includes(r.decision));
+    else if (jobFilter === 'importable') arr = activeJob.results.filter(r => ['safe','likely_safe','risky'].includes(r.decision));
     else if (jobFilter === 'blocked') arr = activeJob.results.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision));
     else arr = activeJob.results.filter(r => r.decision === jobFilter);
     return arr.slice(0, 200);
@@ -228,13 +227,12 @@ export default function LeadsPage() {
   const importCount = useMemo(() => {
     if (!activeJob?.results) return 0;
     return activeJob.results.filter(r => {
-      if (!['safe','likely_safe','risky','catchall','unknown'].includes(r.decision)) return false;
+      if (!['safe','likely_safe','risky'].includes(r.decision)) return false;
       if (r.decision === 'risky' && !includeRisky) return false;
-      if ((r.decision === 'catchall' || r.decision === 'unknown') && !includeCatchall) return false;
       if (r.dupe_lists.length > 0 && !includeCrossListJob) return false;
       return true;
     }).length;
-  }, [activeJob?.results, includeRisky, includeCatchall, includeCrossListJob]);
+  }, [activeJob?.results, includeRisky, includeCrossListJob]);
 
   // ── Import (validate → job) ────────────────────────────────────────
   const handleImport = async (file: File, isSingleLead = false) => {
@@ -262,7 +260,6 @@ export default function LeadsPage() {
         setActiveJob(job);
         setJobFilter('all');
         setIncludeRisky(true);
-        setIncludeCatchall(true);
         setIncludeCrossListJob(true);
         // Auto-open modal for sync results or single lead
         if (d.status === 'done') setShowJobModal(true);
@@ -299,7 +296,7 @@ export default function LeadsPage() {
       const res = await fetch(`/api/leads/import-jobs/${activeJob.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ include_risky: includeRisky, include_catchall: includeCatchall, include_cross_list: includeCrossListJob }),
+        body: JSON.stringify({ include_risky: includeRisky, include_catchall: true, include_cross_list: includeCrossListJob }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -947,9 +944,15 @@ export default function LeadsPage() {
             {/* Modal header */}
             <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900">
-                  {pendingLead ? 'Add Lead — Validation Result' : 'Import Results'}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">
+                    {pendingLead ? 'Add Lead — Validation Result' : 'Import Results'}
+                  </h2>
+                  <button onClick={() => setShowHelp(true)} title="What do these statuses mean?"
+                    className="w-5 h-5 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-600 text-[11px] font-bold flex items-center justify-center transition-colors shrink-0">
+                    ?
+                  </button>
+                </div>
                 <p className="text-xs text-gray-400 mt-0.5 truncate">
                   {activeJob.filename && <span className="font-medium text-gray-500">{activeJob.filename}</span>}
                   {activeJob.list_name && <span> → {activeJob.list_name}</span>}
@@ -968,9 +971,9 @@ export default function LeadsPage() {
             {activeJob.summary && (
               <div className="px-6 pt-4 pb-3 grid grid-cols-4 gap-2 shrink-0">
                 {[
-                  { key: 'safe',        label: 'Safe',        count: activeJob.summary.safe,          cls: 'text-emerald-600', active: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400' },
-                  { key: 'likely_safe', label: 'Likely Safe', count: activeJob.summary.likely_safe,   cls: 'text-teal-600',    active: 'bg-teal-50 border-teal-300 ring-1 ring-teal-400' },
-                  { key: 'risky',       label: 'Risky',       count: activeJob.summary.risky,         cls: 'text-amber-600',   active: 'bg-amber-50 border-amber-300 ring-1 ring-amber-400' },
+                  { key: 'safe',        label: 'Safe',        count: activeJob.summary.safe,                                              cls: 'text-emerald-600', active: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400' },
+                  { key: 'likely_safe', label: 'Likely Safe', count: activeJob.summary.likely_safe,                                       cls: 'text-teal-600',    active: 'bg-teal-50 border-teal-300 ring-1 ring-teal-400' },
+                  { key: 'risky',       label: 'Risky',       count: activeJob.summary.risky,                                             cls: 'text-amber-600',   active: 'bg-amber-50 border-amber-300 ring-1 ring-amber-400' },
                   { key: 'blocked',     label: 'Blocked',     count: (activeJob.summary.invalid ?? 0) + (activeJob.summary.suppressed ?? 0) + (activeJob.summary.unsafe ?? 0), cls: 'text-red-500', active: 'bg-red-50 border-red-300 ring-1 ring-red-400' },
                 ].map(card => (
                   <button key={card.key}
@@ -985,18 +988,13 @@ export default function LeadsPage() {
 
             {/* Options */}
             <div className="px-6 pb-3 flex items-center gap-4 shrink-0 flex-wrap">
-              {[
-                { label: 'Include Risky', val: includeRisky, set: setIncludeRisky, color: 'bg-amber-400' },
-                { label: 'Include Catch-All & Unknown', val: includeCatchall, set: setIncludeCatchall, color: 'bg-purple-500' },
-              ].map(t => (
-                <button key={t.label} type="button" onClick={() => t.set(v => !v)}
-                  className="flex items-center gap-2 cursor-pointer select-none group">
-                  <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${t.val ? t.color : 'bg-gray-200'}`}>
-                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${t.val ? 'left-4' : 'left-0.5'}`}/>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">{t.label}</span>
-                </button>
-              ))}
+              <button type="button" onClick={() => setIncludeRisky(v => !v)}
+                className="flex items-center gap-2 cursor-pointer select-none group">
+                <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${includeRisky ? 'bg-amber-400' : 'bg-gray-200'}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeRisky ? 'left-4' : 'left-0.5'}`}/>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">Include Risky</span>
+              </button>
               {activeJob.results?.some(r => r.dupe_lists.length > 0) && (
                 <button type="button" onClick={() => setIncludeCrossListJob(v => !v)}
                   className="flex items-center gap-2 cursor-pointer select-none group">
@@ -1008,22 +1006,14 @@ export default function LeadsPage() {
               )}
               <div className="ml-auto flex items-center gap-1">
                 {([
-                  { key: 'all',        label: 'All' },
-                  { key: 'importable', label: 'Importable' },
-                  { key: 'blocked',    label: 'Blocked' },
-                  { key: 'catchall',   label: 'Catch-All' },
-                  { key: 'unknown',    label: 'Unknown' },
+                  { key: 'all',        label: 'All',        count: null },
+                  { key: 'importable', label: 'Importable', count: activeJob.results?.filter(r => ['safe','likely_safe','risky'].includes(r.decision)).length ?? 0 },
+                  { key: 'blocked',    label: 'Blocked',    count: activeJob.results?.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision)).length ?? 0 },
                 ] as const).map(f => (
                   <button key={f.key} onClick={() => setJobFilter(f.key)}
                     className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f.key ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
                     {f.label}
-                    {f.key !== 'all' && activeJob.results && (
-                      <span className="ml-1 opacity-60">
-                        {f.key === 'importable' ? activeJob.results.filter(r => ['safe','likely_safe','risky'].includes(r.decision)).length
-                         : f.key === 'blocked' ? activeJob.results.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision)).length
-                         : activeJob.results.filter(r => r.decision === f.key).length}
-                      </span>
-                    )}
+                    {f.count !== null && <span className="ml-1 opacity-60">{f.count}</span>}
                   </button>
                 ))}
                 {activeJob.results && activeJob.results.some(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list) && (
@@ -1098,7 +1088,7 @@ export default function LeadsPage() {
                 <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
                   Dismiss
                 </button>
-                {activeJob?.results?.some(r => (r.decision === 'invalid' || r.decision === 'unknown') && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
+                {activeJob?.results?.some(r => r.decision === 'invalid' && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
                   <button
                     onClick={retryBlocked}
                     disabled={retrying}
@@ -1136,6 +1126,102 @@ export default function LeadsPage() {
               <p className="text-sm font-bold text-gray-900">Validating emails…</p>
               <p className="text-xs text-gray-400 mt-1">Checking syntax, bounces, SMTP & duplicates</p>
               <p className="text-xs text-blue-500 mt-2 font-medium">Please wait, this may take a moment</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Status Help Modal ───────────────────────────────────────────── */}
+      {showHelp && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setShowHelp(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+              <h3 className="text-base font-bold text-gray-900">Email Status Guide</h3>
+              <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto px-6 py-5 space-y-5">
+              {([
+                {
+                  badge: 'bg-emerald-100 text-emerald-700', label: 'Safe',
+                  score: '80–100', icon: '✓',
+                  what: 'SMTP confirmed the mailbox exists. Business domain. Highest confidence.',
+                  factors: ['Valid MX records (+20)', 'Not disposable (+10)', 'No bounce history (+10)', 'Business domain (+10)', 'SMTP 250 accepted (+30)'],
+                  missing: 'Nothing significant — send freely.',
+                },
+                {
+                  badge: 'bg-teal-100 text-teal-700', label: 'Likely Safe',
+                  score: '65–79', icon: '✓',
+                  what: 'Major provider (Outlook, Yahoo, Gmail confirmed 250) or strong signals. Very good to send.',
+                  factors: ['Valid MX (+20)', 'Not disposable (+10)', 'No bounce (+10)', 'Major provider trust (+10)', 'MX confirmed / SMTP accepted (+20–30)'],
+                  missing: 'Can\'t 100% verify the specific mailbox (e.g. Outlook blocks probes), but the provider is trusted.',
+                },
+                {
+                  badge: 'bg-amber-100 text-amber-700', label: 'Risky',
+                  score: '45–64', icon: '~',
+                  what: 'Covers three scenarios: (1) Catch-All — domain accepts all addresses, can\'t verify your specific mailbox. (2) Unknown probe — SMTP blocked/timeout, or Gmail/consumer 550 (which are unreliable). (3) Scored risky — weak SMTP signal.',
+                  factors: ['Valid MX (+20)', 'Not disposable (+10)', 'No bounce (+10)', 'Catch-all or probe blocked = 45'],
+                  missing: 'No confirmed mailbox acceptance. Toggle "Include Risky" to import these (default ON). Expect higher bounce rate than Safe/Likely Safe.',
+                },
+                {
+                  badge: 'bg-orange-100 text-orange-700', label: 'Suppressed',
+                  score: '0', icon: '✕',
+                  what: 'Previously hard-bounced in one of your campaigns, or the contact unsubscribed.',
+                  factors: [],
+                  missing: 'Cannot contact — email regulations (CAN-SPAM, GDPR) require you to honour bounces and unsubscribes.',
+                },
+                {
+                  badge: 'bg-red-100 text-red-600', label: 'Invalid',
+                  score: '0', icon: '✕',
+                  what: 'Hard failure. Business SMTP returned 550 (no such user), OR bad syntax, OR disposable/temporary domain.',
+                  factors: [],
+                  missing: 'Sending will hard-bounce and damage your sender reputation. Do not import.',
+                },
+                {
+                  badge: 'bg-red-100 text-red-500', label: 'Unsafe',
+                  score: '0–49', icon: '✕',
+                  what: 'Very low confidence. Domain may exist but mailbox extremely uncertain.',
+                  factors: [],
+                  missing: 'Multiple signals failed. High bounce risk.',
+                },
+              ] as const).map(s => (
+                <div key={s.label} className="flex gap-3">
+                  <div className="shrink-0 pt-0.5">
+                    <span className={`inline-flex text-[10px] font-bold rounded-full px-2 py-0.5 ${s.badge}`}>{s.label}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-sm font-semibold text-gray-900">{s.what}</p>
+                      <span className="text-[10px] font-bold text-gray-400 shrink-0">Score: {s.score}</span>
+                    </div>
+                    {s.factors.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {s.factors.map(f => (
+                          <span key={f} className="text-[10px] bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">{f}</span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{s.missing}</p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Duplicates */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-bold text-gray-900 mb-2">Duplicates</p>
+                <div className="space-y-2 text-xs text-gray-600">
+                  <p><span className="font-semibold text-purple-700">In-List Dupe</span> — this email already exists in the list you&apos;re importing to. It will be skipped to avoid duplicates.</p>
+                  <p><span className="font-semibold text-blue-600">Cross-List Dupe</span> — this email is in one of your other lists. Toggle &ldquo;Include cross-list dupes&rdquo; to import it here too.</p>
+                  <p><span className="font-semibold text-gray-700">File Dupe</span> — the same email appeared more than once in your uploaded CSV/XLSX. Only the first occurrence is kept.</p>
+                </div>
+              </div>
+
+              {/* Tip */}
+              <div className="bg-blue-50 rounded-xl px-4 py-3">
+                <p className="text-xs font-bold text-blue-800 mb-1">Import strategy</p>
+                <p className="text-xs text-blue-700">Safe + Likely Safe = highest deliverability, send freely. Risky = worth sending to but watch bounce rates. Blocked = never import. Toggle "Include Risky" ON (default) to maximise reach; OFF for safest-only lists.</p>
+              </div>
             </div>
           </div>
         </div>

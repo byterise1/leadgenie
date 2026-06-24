@@ -33,54 +33,51 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const rowData: Record<string, Record<string, string | null>> = job.probe_data?.row_data || {};
 
   // Determine which emails to import
-  // safe + likely_safe: always imported
-  // risky: toggled by include_risky (default true)
-  // catchall + unknown: toggled by include_catchall (default true)
-  // unsafe + invalid + suppressed: never imported
+  // safe + likely_safe: always imported; risky: toggled; rest: never imported
   const toImport = results.filter(r => {
     if (!IMPORTABLE_DECISIONS.includes(r.decision)) return false;
     if (r.decision === 'risky' && !include_risky) return false;
-    if ((r.decision === 'catchall' || r.decision === 'unknown') && !include_catchall) return false;
     if (r.dupe_lists.length > 0 && !include_cross_list) return false;
     return true;
   });
 
-  let imported = 0;
-  let skipped = 0;
+  // ── Batch upsert leads ───────────────────────────────────────────────────────
+  const leadsPayload = toImport.map(r => {
+    const extra = rowData[r.email] || {};
+    return {
+      user_id: user.id,
+      email: r.email,
+      first_name: extra.first_name || null,
+      last_name: extra.last_name || null,
+      company: extra.company || null,
+      title: extra.title || null,
+      website: extra.website || null,
+      linkedin: extra.linkedin || null,
+      phone: extra.phone || null,
+    };
+  });
 
-  for (const result of toImport) {
-    const extraFields = rowData[result.email] || {};
+  const { data: upsertedLeads, error: upsertErr } = await supabaseAdmin
+    .from('leads')
+    .upsert(leadsPayload, { onConflict: 'user_id,email', ignoreDuplicates: false })
+    .select('id, email');
 
-    // Upsert lead
-    const { data: lead, error: leadErr } = await supabaseAdmin
-      .from('leads')
-      .upsert(
-        {
-          user_id: user.id,
-          email: result.email,
-          first_name: extraFields.first_name || null,
-          last_name: extraFields.last_name || null,
-          company: extraFields.company || null,
-          title: extraFields.title || null,
-          website: extraFields.website || null,
-          linkedin: extraFields.linkedin || null,
-          phone: extraFields.phone || null,
-        },
-        { onConflict: 'user_id,email', ignoreDuplicates: false }
-      )
-      .select('id')
-      .single();
+  if (upsertErr) {
+    console.error('Batch upsert failed:', upsertErr.message);
+    return NextResponse.json({ error: 'Import failed' }, { status: 500 });
+  }
 
-    if (leadErr || !lead) { skipped++; continue; }
+  const imported = upsertedLeads?.length ?? 0;
 
-    // Add to list if specified
-    if (job.list_id) {
-      await supabaseAdmin
-        .from('lead_list_members')
-        .upsert({ list_id: job.list_id, lead_id: lead.id }, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
-    }
-
-    imported++;
+  // ── Batch upsert list members ────────────────────────────────────────────────
+  if (job.list_id && upsertedLeads?.length) {
+    const members = upsertedLeads.map((l: { id: string; email: string }) => ({
+      list_id: job.list_id,
+      lead_id: l.id,
+    }));
+    await supabaseAdmin
+      .from('lead_list_members')
+      .upsert(members, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
   }
 
   // Mark job as imported
@@ -89,5 +86,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .update({ status: 'imported', probe_data: null })
     .eq('id', id);
 
-  return NextResponse.json({ imported, skipped });
+  return NextResponse.json({ imported, skipped: toImport.length - imported });
 }
