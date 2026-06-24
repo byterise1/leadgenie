@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { SkeletonRow } from '@/components/Skeleton';
 
+type PoolMode = 'admin_pool' | 'user_to_user' | 'both';
+
 type WarmupAccount = {
   id: string;
   email: string;
@@ -13,7 +15,14 @@ type WarmupAccount = {
   warmup_emails_sent: number;
   health_score: number;
   sent_today: number;
+  warmup_pool_mode: PoolMode;
   status: 'active' | 'warming' | 'error' | 'paused' | 'login' | string;
+};
+
+const POOL_MODE_LABELS: Record<PoolMode, { label: string; desc: string; color: string }> = {
+  admin_pool:    { label: 'Admin Pool',   desc: 'Warms against platform-owned accounts only',          color: 'bg-blue-50 text-blue-700 border-blue-100' },
+  user_to_user:  { label: 'User ↔ User', desc: 'Warms against other users\' accounts only',            color: 'bg-violet-50 text-violet-700 border-violet-100' },
+  both:          { label: 'Both',         desc: 'Warms against all accounts — admin pool + other users', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
 };
 
 const tabs = [
@@ -108,6 +117,16 @@ export default function WarmupPage() {
     });
   };
 
+  const updatePoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_pool_mode } : a));
+    await fetch('/api/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, warmup_pool_mode }),
+    });
+    showToast('Pool mode updated');
+  };
+
   const warmingAccounts = accounts.filter(a => a.warmup_enabled || a.status === 'warming');
   const avgScore = accounts.length
     ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
@@ -187,6 +206,9 @@ export default function WarmupPage() {
                   <div>
                     <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
                     <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
+                    {(() => { const m = POOL_MODE_LABELS[acc.warmup_pool_mode || 'admin_pool']; return (
+                      <span className={`inline-block text-[10px] font-semibold border rounded-full px-2 py-0.5 mt-0.5 ${m.color}`}>{m.label}</span>
+                    ); })()}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${
@@ -266,27 +288,51 @@ export default function WarmupPage() {
             </div>
             {accounts.length === 0 ? (
               <p className="text-sm text-gray-400">No accounts connected yet.</p>
-            ) : accounts.map(acc => (
-              <div key={acc.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${acc.warmup_enabled ? 'bg-amber-400' : 'bg-gray-300'}`}/>
-                  <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-700">Daily email target</label>
-                    <span className="text-xs font-bold text-blue-600">{acc.warmup_target || 40} / day</span>
+            ) : accounts.map(acc => {
+              const mode = acc.warmup_pool_mode || 'admin_pool';
+              const modeInfo = POOL_MODE_LABELS[mode];
+              return (
+                <div key={acc.id} className="border border-gray-100 rounded-xl p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${acc.warmup_enabled ? 'bg-amber-400' : 'bg-gray-300'}`}/>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
                   </div>
-                  <input type="range" min={5} max={100} step={5}
-                    value={acc.warmup_target || 40}
-                    onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                    className="w-full accent-blue-600"/>
-                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                    <span>5 (slow)</span><span>100 (aggressive)</span>
+
+                  {/* Pool mode */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-2">Warmup Pool Mode</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.entries(POOL_MODE_LABELS) as [PoolMode, typeof POOL_MODE_LABELS[PoolMode]][]).map(([val, info]) => (
+                        <button key={val} type="button"
+                          onClick={() => updatePoolMode(acc.id, val)}
+                          className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                            mode === val ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50'
+                          }`}>
+                          <span className={`text-xs font-bold ${mode === val ? 'text-white' : 'text-gray-800'}`}>{info.label}</span>
+                          <span className={`text-[10px] leading-snug ${mode === val ? 'text-blue-100' : 'text-gray-400'}`}>{info.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">Current: <span className={`font-semibold border rounded-full px-2 py-0.5 ${modeInfo.color}`}>{modeInfo.label}</span></p>
+                  </div>
+
+                  {/* Daily target */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-gray-700">Daily email target</label>
+                      <span className="text-xs font-bold text-blue-600">{acc.warmup_target || 40} / day</span>
+                    </div>
+                    <input type="range" min={5} max={100} step={5}
+                      value={acc.warmup_target || 40}
+                      onChange={e => updateTarget(acc.id, Number(e.target.value))}
+                      className="w-full accent-blue-600"/>
+                    <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                      <span>5 (slow)</span><span>100 (aggressive)</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
@@ -295,12 +341,13 @@ export default function WarmupPage() {
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <div>
-                <p className="text-sm font-bold text-blue-900 mb-1">Warmup Pool</p>
-                <p className="text-xs text-blue-700 leading-relaxed">
-                  Warmup emails are sent between all {accounts.filter(a => a.warmup_enabled).length} warmed accounts in your pool.
-                  The more accounts you warm, the more realistic the warmup traffic.
-                  Warmup runs automatically every 6 hours.
-                </p>
+                <p className="text-sm font-bold text-blue-900 mb-1">About Pool Modes</p>
+                <ul className="text-xs text-blue-700 leading-relaxed space-y-1">
+                  <li><span className="font-semibold">Admin Pool</span> — your account warms against LeadGenie's platform accounts (default, most reliable)</li>
+                  <li><span className="font-semibold">User ↔ User</span> — warms with other users on the platform (larger pool, more organic)</li>
+                  <li><span className="font-semibold">Both</span> — maximum pool size, fastest warmup ramp</li>
+                </ul>
+                <p className="text-[11px] text-blue-600 mt-2">Warmup runs automatically every 6 hours.</p>
               </div>
             </div>
           </div>

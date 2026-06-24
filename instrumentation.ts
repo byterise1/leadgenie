@@ -651,9 +651,13 @@ export async function register() {
     }
 
     new SyncWorker('warmup', async () => {
+      // Reset sent_today at the start of each 6h cycle so the counter is per-cycle not cumulative
+      await supabase.from('email_accounts').update({ sent_today: 0 })
+        .eq('warmup_enabled', true).neq('status', 'error');
+
       const { data: allWarmupAccounts } = await supabase
         .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode')
         .eq('warmup_enabled', true)
         .neq('status', 'error');
 
@@ -670,7 +674,22 @@ export async function register() {
           const target = account.warmup_target ?? 40;
           const emailsToday = warmupDailyTarget(day, target);
 
-          const pool = allWarmupAccounts.filter(a => a.id !== account.id);
+          // Filter eligible peers based on pool mode
+          // Admin pool accounts warm with everyone; user accounts filter by warmup_pool_mode
+          let pool: typeof allWarmupAccounts;
+          if (account.is_pool_account) {
+            pool = allWarmupAccounts.filter(a => a.id !== account.id);
+          } else {
+            const mode = account.warmup_pool_mode || 'admin_pool';
+            if (mode === 'user_to_user') {
+              pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
+            } else if (mode === 'both') {
+              pool = allWarmupAccounts.filter(a => a.id !== account.id);
+            } else {
+              // admin_pool (default)
+              pool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
+            }
+          }
           if (pool.length === 0) continue;
 
           let sent = 0;

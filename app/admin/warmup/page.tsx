@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
+type PoolMode = 'admin_pool' | 'user_to_user' | 'both';
+
 type WarmupAccount = {
   id: string;
   user_id: string;
@@ -17,6 +19,7 @@ type WarmupAccount = {
   warmup_day: number;
   warmup_target: number;
   sent_today: number;
+  warmup_pool_mode: PoolMode;
 };
 
 type PoolAccount = {
@@ -281,7 +284,17 @@ function AdminWarmupPageInner() {
       body: JSON.stringify({ id, warmup_enabled: enabled }),
     });
     setTogglingId(null);
-    showToast(enabled ? 'Warmup enabled for account' : 'Warmup disabled');
+    showToast(enabled ? 'Warmup enabled' : 'Warmup disabled');
+  };
+
+  const setPoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_pool_mode } : a));
+    await fetch('/api/admin/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, warmup_pool_mode }),
+    });
+    showToast('Pool mode updated');
   };
 
   const handleDeletePool = async (id: string) => {
@@ -440,17 +453,18 @@ function AdminWarmupPageInner() {
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Health</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sent Today</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Today</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Pool Mode</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Warmup</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>{Array.from({ length: 7 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-3.5 bg-gray-100 rounded animate-pulse"/></td>)}</tr>
+                    <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-3.5 bg-gray-100 rounded animate-pulse"/></td>)}</tr>
                   ))
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">No accounts found.</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">No accounts found.</td></tr>
                 ) : (
                   filtered.map(a => (
                     <tr key={a.id} className="hover:bg-gray-50 transition-colors">
@@ -483,6 +497,16 @@ function AdminWarmupPageInner() {
                       </td>
                       <td className="px-4 py-3"><span className="text-sm font-semibold text-gray-700">{a.sent_today}</span></td>
                       <td className="px-4 py-3">
+                        <select
+                          value={a.warmup_pool_mode || 'admin_pool'}
+                          onChange={e => setPoolMode(a.id, e.target.value as PoolMode)}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-700 font-medium">
+                          <option value="admin_pool">Admin Pool</option>
+                          <option value="user_to_user">User ↔ User</option>
+                          <option value="both">Both</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
                         <Toggle on={a.warmup_enabled} disabled={togglingId === a.id} onToggle={() => toggleWarmup(a.id, a.warmup_enabled)}/>
                       </td>
                     </tr>
@@ -491,8 +515,9 @@ function AdminWarmupPageInner() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 border-t border-gray-100">
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
             <p className="text-xs text-gray-400">{filtered.length} account{filtered.length !== 1 ? 's' : ''} shown</p>
+            <p className="text-[10px] text-gray-400">Pool Mode: Admin Pool = warms with platform accounts only · User ↔ User = warms with other users · Both = all accounts</p>
           </div>
         </div>
       </div>
