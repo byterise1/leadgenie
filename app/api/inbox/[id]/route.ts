@@ -13,7 +13,7 @@ function replaceVars(template: string, lead: Record<string, unknown>): string {
     .replace(/\{\{phone\}\}/gi, String(lead.phone || ''));
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
