@@ -9,7 +9,7 @@ export async function GET() {
 
   const { data: accounts } = await supabaseAdmin
     .from('email_accounts')
-    .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode')
+    .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
