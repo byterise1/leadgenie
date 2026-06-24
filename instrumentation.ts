@@ -135,9 +135,17 @@ export async function register() {
       const accounts = campaign.campaign_accounts.map((ca: any) => ca.account).filter(Boolean);
       if (!accounts.length) return;
 
-      // Use accountIndex from scheduler (round-robin), fall back to stepNumber rotation
-      const accountIndex = typeof job.data.accountIndex === 'number' ? job.data.accountIndex : stepNumber;
-      const account = accounts[accountIndex % accounts.length];
+      // Follow-ups must use the SAME account that sent step 0 for this lead.
+      // The scheduler passes accountId for step 0; we lock it for all follow-ups.
+      let account;
+      if (job.data.accountId) {
+        account = accounts.find((a: any) => a.id === job.data.accountId);
+      }
+      if (!account) {
+        // Step 0: round-robin from scheduler. Also fallback if account was removed from campaign.
+        const accountIndex = typeof job.data.accountIndex === 'number' ? job.data.accountIndex : 0;
+        account = accounts[accountIndex % accounts.length];
+      }
 
       // Enforce per-account daily limit across all campaigns
       const todayUTC = new Date();
@@ -182,7 +190,7 @@ export async function register() {
         return;
       }
 
-      // Credits check only on step 1 — follow-ups and warmup emails are free
+      // Credits check only on step 0 (first email) — follow-ups are free
       const { data: profileData } = await supabase
         .from('profiles')
         .select('credits_used, credits_total')
@@ -191,7 +199,7 @@ export async function register() {
       const creditsUsed = profileData?.credits_used ?? 0;
       const creditsTotal = profileData?.credits_total ?? 100;
 
-      if (stepNumber === 1 && creditsUsed >= creditsTotal) {
+      if (stepNumber === 0 && creditsUsed >= creditsTotal) {
         console.log(`⛔ User ${campaign.user_id} out of credits (${creditsUsed}/${creditsTotal})`);
         const { data: existingCreditNotif } = await supabase
           .from('notifications').select('id').eq('user_id', campaign.user_id)
@@ -362,8 +370,8 @@ export async function register() {
       const { data: campRow } = await supabase.from('campaigns').select('total_sent').eq('id', campaign.id).single();
       await supabase.from('campaigns').update({ total_sent: (campRow?.total_sent || 0) + 1 }).eq('id', campaign.id);
 
-      // Deduct 1 credit only on step 1 (first email) — follow-ups are free
-      if (stepNumber === 1) {
+      // Deduct 1 credit only on step 0 (first email) — follow-ups are free
+      if (stepNumber === 0) {
         const { data: profRow } = await supabase.from('profiles').select('credits_used').eq('id', campaign.user_id).single();
         await supabase.from('profiles').update({ credits_used: (profRow?.credits_used || 0) + 1 }).eq('id', campaign.user_id);
       }
@@ -392,7 +400,7 @@ export async function register() {
         const targetFireMs = Date.now() + rawDelayMs;
         const adjustedFireMs = adjustToWindow(targetFireMs, campaign);
         const delayMs = Math.max(0, adjustedFireMs - Date.now());
-        await emailQueue.add('send', { campaignLeadId, stepNumber: nextStep }, { delay: delayMs });
+        await emailQueue.add('send', { campaignLeadId, stepNumber: nextStep, accountId: account.id }, { delay: delayMs });
       }
 
       console.log(`✓ Sent step ${stepNumber} to ${lead.email}`);

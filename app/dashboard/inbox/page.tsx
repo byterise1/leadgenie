@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/Skeleton';
 
 const filters = ['All', 'Interested', 'Not Interested', 'Out of Office', 'Do Not Contact'];
@@ -29,6 +29,19 @@ type Thread = {
   };
 };
 
+type ThreadMessage = {
+  type: 'sent' | 'reply';
+  step_number: number;
+  subject: string;
+  body: string;
+  sent_at: string;
+  opened_at?: string | null;
+  is_reply_thread?: boolean;
+  account_email?: string;
+  from_name?: string;
+  from_email?: string;
+};
+
 export default function InboxPage() {
   const [filter, setFilter] = useState('All');
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -36,6 +49,10 @@ export default function InboxPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [selected, setSelected] = useState<Thread | null>(null);
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
   const fetchThreads = useCallback((showLoader = false) => {
     if (showLoader) setLoading(true);
@@ -74,8 +91,28 @@ export default function InboxPage() {
 
   const selectThread = async (thread: Thread) => {
     setSelected(thread);
+    setMessages([]);
+    setExpandedSteps(new Set());
+    setMessagesLoading(true);
+
+    // Load full conversation thread
+    fetch(`/api/inbox/${thread.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.messages) {
+          setMessages(data.messages);
+          // Auto-expand reply and last sent step
+          const defaultExpanded = new Set<number>();
+          data.messages.forEach((m: ThreadMessage, i: number) => {
+            if (m.type === 'reply' || i === data.messages.length - 1) defaultExpanded.add(i);
+          });
+          setExpandedSteps(defaultExpanded);
+          setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+      })
+      .finally(() => setMessagesLoading(false));
+
     if (!thread.read) {
-      // Immediately update local state and signal the sidebar to decrement its badge
       setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, read: true } : t));
       window.dispatchEvent(new CustomEvent('leadgenie:thread-read'));
       await fetch('/api/inbox', {
@@ -201,27 +238,26 @@ export default function InboxPage() {
 
       {selected ? (
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
+          {/* Thread header */}
+          <div className="px-6 py-4 border-b border-gray-100 shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold text-gray-900 truncate">{selected.subject}</h2>
-                <p className="text-xs text-gray-400 mt-1">
-                  From: {selected.from_email || selected.lead?.email}
-                  {selected.from_name && selected.from_name !== selected.from_email ? ` (${selected.from_name})` : ''}
-                  {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
-                  {' · '}{new Date(selected.received_at).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  To: {selected.lead?.email || '—'}
-                  {selected.account?.email ? ` · via ${selected.account.email}` : ''}
-                </p>
-                {selected.campaign && (
-                  <span className="inline-block text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mt-1">
-                    Campaign: {selected.campaign.name}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                  <span className="text-xs text-gray-400">
+                    {[selected.lead?.first_name, selected.lead?.last_name].filter(Boolean).join(' ') || selected.from_name || selected.from_email}
+                    {selected.lead?.company ? ` · ${selected.lead.company}` : ''}
                   </span>
-                )}
+                  {selected.account?.email && (
+                    <span className="text-[10px] text-gray-400">via {selected.account.email}</span>
+                  )}
+                  {selected.campaign && (
+                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5">
+                      {selected.campaign.name}
+                    </span>
+                  )}
+                </div>
               </div>
-              {/* Status tags — top right for quick access */}
               <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
                 {[
                   { key: 'interested', label: '✓ Interested', active: 'bg-emerald-500 text-white border-emerald-500', inactive: 'border-gray-200 text-gray-500 hover:border-emerald-400 hover:text-emerald-600' },
@@ -230,7 +266,6 @@ export default function InboxPage() {
                   { key: 'do_not_contact', label: '🚫 DNC', active: 'bg-red-500 text-white border-red-500', inactive: 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-600' },
                 ].map(s => (
                   <button key={s.key} onClick={() => updateStatus(selected.id, s.key)}
-                    title={s.label}
                     className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all ${selected.status === s.key ? s.active : s.inactive}`}>
                     {s.label}
                   </button>
@@ -238,27 +273,107 @@ export default function InboxPage() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {/* Reply body */}
-            <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Reply</p>
-              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                {selected.last_message || 'No message content.'}
-              </p>
-            </div>
 
-            {/* Original email context */}
-            <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Original Email Sent</p>
-              <div className="text-xs text-gray-500 space-y-0.5">
-                <p><span className="font-semibold text-gray-600">From:</span> {selected.account?.email || '—'}</p>
-                <p><span className="font-semibold text-gray-600">To:</span> {selected.lead?.email || selected.from_email || '—'}</p>
-                <p><span className="font-semibold text-gray-600">Subject:</span> {selected.subject?.replace(/^Re:\s*/i, '') || '—'}</p>
-                {selected.campaign && (
-                  <p><span className="font-semibold text-gray-600">Campaign:</span> {selected.campaign.name}</p>
-                )}
+          {/* Thread messages — scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3 bg-gray-50">
+            {messagesLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map(i => (
+                  <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-2.5 w-full" />
+                    <Skeleton className="h-2.5 w-3/4" />
+                  </div>
+                ))}
               </div>
-            </div>
+            ) : messages.map((msg, i) => {
+              const isExpanded = expandedSteps.has(i);
+              const isReplyMsg = msg.type === 'reply';
+
+              return (
+                <div key={i} className={`rounded-xl border transition-all ${
+                  isReplyMsg
+                    ? 'bg-white border-blue-100 shadow-sm'
+                    : 'bg-white border-gray-100'
+                }`}>
+                  {/* Message header — always visible, click to expand/collapse */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSteps(prev => {
+                      const next = new Set(prev);
+                      if (next.has(i)) next.delete(i); else next.add(i);
+                      return next;
+                    })}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Avatar */}
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                        isReplyMsg ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {isReplyMsg
+                          ? (selected.from_name || selected.from_email || '?')[0].toUpperCase()
+                          : (msg.account_email || msg.from_name || 'Y')[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-900 truncate">
+                            {isReplyMsg
+                              ? (msg.from_name || msg.from_email || selected.from_email || 'Lead')
+                              : (msg.from_name ? `${msg.from_name} <${msg.account_email}>` : msg.account_email || 'You')}
+                          </span>
+                          {isReplyMsg && (
+                            <span className="shrink-0 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">Reply</span>
+                          )}
+                          {msg.type === 'sent' && msg.step_number === 0 && (
+                            <span className="shrink-0 text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5">Email 1</span>
+                          )}
+                          {msg.type === 'sent' && msg.step_number > 0 && (
+                            <span className="shrink-0 text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5">
+                              {msg.is_reply_thread ? '↩ Follow-up' : `Email ${msg.step_number + 1}`}
+                            </span>
+                          )}
+                        </div>
+                        {!isExpanded && (
+                          <p className="text-[11px] text-gray-400 truncate max-w-xs">
+                            {msg.subject || msg.body.slice(0, 80)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {msg.type === 'sent' && msg.opened_at && (
+                        <span className="text-[10px] text-emerald-600 font-semibold">Opened</span>
+                      )}
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(msg.sent_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+                  </button>
+
+                  {/* Expanded body */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-gray-50">
+                      {msg.subject && !msg.is_reply_thread && (
+                        <div className="pt-3 pb-2">
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Subject</span>
+                          <p className="text-xs font-semibold text-gray-800 mt-0.5">{msg.subject}</p>
+                        </div>
+                      )}
+                      <div className={msg.subject && !msg.is_reply_thread ? '' : 'pt-3'}>
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {msg.body || '(No content)'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div ref={threadEndRef} />
           </div>
         </div>
       ) : (
