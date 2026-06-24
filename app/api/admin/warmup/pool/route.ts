@@ -36,22 +36,79 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email, smtp_host, smtp_user and smtp_pass are required' }, { status: 400 });
   }
 
+  // Check if this email already exists for the admin (unique constraint)
+  const { data: existing } = await supabaseAdmin
+    .from('email_accounts')
+    .select('id')
+    .eq('user_id', admin.id)
+    .eq('email', email)
+    .maybeSingle();
+
+  let result;
+  if (existing) {
+    // Promote existing account to pool account
+    const { data, error } = await supabaseAdmin
+      .from('email_accounts')
+      .update({
+        type: type || 'smtp',
+        smtp_host,
+        smtp_port: smtp_port || 587,
+        smtp_user,
+        smtp_pass,
+        warmup_enabled: true,
+        warmup_target: warmup_target || 40,
+        health_score: 50,
+        status: 'warming',
+        is_pool_account: true,
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    result = data;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('email_accounts')
+      .insert({
+        user_id: admin.id,
+        email,
+        type: type || 'smtp',
+        status: 'warming',
+        smtp_host,
+        smtp_port: smtp_port || 587,
+        smtp_user,
+        smtp_pass,
+        warmup_enabled: true,
+        warmup_target: warmup_target || 40,
+        health_score: 50,
+        is_pool_account: true,
+      })
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    result = data;
+  }
+
+  return NextResponse.json(result);
+}
+
+export async function PATCH(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { id, warmup_target } = await req.json();
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const updates: Record<string, unknown> = {};
+  if (typeof warmup_target === 'number') updates.warmup_target = warmup_target;
+  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
-    .insert({
-      user_id: admin.id,
-      email,
-      type: type || 'smtp',
-      status: 'warming',
-      smtp_host,
-      smtp_port: smtp_port || 587,
-      smtp_user,
-      smtp_pass,
-      warmup_enabled: true,
-      warmup_target: warmup_target || 40,
-      health_score: 50,
-      is_pool_account: true,
-    })
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', admin.id)
+    .eq('is_pool_account', true)
     .select()
     .single();
 

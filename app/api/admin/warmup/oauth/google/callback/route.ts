@@ -50,25 +50,27 @@ export async function GET(request: NextRequest) {
   const info = await infoRes.json();
   if (!info.email) return NextResponse.redirect(failUrl);
 
-  // Check if this Gmail is already a pool account
+  // Check if this Gmail already exists (pool or non-pool)
   const { data: existing } = await supabaseAdmin
     .from('email_accounts')
-    .select('id')
+    .select('id, is_pool_account')
     .eq('user_id', adminId)
     .eq('email', info.email)
-    .eq('is_pool_account', true)
     .maybeSingle();
 
   if (existing) {
-    // Refresh tokens for the existing pool account
+    // Account already exists — update tokens + mark as pool account
     const { error: upErr } = await supabaseAdmin.from('email_accounts').update({
       smtp_pass: tokens.refresh_token,
       smtp_user: info.email,
+      type: 'gmail-oauth',
       status: 'warming',
       warmup_enabled: true,
+      is_pool_account: true,
     }).eq('id', existing.id);
     if (upErr) return NextResponse.redirect(`${siteOrigin}/admin/warmup?error=update_failed`);
-    return NextResponse.redirect(alreadyUrl);
+    // Show "refreshed" if it was already a pool account, "connected" if newly promoted
+    return NextResponse.redirect(existing.is_pool_account ? alreadyUrl : successUrl);
   } else {
     const { error: insErr } = await supabaseAdmin.from('email_accounts').insert({
       user_id: adminId,
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
       smtp_user: info.email,
       smtp_pass: tokens.refresh_token,
       status: 'warming',
-      health_score: 85,
+      health_score: 50,
       warmup_enabled: true,
       is_pool_account: true,
     });

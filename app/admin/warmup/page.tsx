@@ -304,6 +304,16 @@ function AdminWarmupPageInner() {
     showToast('Pool account removed');
   };
 
+  const updatePoolTarget = async (id: string, warmup_target: number) => {
+    setPoolAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_target } : a));
+    await fetch('/api/admin/warmup/pool', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, warmup_target }),
+    });
+    showToast('Target updated');
+  };
+
   const filtered = accounts.filter(a => {
     const matchSearch = !search ||
       a.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -391,6 +401,7 @@ function AdminWarmupPageInner() {
                   <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Health</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Progress</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Sent Today</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Daily Target</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase"></th>
                 </tr>
               </thead>
@@ -411,6 +422,16 @@ function AdminWarmupPageInner() {
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className="text-sm font-semibold text-gray-700">{a.sent_today}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number" min={5} max={150} step={5}
+                          value={a.warmup_target || 40}
+                          onChange={e => updatePoolTarget(a.id, Number(e.target.value))}
+                          className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+                        <span className="text-[10px] text-gray-400">/day</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <button onClick={() => handleDeletePool(a.id)} className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg hover:bg-red-50 transition-colors">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
