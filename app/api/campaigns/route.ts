@@ -125,13 +125,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save email steps: ' + stepsErr.message }, { status: 500 });
   }
 
-  // Best-effort: write template_id if migration has been run and ID is a valid UUID
+  // Best-effort: write template_id and thread_mode (depends on DB migration)
   if (insertedSteps?.length) {
     for (const row of insertedSteps) {
       const src = steps[row.step_number as number];
+      const updates: Record<string, unknown> = {};
       const tid = src?.templateId;
-      if (tid && UUID_RE.test(tid)) {
-        await supabaseAdmin.from('email_steps').update({ template_id: tid }).eq('id', row.id);
+      if (tid && UUID_RE.test(tid)) updates.template_id = tid;
+      const threadMode = src?.threadMode;
+      if (threadMode === 'reply' || threadMode === 'new_thread') updates.thread_mode = threadMode;
+      if (Object.keys(updates).length > 0) {
+        await supabaseAdmin.from('email_steps').update(updates).eq('id', row.id);
       }
     }
   }

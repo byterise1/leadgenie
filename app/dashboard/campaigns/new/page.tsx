@@ -56,8 +56,8 @@ const MOCK_TEMPLATES = [
   },
 ];
 
-type EmailStep = { subject: string; body: string; delay: number; templateId: string | null; includeUnsub: boolean };
-const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false };
+type EmailStep = { subject: string; body: string; delay: number; templateId: string | null; includeUnsub: boolean; threadMode: 'reply' | 'new_thread' };
+const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false, threadMode: 'new_thread' };
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -139,7 +139,8 @@ export default function NewCampaignPage() {
     }
     if (s === 1) {
       emails.forEach((e, i) => {
-        if (!e.subject.trim()) errs.push(`Email ${i + 1}: subject line is required.`);
+        const needsSubject = i === 0 || e.threadMode === 'new_thread';
+        if (needsSubject && !e.subject.trim()) errs.push(`Email ${i + 1}: subject line is required.`);
         if (!e.body.trim()) errs.push(`Email ${i + 1}: body is required.`);
       });
     }
@@ -170,7 +171,7 @@ export default function NewCampaignPage() {
       const prefill = localStorage.getItem('prefill_template');
       if (prefill) {
         const t = JSON.parse(prefill);
-        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: t.templateId || null, includeUnsub: false }]);
+        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: t.templateId || null, includeUnsub: false, threadMode: 'new_thread' }]);
         localStorage.removeItem('prefill_template');
       }
     } catch {}
@@ -398,9 +399,49 @@ export default function NewCampaignPage() {
                 </button>
 
                 <div className="space-y-3">
-                  <input placeholder="Subject line" value={email.subject}
-                    onChange={e => updateEmail(idx, 'subject', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                  {/* Thread mode toggle — only for follow-up steps */}
+                  {idx > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateEmail(idx, 'threadMode', email.threadMode === 'reply' ? 'new_thread' : 'reply')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                          email.threadMode === 'reply'
+                            ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                            : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
+                        }`}>
+                        {email.threadMode === 'reply' ? (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                            Reply in thread
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            New thread
+                          </>
+                        )}
+                      </button>
+                      <span className="text-[10px] text-gray-400">
+                        {email.threadMode === 'reply'
+                          ? 'Sends as a reply to Step 1 — appears in same inbox thread'
+                          : 'Sends as a separate email with its own subject line'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Subject — hidden for reply-mode follow-ups */}
+                  {(idx === 0 || email.threadMode === 'new_thread') && (
+                    <input placeholder="Subject line" value={email.subject}
+                      onChange={e => updateEmail(idx, 'subject', e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                  )}
+                  {idx > 0 && email.threadMode === 'reply' && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100">
+                      <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                      <span className="text-xs text-blue-600">In thread with Step 1 — no subject needed</span>
+                    </div>
+                  )}
 
                   {/* Body — Edit / Preview tabs */}
                   <div>
@@ -453,7 +494,7 @@ export default function NewCampaignPage() {
               </div>
             ))}
 
-            <button onClick={() => setEmails(e => [...e, { ...DEFAULT_EMAIL, delay: 3 }])}
+            <button onClick={() => setEmails(e => [...e, { ...DEFAULT_EMAIL, delay: 3, threadMode: 'reply' }])}
               className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-4 text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
               + Add Follow-up Step
             </button>
@@ -701,7 +742,7 @@ export default function NewCampaignPage() {
                 <button onClick={() => { setStepErrors([]); setStep(0); }} className="text-xs font-bold text-amber-700 underline ml-3">Fix →</button>
               </div>
             )}
-            {emails.some(e => !e.subject.trim() || !e.body.trim()) && (
+            {emails.some((e, i) => !e.body.trim() || ((i === 0 || e.threadMode === 'new_thread') && !e.subject.trim())) && (
               <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 flex items-center justify-between">
                 <span className="text-xs text-amber-700 font-medium">⚠️ Some email steps are missing subject or body.</span>
                 <button onClick={() => { setStepErrors([]); setStep(1); }} className="text-xs font-bold text-amber-700 underline ml-3">Fix →</button>
@@ -711,7 +752,7 @@ export default function NewCampaignPage() {
               <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-xs text-red-600">{launchError}</div>
             )}
             <button
-              disabled={activeAccountCount === 0 || (!selectedListId && leadLists.length > 0) || !name.trim() || emails.some(e => !e.subject.trim() || !e.body.trim()) || launching}
+              disabled={activeAccountCount === 0 || (!selectedListId && leadLists.length > 0) || !name.trim() || emails.some((e, i) => !e.body.trim() || ((i === 0 || e.threadMode === 'new_thread') && !e.subject.trim())) || launching}
               onClick={async () => {
                 setLaunching(true);
                 setLaunchError('');
@@ -733,7 +774,7 @@ export default function NewCampaignPage() {
                       timezone,
                       start_date: startDate || null,
                       list_id: selectedListId || null,
-                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId })),
+                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId, threadMode: e.threadMode })),
                       account_ids: accountIds,
                     }),
                   });

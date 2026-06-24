@@ -12,6 +12,7 @@ type EmailStep = {
   subject: string;
   body: string;
   delay_days: number;
+  thread_mode?: string;
 };
 
 type CampaignLead = {
@@ -569,9 +570,16 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         <div className="divide-y divide-gray-100">
           {[...campaign.email_steps].sort((a, b) => a.step_number - b.step_number).map((step, i) => (
             <div key={step.id} className="px-5 py-4">
-              <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
-                <p className="text-sm font-semibold text-gray-900 truncate">{step.subject || '(no subject)'}</p>
+                {i > 0 && step.thread_mode === 'reply' ? (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    Reply in thread
+                  </span>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 truncate">{step.subject || '(no subject)'}</p>
+                )}
                 {i > 0 && step.delay_days > 0 && (
                   <span className="text-[10px] text-gray-400 shrink-0">+{step.delay_days} min</span>
                 )}

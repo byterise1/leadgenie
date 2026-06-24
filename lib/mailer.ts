@@ -55,6 +55,8 @@ type SendOptions = {
   subject: string;
   text: string;
   html: string;
+  inReplyTo?: string;
+  references?: string;
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -143,13 +145,19 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     ? `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`
     : opts.subject;
 
-  const rawMessage = [
+  const headers = [
     `From: ${opts.from}`,
     `To: ${opts.to}`,
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    ``,
+  ];
+  if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
+  if (opts.references) headers.push(`References: ${opts.references}`);
+  headers.push('');
+
+  const rawMessage = [
+    ...headers,
     `--${boundary}`,
     `Content-Type: text/plain; charset=UTF-8`,
     ``,
@@ -322,11 +330,15 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
     return sendViaGmailApi(account, opts);
   }
 
+  const mailOpts: any = { ...opts };
+  if (opts.inReplyTo) mailOpts.inReplyTo = opts.inReplyTo;
+  if (opts.references) mailOpts.references = opts.references;
+
   // Proxy mode: SOCKS5 socket is single-use — create a fresh transport per email
   if (process.env.SMTP_PROXY) {
     const transport = await createSmtpTransport(account);
     try {
-      const info = await transport.sendMail(opts);
+      const info = await transport.sendMail(mailOpts);
       return { threadId: (info as any).messageId || undefined };
     } finally {
       try { (transport as any).close(); } catch { /* ignore */ }
@@ -336,13 +348,13 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   // Direct mode: use cached pooled transport
   const transport = await getTransport(account);
   try {
-    const info = await transport.sendMail(opts);
+    const info = await transport.sendMail(mailOpts);
     return { threadId: (info as any).messageId || undefined };
   } catch (err: any) {
     evictTransport(account);
     if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
       const fresh = await getTransport(account);
-      const info = await fresh.sendMail(opts);
+      const info = await fresh.sendMail(mailOpts);
       return { threadId: (info as any).messageId || undefined };
     }
     throw err;

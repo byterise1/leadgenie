@@ -207,7 +207,24 @@ export async function register() {
       }
 
       const lead = cl.lead;
-      const subject = replaceVars(step.subject, lead);
+      const isReplyThread = stepNumber > 0 && step.thread_mode === 'reply';
+
+      // For reply-in-thread follow-ups: look up step 0's message_id for this lead
+      let inReplyTo: string | undefined;
+      if (isReplyThread) {
+        const { data: firstSent } = await supabase
+          .from('sent_emails')
+          .select('message_id')
+          .eq('campaign_id', campaign.id)
+          .eq('lead_id', lead.id)
+          .eq('step_number', 0)
+          .not('message_id', 'is', null)
+          .maybeSingle();
+        if (firstSent?.message_id) inReplyTo = firstSent.message_id;
+      }
+
+      // Reply mode sends with no subject (thread subject comes from original email)
+      const subject = isReplyThread && inReplyTo ? '' : replaceVars(step.subject || '', lead);
       const rawBody = replaceVars(step.body, lead);
 
       // Insert sent_email record FIRST to get ID for tracking pixel + unsubscribe link
@@ -284,6 +301,7 @@ export async function register() {
           subject,
           text: body,
           html: fullHtml,
+          ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
         });
 
         // Store Gmail threadId for reply detection
