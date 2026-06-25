@@ -635,30 +635,113 @@ export async function register() {
     const warmupQueue = new Queue('warmup', { connection });
     await warmupQueue.upsertJobScheduler('warmup-daily', { every: 6 * 60 * 60_000 }, { name: 'warmup', data: {} });
 
-    const WARMUP_SUBJECTS = [
-      'Quick follow-up', 'Checking in', 'Thoughts on this?',
-      'Following up from our conversation', 'Hope this finds you well',
-      'A question for you', 'Reaching out', 'Wanted to connect',
-      'Re: our conversation', 'Just circling back',
+    // Paired templates: each entry = { subject, body, reply }
+    // Reply is contextually matched to the initial email topic
+    const WARMUP_PAIRS: { subject: string; body: string; reply: string }[] = [
+      {
+        subject: 'Quick question about Q3 planning',
+        body: 'Hi,\n\nHope your Q3 is going well. I had a quick question about how your team is structuring priorities for the rest of the quarter — are you focusing more on growth or efficiency?\n\nWould love to hear your thoughts.\n\nBest',
+        reply: 'Good question! We\'re leaning toward efficiency this quarter — trying to tighten up processes before pushing growth again. How about your side?',
+      },
+      {
+        subject: 'Saw your LinkedIn post — had to reach out',
+        body: 'Hi,\n\nI came across your recent post and it really resonated with me. The point about building systems before scaling was something I\'ve been thinking about a lot lately.\n\nWould love to connect and exchange ideas sometime.\n\nBest regards',
+        reply: 'Thanks for reaching out! That post got a lot of engagement — clearly it struck a chord. Happy to connect and chat more about it.',
+      },
+      {
+        subject: 'Referral from a mutual connection',
+        body: 'Hello,\n\nA mutual colleague suggested I reach out to you. They mentioned you\'ve done some interesting work in the ops space and thought we\'d have a lot to talk about.\n\nLooking forward to connecting.\n\nWarm regards',
+        reply: 'Great to hear from you! Always happy to connect with people in the same space. What kind of work are you focused on right now?',
+      },
+      {
+        subject: 'Following up on last week\'s conference',
+        body: 'Hi,\n\nIt was great seeing you at the conference last week. I\'ve been thinking about the panel discussion on AI in sales — some really eye-opening perspectives.\n\nWanted to follow up and stay in touch.\n\nCheers',
+        reply: 'Great connecting with you too! That panel was one of the highlights for me. The bit about AI replacing SDRs was controversial but probably not far off.',
+      },
+      {
+        subject: 'Thoughts on the market shift?',
+        body: 'Hello,\n\nWith everything happening in the market right now, I\'m curious how your team is adapting. We\'ve been seeing a real shift in buyer behavior over the last 6 months.\n\nWould love to hear how you\'re navigating it.\n\nBest',
+        reply: 'Definitely feeling it on our end too. Buyers are taking longer to decide and asking a lot more questions before committing. We\'ve had to rethink our whole nurture sequence.',
+      },
+      {
+        subject: 'Collaboration opportunity?',
+        body: 'Hi,\n\nI\'ve been following your work for a while and think there could be a really interesting collaboration opportunity between our teams.\n\nWould you be open to a quick 20-min call to explore?\n\nBest regards',
+        reply: 'Appreciate you reaching out! Always open to exploring collaborations. Send me some times that work for you and we\'ll find a slot.',
+      },
+      {
+        subject: 'Re: the article you shared',
+        body: 'Hello,\n\nI saw the article you shared about outbound strategies and found it really useful — especially the part about personalization at scale.\n\nDo you have any resources you\'d recommend on that topic?\n\nThanks',
+        reply: 'Glad it was helpful! For personalization at scale, I\'d recommend checking out some of the work coming out of the Pavilion community. Lots of good frameworks there.',
+      },
+      {
+        subject: 'Quick intro — we work in similar spaces',
+        body: 'Hi,\n\nI was looking through my network and noticed we work in overlapping spaces. I\'d love to stay connected and share notes on what\'s working.\n\nNo agenda — just think it\'d be valuable to know each other.\n\nWarm regards',
+        reply: 'Totally agree — always good to build those peer connections. What\'s your focus area within the space? I work mostly on the go-to-market side.',
+      },
+      {
+        subject: 'Hiring insight — curious about your approach',
+        body: 'Hello,\n\nWe\'re in the middle of scaling our team and I\'ve been researching how companies our size approach the first sales hire.\n\nHave you been through that stage? Would love any perspective.\n\nBest',
+        reply: 'Been through it twice! The biggest mistake is hiring before the process is repeatable. Happy to share what worked for us if you want to jump on a call.',
+      },
+      {
+        subject: 'Loved your take on cold email',
+        body: 'Hi,\n\nI read your thoughts on cold email and you\'re spot on — most people over-engineer the copy and forget that deliverability is half the battle.\n\nAre you still experimenting with warm-up strategies?\n\nCheers',
+        reply: 'Yes, actively! Warmup has become non-negotiable for us. We saw a 30% improvement in inbox rates just by being more systematic about it. What are you using?',
+      },
+      {
+        subject: 'Interesting webinar coming up',
+        body: 'Hello,\n\nI\'m running a small virtual session next month on pipeline generation — keeping it to 20 people max to keep it actionable.\n\nThought you might find it useful. Would you want a spot?\n\nBest regards',
+        reply: 'That sounds really interesting — I\'d definitely be up for joining. What topics are you planning to cover? Send over the details when you have them.',
+      },
+      {
+        subject: 'Checking in — how\'s business?',
+        body: 'Hi,\n\nHope things are going well on your end. We\'ve had a busy few months and I\'ve been meaning to check in with a few people I respect in the industry.\n\nHow are things looking for you heading into the next quarter?\n\nBest',
+        reply: 'Things are actually going really well, thanks for asking! We had a strong close to last quarter and momentum is carrying over. How about you?',
+      },
+      {
+        subject: 'Intro from a shared connection',
+        body: 'Hello,\n\nHope you don\'t mind me reaching out — we have a few shared connections and I\'ve heard your name come up more than once in conversations about B2B sales.\n\nWould love to find some time to connect.\n\nWarm regards',
+        reply: 'Small world! Always happy to connect with people who come recommended. What\'s the best way to get 20 minutes on your calendar?',
+      },
+      {
+        subject: 'Your framework makes a lot of sense',
+        body: 'Hi,\n\nI\'ve been implementing a framework similar to what you described and the results have been promising. We\'re seeing faster cycles and better conversion.\n\nCurious if you\'ve tested this across different industries.\n\nThanks',
+        reply: 'Great to hear you\'re seeing results! We\'ve tested it in SaaS and professional services mostly. Manufacturing was trickier — longer cycles needed more touchpoints.',
+      },
+      {
+        subject: 'Partnership idea — worth a chat?',
+        body: 'Hello,\n\nI\'ve been thinking about a potential partnership angle between what your company does and what we\'re building.\n\nI think there\'s a complementary fit that could benefit both sides. Worth a quick conversation?\n\nBest',
+        reply: 'Interesting — I\'m always open to exploring partnerships that make sense. Can you send a quick overview of what you have in mind? Happy to jump on a call after.',
+      },
+      {
+        subject: 'How are you handling the AI wave?',
+        body: 'Hi,\n\nCurious how your team is thinking about AI tools in your workflow. We\'ve been testing a few things and the results are... mixed.\n\nWould love to compare notes.\n\nCheers',
+        reply: 'Ha — mixed is the right word! We\'ve had some great wins with AI for research and first drafts, but it still needs a human eye before anything goes out. What tools are you trying?',
+      },
+      {
+        subject: 'Saw your company is hiring',
+        body: 'Hello,\n\nNoticed you\'re scaling the team — congrats! Growth mode is exciting but also a lot to manage.\n\nWe\'ve helped teams in similar situations streamline their onboarding and ramp time. Happy to share some notes if useful.\n\nBest regards',
+        reply: 'Thanks! Yes, it\'s a great problem to have but definitely keeps us on our toes. I\'d be interested in hearing what you\'ve seen work for onboarding. Let\'s find some time.',
+      },
+      {
+        subject: 'Re: the podcast episode',
+        body: 'Hi,\n\nI listened to the episode you were on last week — really solid insights on building a repeatable outbound motion. The bit about ICP definition was especially timely for us.\n\nDo you have a newsletter or resource list I could follow?\n\nBest',
+        reply: 'Thanks so much — that was a fun one to record! I do have a newsletter, I\'ll send you the link. Also happy to chat more about the ICP stuff if it\'s relevant to what you\'re working through.',
+      },
+      {
+        subject: 'Feedback request — would love your thoughts',
+        body: 'Hello,\n\nI\'m putting together a short guide on outbound best practices and wanted to gather input from a few practitioners I respect.\n\nWould you be willing to answer 2-3 quick questions? It\'ll take under 5 minutes.\n\nThank you',
+        reply: 'Happy to help! Send over the questions and I\'ll get back to you this week. Always glad to contribute to useful resources in the community.',
+      },
+      {
+        subject: 'Just wanted to say — great work',
+        body: 'Hi,\n\nI don\'t say this enough, but your content has genuinely helped me think differently about pipeline. The frameworks you share are practical and not just theoretical.\n\nKeep it up — it makes a difference.\n\nBest regards',
+        reply: 'That genuinely made my day — thank you. It\'s great to hear the content is actually useful and not just adding to the noise. Let me know if there\'s ever a topic you\'d find helpful.',
+      },
     ];
-    const WARMUP_BODIES = [
-      'Hi,\n\nJust wanted to follow up and see if you had a chance to look at my previous message.\n\nBest regards',
-      'Hello,\n\nHope you are having a great week. I wanted to touch base regarding our previous discussion.\n\nThank you',
-      'Hi there,\n\nI hope this email finds you well. I wanted to check in and see how things are going.\n\nBest',
-      'Hello,\n\nThanks for your time. I wanted to reach out and continue our conversation from last week.\n\nRegards',
-      'Hi,\n\nI wanted to follow up on my earlier email. Please let me know if you have any questions.\n\nBest wishes',
-      'Hey,\n\nJust checking in to see if everything is going well on your end. Let me know if there is anything I can help with.\n\nCheers',
-    ];
-    const WARMUP_REPLIES = [
-      'Thanks, I\'ll take a look at this.',
-      'Got it, thanks for reaching out!',
-      'Appreciate the follow-up.',
-      'Thanks for the message, will circle back soon.',
-      'Noted, I\'ll get back to you shortly.',
-      'Received, thank you!',
-      'Thanks for checking in.',
-      'I appreciate you following up.',
-    ];
+
+    // Reply pool — extracted from pairs so replies sound contextual, not generic
+    const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.reply);
 
     function warmupDailyTarget(day: number, target: number): number {
       if (day <= 0) return 2;
@@ -734,13 +817,13 @@ export async function register() {
           let sent = 0;
           for (let i = 0; i < emailsToday; i++) {
             const toAccount = pool[Math.floor(Math.random() * pool.length)];
-            const subject = WARMUP_SUBJECTS[Math.floor(Math.random() * WARMUP_SUBJECTS.length)];
-            const body = WARMUP_BODIES[Math.floor(Math.random() * WARMUP_BODIES.length)];
+            const pair = WARMUP_PAIRS[Math.floor(Math.random() * WARMUP_PAIRS.length)];
+            const { subject, body } = pair;
 
             try {
               await sendEmail(
                 { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-                { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n/g, '<br>')}</p>` }
+                { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
               );
               await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
               sent++;
