@@ -69,8 +69,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [supportBadge, setSupportBadge] = useState(0);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [showBell, setShowBell] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
   // Prevents the 5s interval from re-populating notifs while a mark-all-read PATCH is in-flight
   const clearingRef = useRef(false);
+
+  // Close bell on outside click or tab switch
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowBell(false);
+      }
+    };
+    const onVisibilityChange = () => { if (document.hidden) setShowBell(false); };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
 
   const fetchSupportBadge = useCallback(() => {
     fetch('/api/admin/support?count=1')
@@ -226,7 +243,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1"/>
 
           {/* Notification bell */}
-          <div className="relative">
+          <div className="relative" ref={bellRef}>
             <button onClick={() => setShowBell(v => !v)}
               className="relative p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
