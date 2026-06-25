@@ -80,6 +80,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [editName, setEditName] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [msg, setMsg] = useState('');
+  const [abStats, setAbStats] = useState<{ step_number: number; variant: string; sent: number; opened: number; replied: number }[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   // Schedule edit
@@ -107,6 +108,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
     fetchAll(true);
     const pollId = setInterval(() => fetchAll(false), 10000);
+    fetch(`/api/campaigns/${id}/ab-stats`).then(r => r.json()).then(d => { if (Array.isArray(d)) setAbStats(d); });
     return () => clearInterval(pollId);
   }, [id]);
 
@@ -354,6 +356,11 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               {campaign.status === 'active' ? 'Pause' : 'Resume'}
             </button>
           )}
+          <a href={`/api/campaigns/${id}/export`} download
+            className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </a>
           <button onClick={deleteCampaign} disabled={deleting}
             className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -589,6 +596,52 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           ))}
         </div>
       </div>
+
+      {/* A/B Test results */}
+      {abStats.length > 0 && (() => {
+        const steps = [...new Set(abStats.map(r => r.step_number))].sort();
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+              <span className="w-5 h-5 rounded bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center">AB</span>
+              <p className="text-sm font-bold text-gray-900">A/B Test Results</p>
+            </div>
+            {steps.map(stepNum => {
+              const variants = abStats.filter(r => r.step_number === stepNum);
+              const winner = variants.length >= 2
+                ? variants.reduce((best, v) => (v.sent > 0 && (v.opened / v.sent) > (best.sent > 0 ? best.opened / best.sent : 0)) ? v : best, variants[0])
+                : null;
+              return (
+                <div key={stepNum} className="px-5 py-4 border-b border-gray-50 last:border-0">
+                  <p className="text-xs font-semibold text-gray-500 mb-3">Step {stepNum + 1}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {variants.map(v => {
+                      const openRate = v.sent > 0 ? ((v.opened / v.sent) * 100).toFixed(1) : '0.0';
+                      const replyRate = v.sent > 0 ? ((v.replied / v.sent) * 100).toFixed(1) : '0.0';
+                      const isWinner = winner?.variant === v.variant;
+                      return (
+                        <div key={v.variant} className={`rounded-xl border-2 p-4 ${isWinner && variants.length >= 2 ? 'border-violet-300 bg-violet-50/30' : 'border-gray-100'}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-xs font-bold text-violet-700 bg-violet-100 rounded px-2 py-0.5">Variant {v.variant}</span>
+                            {isWinner && variants.length >= 2 && (
+                              <span className="text-[10px] font-bold text-violet-600 bg-violet-100 border border-violet-200 rounded-full px-2 py-0.5">🏆 Winning</span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div><p className="text-xs text-gray-400">Sent</p><p className="text-lg font-bold text-gray-900">{v.sent}</p></div>
+                            <div><p className="text-xs text-gray-400">Open Rate</p><p className="text-lg font-bold text-emerald-600">{openRate}%</p></div>
+                            <div><p className="text-xs text-gray-400">Reply Rate</p><p className="text-lg font-bold text-blue-600">{replyRate}%</p></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Leads table */}
       {leads.length > 0 && (

@@ -258,13 +258,27 @@ export async function register() {
         originalSubject = firstSent?.subject || undefined;
       }
 
+      // A/B variant selection: randomly pick A (base) or B/C... (ab_variants array)
+      const abVariants: { subject: string; body: string }[] = Array.isArray(step.ab_variants) ? step.ab_variants : [];
+      const hasAb = abVariants.length > 0 && abVariants[0]?.body?.trim();
+      let chosenVariant = 'A';
+      let chosenSubject = step.subject || '';
+      let chosenBody = step.body || '';
+      if (hasAb) {
+        // 50/50 split: 0 = A, 1 = B
+        const pick = Math.floor(Math.random() * (abVariants.length + 1));
+        if (pick > 0) {
+          chosenVariant = String.fromCharCode(65 + pick); // 'B', 'C', etc.
+          chosenSubject = abVariants[pick - 1].subject || step.subject || '';
+          chosenBody = abVariants[pick - 1].body || step.body || '';
+        }
+      }
+
       // Follow-up subject: ALWAYS use original step 0 subject for reply-in-thread steps.
-      // Using the step's own subject (usually empty) breaks threading in non-Gmail clients
-      // and shows "(no subject)" to recipients.
       const subject = isReplyThread
-        ? (originalSubject ?? replaceVars(step.subject || '', lead))
-        : replaceVars(step.subject || '', lead);
-      const rawBody = replaceVars(step.body, lead);
+        ? (originalSubject ?? replaceVars(chosenSubject, lead))
+        : replaceVars(chosenSubject, lead);
+      const rawBody = replaceVars(chosenBody, lead);
 
       // Insert sent_email record FIRST to get ID for tracking pixel + unsubscribe link
       const { data: sentEmail } = await supabase.from('sent_emails').insert({
@@ -275,6 +289,7 @@ export async function register() {
         step_number: stepNumber,
         subject,
         sent_at: new Date().toISOString(),
+        ab_variant: chosenVariant,
       }).select('id').single();
 
       // Inject unsubscribe link into body

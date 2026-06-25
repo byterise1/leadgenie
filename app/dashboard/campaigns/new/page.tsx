@@ -56,8 +56,9 @@ const MOCK_TEMPLATES = [
   },
 ];
 
-type EmailStep = { subject: string; body: string; delay: number; templateId: string | null; includeUnsub: boolean; threadMode: 'reply' | 'new_thread' };
-const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false, threadMode: 'new_thread' };
+type AbVariant = { subject: string; body: string };
+type EmailStep = { subject: string; body: string; delay: number; templateId: string | null; includeUnsub: boolean; threadMode: 'reply' | 'new_thread'; abEnabled: boolean; abVariants: AbVariant[] };
+const DEFAULT_EMAIL: EmailStep = { subject: '', body: '', delay: 0, templateId: null, includeUnsub: false, threadMode: 'new_thread', abEnabled: false, abVariants: [{ subject: '', body: '' }] };
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -171,7 +172,7 @@ export default function NewCampaignPage() {
       const prefill = localStorage.getItem('prefill_template');
       if (prefill) {
         const t = JSON.parse(prefill);
-        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: t.templateId || null, includeUnsub: false, threadMode: 'new_thread' }]);
+        setEmails([{ subject: t.subject || '', body: t.body || '', delay: 0, templateId: t.templateId || null, includeUnsub: false, threadMode: 'new_thread', abEnabled: false, abVariants: [{ subject: '', body: '' }] }]);
         localStorage.removeItem('prefill_template');
       }
     } catch {}
@@ -430,6 +431,21 @@ export default function NewCampaignPage() {
                     </div>
                   )}
 
+                  {/* A/B Test toggle */}
+                  <div className="flex items-center gap-3 py-2 border-t border-dashed border-gray-100">
+                    <button type="button" onClick={() => updateEmail(idx, 'abEnabled', !email.abEnabled)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                        email.abEnabled ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                      A/B Test
+                    </button>
+                    {email.abEnabled && <span className="text-[10px] text-violet-500 font-semibold">Leads randomly get Variant A or B — check analytics to see which wins</span>}
+                  </div>
+
+                  {/* Variant A */}
+                  {email.abEnabled && <p className="text-xs font-bold text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-3 py-1.5">Variant A</p>}
+
                   {/* Subject — hidden for reply-mode follow-ups */}
                   {(idx === 0 || email.threadMode === 'new_thread') && (
                     <input placeholder="Subject line" value={email.subject}
@@ -480,6 +496,27 @@ export default function NewCampaignPage() {
                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
                     )}
                   </div>
+
+                  {/* Variant B editor */}
+                  {email.abEnabled && (
+                    <div className="border border-violet-100 rounded-xl p-4 bg-violet-50/30 space-y-3">
+                      <p className="text-xs font-bold text-violet-700">Variant B</p>
+                      {(idx === 0 || email.threadMode === 'new_thread') && (
+                        <input
+                          placeholder="Subject line for Variant B"
+                          value={email.abVariants[0]?.subject || ''}
+                          onChange={e => updateEmail(idx, 'abVariants', [{ ...email.abVariants[0], subject: e.target.value }])}
+                          className="w-full border border-violet-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 transition bg-white"
+                        />
+                      )}
+                      <textarea rows={6}
+                        placeholder={`Hi {{first_name}},\n\nAlternative email body...\n\n[Your Name]`}
+                        value={email.abVariants[0]?.body || ''}
+                        onChange={e => updateEmail(idx, 'abVariants', [{ ...email.abVariants[0], body: e.target.value }])}
+                        className="w-full border border-violet-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 transition resize-none font-mono bg-white"
+                      />
+                    </div>
+                  )}
 
                   <p className="text-[10px] text-gray-400">Variables: <span className="font-mono">{'{{first_name}}'}</span>, <span className="font-mono">{'{{company}}'}</span>, <span className="font-mono">{'{{title}}'}</span></p>
 
@@ -774,7 +811,7 @@ export default function NewCampaignPage() {
                       timezone,
                       start_date: startDate || null,
                       list_id: selectedListId || null,
-                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId, threadMode: e.threadMode })),
+                      steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId, threadMode: e.threadMode, abVariants: e.abEnabled && e.abVariants[0]?.body?.trim() ? e.abVariants : [] })),
                       account_ids: accountIds,
                     }),
                   });

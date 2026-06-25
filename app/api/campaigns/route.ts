@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
     delay_days: s.delay || 0,
     include_unsub: s.includeUnsub || false,
     thread_mode: (s.threadMode === 'reply' || s.threadMode === 'new_thread') ? s.threadMode : 'new_thread',
+    ab_variants: Array.isArray(s.abVariants) && s.abVariants.length > 0 ? s.abVariants : [],
   }));
 
   const { data: insertedSteps, error: stepsErr } = await supabaseAdmin
