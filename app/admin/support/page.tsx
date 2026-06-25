@@ -13,6 +13,8 @@ type Ticket = {
   status: string;
   priority: string;
   admin_reply: string | null;
+  admin_seen_at: string | null;
+  messages: { role: string; body: string; ts: string }[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -61,9 +63,24 @@ export default function AdminSupportPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Mark all currently-open tickets as seen when admin visits the list
+  // This clears the badge for tickets that haven't had new user activity
+  useEffect(() => {
+    fetch('/api/admin/support/mark-all-seen', { method: 'POST' }).catch(() => {});
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
-  const unread = tickets.filter(t => !t.admin_reply && t.status !== 'closed').length;
+  const isUnread = (t: Ticket) => {
+    if (t.status === 'closed') return false;
+    if (!t.admin_seen_at) return true;
+    if (new Date(t.updated_at) > new Date(t.admin_seen_at)) {
+      const msgs = Array.isArray(t.messages) ? t.messages : [];
+      return msgs.length > 0 && msgs[msgs.length - 1]?.role === 'user';
+    }
+    return false;
+  };
+  const unread = tickets.filter(isUnread).length;
   const openCount = tickets.filter(t => t.status === 'open').length;
   const waitingCount = tickets.filter(t => t.status === 'in_progress').length;
   const resolved30d = tickets.filter(t => {
@@ -170,17 +187,25 @@ export default function AdminSupportPage() {
         ) : (
           <div className="divide-y divide-gray-50">
             {filtered.map(t => (
-              <div key={t.id} onClick={() => router.push(`/admin/support/${t.id}`)}
-                className="px-5 py-4 flex items-center gap-4 hover:bg-gray-50 cursor-pointer transition-colors group">
-                {/* Icon — blue if unread */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!t.admin_reply && t.status !== 'closed' ? 'bg-blue-50' : 'bg-gray-100'}`}>
-                  <svg className={`w-4 h-4 ${!t.admin_reply && t.status !== 'closed' ? 'text-blue-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                  </svg>
+              <div key={t.id} onClick={() => {
+                  setTickets(prev => prev.map(x => x.id === t.id ? { ...x, admin_seen_at: new Date().toISOString() } : x));
+                  router.push(`/admin/support/${t.id}`);
+                }}
+                className={`px-5 py-4 flex items-center gap-4 hover:bg-gray-50 cursor-pointer transition-colors group ${isUnread(t) ? 'bg-blue-50/30' : ''}`}>
+                {/* Unread dot + icon */}
+                <div className="relative shrink-0">
+                  {isUnread(t) && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white z-10"/>
+                  )}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUnread(t) ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <svg className={`w-4 h-4 ${isUnread(t) ? 'text-blue-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                  </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{t.subject}</p>
+                  <p className={`text-sm truncate ${isUnread(t) ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>{t.subject}</p>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="text-xs text-gray-400 truncate max-w-[160px]">{t.user_email}</span>
                     <span className="text-gray-200 text-xs">·</span>

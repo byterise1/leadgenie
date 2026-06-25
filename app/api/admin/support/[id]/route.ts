@@ -22,5 +22,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+
+  // Mark as seen by admin — clears the unread badge for this ticket
+  await supabaseAdmin
+    .from('support_tickets')
+    .update({ admin_seen_at: new Date().toISOString() })
+    .eq('id', id);
+
   return NextResponse.json(data);
 }

@@ -18,16 +18,21 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status') || '';
 
   // Fast count for admin sidebar badge: ?count=1
-  // Counts: no reply yet OR user sent follow-up after last admin reply (last message role = 'user')
+  // Counts tickets admin hasn't seen yet OR where user sent a follow-up since admin last viewed
   if (searchParams.get('count') === '1') {
     const { data: open } = await supabaseAdmin
       .from('support_tickets')
-      .select('id, admin_reply, messages')
+      .select('id, admin_seen_at, updated_at, messages')
       .in('status', ['open', 'in_progress']);
     const count = (open || []).filter(t => {
-      if (!t.admin_reply) return true;
-      const msgs = Array.isArray(t.messages) ? t.messages : [];
-      return msgs.length > 0 && msgs[msgs.length - 1]?.role === 'user';
+      // Never seen by admin
+      if (!t.admin_seen_at) return true;
+      // New user activity after admin last viewed
+      if (new Date(t.updated_at) > new Date(t.admin_seen_at)) {
+        const msgs = Array.isArray(t.messages) ? t.messages : [];
+        return msgs.length > 0 && msgs[msgs.length - 1]?.role === 'user';
+      }
+      return false;
     }).length;
     return NextResponse.json({ unread: count });
   }
