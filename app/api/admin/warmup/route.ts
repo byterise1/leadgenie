@@ -57,7 +57,19 @@ export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id, warmup_enabled, warmup_pool_mode } = await req.json();
+  const body = await req.json();
+  const { id, warmup_enabled, warmup_pool_mode, set_all_pool_mode } = body;
+
+  // Bulk: set pool mode for ALL user accounts at once
+  if (set_all_pool_mode && VALID_POOL_MODES.includes(set_all_pool_mode)) {
+    const { error } = await supabaseAdmin
+      .from('email_accounts')
+      .update({ warmup_pool_mode: set_all_pool_mode })
+      .neq('is_pool_account', true);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, set_all_pool_mode });
+  }
+
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const updates: Record<string, unknown> = {};

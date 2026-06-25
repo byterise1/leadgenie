@@ -96,11 +96,18 @@ export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id, warmup_target } = await req.json();
+  const body = await req.json();
+  const { id, warmup_target, promote } = body;
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const updates: Record<string, unknown> = {};
   if (typeof warmup_target === 'number') updates.warmup_target = warmup_target;
+  // promote=true: mark an existing admin account as a pool account
+  if (promote === true) {
+    updates.is_pool_account = true;
+    updates.warmup_enabled = true;
+    updates.status = 'warming';
+  }
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
 
   const { data, error } = await supabaseAdmin
@@ -108,7 +115,6 @@ export async function PATCH(req: NextRequest) {
     .update(updates)
     .eq('id', id)
     .eq('user_id', admin.id)
-    .eq('is_pool_account', true)
     .select()
     .single();
 
@@ -121,12 +127,12 @@ export async function DELETE(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await req.json();
+  // Demote from pool (keep account for sending, just remove pool flag)
   const { error } = await supabaseAdmin
     .from('email_accounts')
-    .delete()
+    .update({ is_pool_account: false, warmup_enabled: false })
     .eq('id', id)
-    .eq('user_id', admin.id)
-    .eq('is_pool_account', true);
+    .eq('user_id', admin.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

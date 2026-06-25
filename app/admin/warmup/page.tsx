@@ -55,8 +55,10 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+type AvailableAccount = { id: string; email: string; type: string; status: string; health_score: number };
+
 function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: PoolAccount) => void }) {
-  const [accountType, setAccountType] = useState<'gmail-oauth' | 'gmail-app' | 'smtp'>('gmail-oauth');
+  const [tab, setTab] = useState<'existing' | 'gmail-oauth' | 'gmail-app' | 'smtp'>('existing');
   const [email, setEmail] = useState('');
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('587');
@@ -66,19 +68,53 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
   const [warmupTarget, setWarmupTarget] = useState('40');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [available, setAvailable] = useState<AvailableAccount[]>([]);
+  const [availLoading, setAvailLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const handleOAuth = () => {
-    window.location.href = '/api/admin/warmup/oauth/google';
+  useEffect(() => {
+    if (tab === 'existing') {
+      setAvailLoading(true);
+      fetch('/api/admin/warmup/pool/available').then(r => r.json()).then(d => {
+        setAvailable(Array.isArray(d) ? d : []);
+      }).finally(() => setAvailLoading(false));
+    }
+  }, [tab]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  };
+
+  const handlePromoteExisting = async () => {
+    if (selectedIds.size === 0) { setError('Select at least one account.'); return; }
+    setSaving(true);
+    setError('');
+    for (const id of selectedIds) {
+      const res = await fetch('/api/admin/warmup/pool', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, promote: true }),
+      });
+      const data = await res.json();
+      if (!data.error) onAdd(data);
+    }
+    setSaving(false);
+    onClose();
   };
 
   const handleAdd = async () => {
-    if (accountType === 'gmail-oauth') { handleOAuth(); return; }
+    if (tab === 'gmail-oauth') { window.location.href = '/api/admin/warmup/oauth/google'; return; }
+    if (tab === 'existing') { handlePromoteExisting(); return; }
     if (!email) { setError('Email address is required.'); return; }
-    if (accountType === 'gmail-app' && !appPass) { setError('App password is required.'); return; }
-    if (accountType === 'smtp' && (!smtpHost || !smtpUser || !smtpPass)) { setError('All SMTP fields are required.'); return; }
+    if (tab === 'gmail-app' && !appPass) { setError('App password is required.'); return; }
+    if (tab === 'smtp' && (!smtpHost || !smtpUser || !smtpPass)) { setError('All SMTP fields are required.'); return; }
     setSaving(true);
     setError('');
-    const payload = accountType === 'gmail-app'
+    const payload = tab === 'gmail-app'
       ? { email, type: 'gmail-app', smtp_host: 'smtp.gmail.com', smtp_port: 587, smtp_user: email, smtp_pass: appPass, warmup_target: Number(warmupTarget) }
       : { email, type: 'smtp', smtp_host: smtpHost, smtp_port: Number(smtpPort), smtp_user: smtpUser, smtp_pass: smtpPass, warmup_target: Number(warmupTarget) };
     const res = await fetch('/api/admin/warmup/pool', {
@@ -98,7 +134,7 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-gray-900">Add Pool Account</h2>
-            <p className="text-xs text-gray-400 mt-0.5">This account joins the shared warmup pool.</p>
+            <p className="text-xs text-gray-400 mt-0.5">Add an account to the shared warmup pool.</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -107,18 +143,19 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
         <div className="px-6 py-5 space-y-4">
           {error && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-          {/* Account type selector */}
+          {/* Tab selector */}
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Account Type</label>
-            <div className="grid grid-cols-3 gap-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Source</label>
+            <div className="grid grid-cols-4 gap-1.5">
               {([
+                ['existing', 'My Accounts'],
                 ['gmail-oauth', 'Gmail OAuth'],
-                ['gmail-app', 'Gmail App Pass'],
-                ['smtp', 'Custom SMTP'],
+                ['gmail-app', 'App Pass'],
+                ['smtp', 'SMTP'],
               ] as const).map(([val, label]) => (
-                <button key={val} type="button" onClick={() => setAccountType(val)}
-                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
-                    accountType === val ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                <button key={val} type="button" onClick={() => { setTab(val); setError(''); }}
+                  className={`py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    tab === val ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
                   }`}>
                   {label}
                 </button>
@@ -126,7 +163,35 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
             </div>
           </div>
 
-          {accountType === 'gmail-oauth' ? (
+          {/* Existing accounts list */}
+          {tab === 'existing' && (
+            <div>
+              {availLoading ? (
+                <p className="text-xs text-gray-400 text-center py-6">Loading accounts…</p>
+              ) : available.length === 0 ? (
+                <div className="text-center py-6 text-sm text-gray-400">
+                  All connected accounts are already in the pool.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-52 overflow-y-auto">
+                  {available.map(a => (
+                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedIds.has(a.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <input type="checkbox" checked={selectedIds.has(a.id)} onChange={() => toggleSelect(a.id)} className="accent-blue-600"/>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{a.email}</p>
+                        <p className="text-[10px] text-gray-400 capitalize">{a.type} · {a.status}</p>
+                      </div>
+                      <span className={`text-xs font-bold ${a.health_score >= 80 ? 'text-emerald-600' : a.health_score >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{a.health_score}%</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-gray-400 mt-2">Selected accounts will be marked as warmup pool accounts and start warming immediately.</p>
+            </div>
+          )}
+
+          {/* Gmail OAuth */}
+          {tab === 'gmail-oauth' && (
             <div className="flex flex-col items-center gap-3 py-4">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
@@ -138,9 +203,9 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-900">Connect Gmail with OAuth</p>
-                <p className="text-xs text-gray-400 mt-1">You'll be redirected to Google to authorize access. The account will be added to the pool automatically.</p>
+                <p className="text-xs text-gray-400 mt-1">Redirected to Google to authorize — account added to pool automatically.</p>
               </div>
-              <button onClick={handleOAuth}
+              <button onClick={() => { window.location.href = '/api/admin/warmup/oauth/google'; }}
                 className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -151,46 +216,60 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
                 Sign in with Google
               </button>
             </div>
-          ) : (
+          )}
+
+          {/* Gmail App Password */}
+          {tab === 'gmail-app' && (
+            <>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Gmail Address</label>
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@gmail.com"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">App Password</label>
+                <input type="password" value={appPass} onChange={e => setAppPass(e.target.value)} placeholder="xxxx xxxx xxxx xxxx"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                <p className="text-[10px] text-gray-400 mt-1">myaccount.google.com → Security → App Passwords</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Warmup Target (emails/day)</label>
+                <input type="number" value={warmupTarget} onChange={e => setWarmupTarget(e.target.value)} min={5} max={100}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+            </>
+          )}
+
+          {/* Custom SMTP */}
+          {tab === 'smtp' && (
             <>
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Email Address</label>
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder={accountType === 'gmail-app' ? 'you@gmail.com' : 'pool@yourdomain.com'}
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="pool@yourdomain.com"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
               </div>
-
-              {accountType === 'gmail-app' ? (
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">App Password</label>
-                  <input type="password" value={appPass} onChange={e => setAppPass(e.target.value)} placeholder="xxxx xxxx xxxx xxxx"
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Host</label>
+                  <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.yourdomain.com"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  <p className="text-[10px] text-gray-400 mt-1">Generate at myaccount.google.com → Security → App Passwords</p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Host</label>
-                    <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.yourdomain.com"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Port</label>
-                    <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Username</label>
-                    <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="user@domain.com"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Password</label>
-                    <input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">SMTP Port</label>
+                  <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                 </div>
-              )}
-
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Username</label>
+                  <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="user@domain.com"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Password</label>
+                  <input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                </div>
+              </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Warmup Target (emails/day)</label>
                 <input type="number" value={warmupTarget} onChange={e => setWarmupTarget(e.target.value)} min={5} max={100}
@@ -201,10 +280,10 @@ function AddPoolModal({ onClose, onAdd }: { onClose: () => void; onAdd: (acct: P
         </div>
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
           <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700">Cancel</button>
-          {accountType !== 'gmail-oauth' && (
-            <button onClick={handleAdd} disabled={saving}
+          {tab !== 'gmail-oauth' && (
+            <button onClick={handleAdd} disabled={saving || (tab === 'existing' && selectedIds.size === 0)}
               className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60">
-              {saving ? 'Adding…' : 'Add to Pool'}
+              {saving ? 'Adding…' : tab === 'existing' ? `Add ${selectedIds.size > 0 ? selectedIds.size : ''} to Pool` : 'Add to Pool'}
             </button>
           )}
         </div>
@@ -232,6 +311,8 @@ function AdminWarmupPageInner() {
   const [showAddPool, setShowAddPool] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [globalPoolMode, setGlobalPoolMode] = useState<PoolMode>('admin_pool');
+  const [settingGlobalMode, setSettingGlobalMode] = useState(false);
   const searchParams = useSearchParams();
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
@@ -250,7 +331,11 @@ function AdminWarmupPageInner() {
       });
     }
     if (refreshed === 'gmail') {
-      setToast('Gmail already in pool — OAuth tokens refreshed!');
+      showToast('Gmail already in pool — OAuth tokens refreshed!');
+      // Re-fetch pool accounts to show the account
+      fetch('/api/admin/warmup/pool').then(r => r.json()).then(pool => {
+        if (Array.isArray(pool)) setPoolAccounts(pool);
+      });
     }
     if (error === 'oauth_failed') setToast('Google OAuth failed — please try again.');
     if (error === 'update_failed') setToast('Failed to refresh Gmail tokens — please try again.');
@@ -302,6 +387,19 @@ function AdminWarmupPageInner() {
     await fetch('/api/admin/warmup/pool', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     setPoolAccounts(prev => prev.filter(a => a.id !== id));
     showToast('Pool account removed');
+  };
+
+  const setAllPoolMode = async (mode: PoolMode) => {
+    setSettingGlobalMode(true);
+    setGlobalPoolMode(mode);
+    await fetch('/api/admin/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ set_all_pool_mode: mode }),
+    });
+    setAccounts(prev => prev.map(a => ({ ...a, warmup_pool_mode: mode })));
+    setSettingGlobalMode(false);
+    showToast(`Pool mode set to "${mode === 'admin_pool' ? 'Admin Pool Only' : mode === 'both' ? 'Both (Admin + User)' : 'User-to-User'}" for all accounts`);
   };
 
   const updatePoolTarget = async (id: string, warmup_target: number) => {
@@ -374,16 +472,38 @@ function AdminWarmupPageInner() {
 
       {/* Platform Pool Accounts */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900">Platform Pool Accounts</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Admin-owned accounts (Gmail OAuth, Gmail App Password, or custom SMTP) dedicated to the warmup pool.</p>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">Platform Pool Accounts</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Accounts in the shared warmup pool. Users' accounts warm with these.</p>
+            </div>
+            <button onClick={() => setShowAddPool(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold rounded-xl px-3 py-2 hover:bg-blue-700 shrink-0">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+              Add Account
+            </button>
           </div>
-          <button onClick={() => setShowAddPool(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold rounded-xl px-3 py-2 hover:bg-blue-700">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            Add Account
-          </button>
+          {/* Global pool mode control */}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <span className="text-[11px] font-bold text-gray-400 uppercase shrink-0">Warmup Mode for All Users:</span>
+            <div className="flex gap-1">
+              {([
+                ['admin_pool', 'Admin Pool Only'],
+                ['both', 'Admin + User'],
+                ['user_to_user', 'User to User'],
+              ] as const).map(([val, label]) => (
+                <button key={val} type="button" disabled={settingGlobalMode}
+                  onClick={() => setAllPoolMode(val)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all disabled:opacity-50 ${
+                    globalPoolMode === val ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[10px] text-gray-400">Applies to all user accounts instantly</span>
+          </div>
         </div>
 
         {poolAccounts.length === 0 ? (
