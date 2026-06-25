@@ -773,7 +773,7 @@ export async function register() {
     }
 
     new SyncWorker('warmup', async () => {
-      // Reset sent_today at the start of each 6h cycle so the counter is per-cycle not cumulative
+      // Reset sent_today at the start of each 6h cycle
       await supabase.from('email_accounts').update({ sent_today: 0 })
         .eq('warmup_enabled', true).neq('status', 'error');
 
@@ -789,65 +789,97 @@ export async function register() {
 
       const { sendEmail, getAccessToken } = await import('./lib/mailer');
 
-      // ── PHASE 1: SEND warmup emails ──────────────────────────────────────
-      for (const account of allWarmupAccounts) {
-        try {
-          const day = (account.warmup_day ?? 0) + 1;
-          const target = account.warmup_target ?? 40;
-          const emailsToday = warmupDailyTarget(day, target);
+      // Track pairs sent this cycle — prevents A→B and B→A in the same run
+      const sentPairs = new Set<string>();
 
-          // Filter eligible peers based on pool mode
-          // Admin pool accounts warm with everyone; user accounts filter by warmup_pool_mode
-          let pool: typeof allWarmupAccounts;
-          if (account.is_pool_account) {
-            pool = allWarmupAccounts.filter(a => a.id !== account.id);
-          } else {
-            const mode = account.warmup_pool_mode || 'admin_pool';
-            if (mode === 'user_to_user') {
-              pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
-            } else if (mode === 'both') {
+      // Batch DB updates — collect all changes, flush at end to reduce DB round-trips
+      const accountUpdates = new Map<string, { warmup_day: number; health_score: number; sent_today: number }>();
+      const warmupEmailRows: { from_account_id: string; to_account_id: string; subject: string; body: string; sent_at: string }[] = [];
+      const errorAccountIds = new Set<string>();
+
+      // ── PHASE 1: SEND warmup emails (parallel batches of 10) ─────────────
+      const BATCH_SIZE = 10;
+      for (let b = 0; b < allWarmupAccounts.length; b += BATCH_SIZE) {
+        const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
+        await Promise.all(batch.map(async account => {
+          try {
+            const day = (account.warmup_day ?? 0) + 1;
+            const target = account.warmup_target ?? 40;
+            const emailsToday = warmupDailyTarget(day, target);
+
+            // Filter eligible peers based on pool mode
+            let pool: typeof allWarmupAccounts;
+            if (account.is_pool_account) {
               pool = allWarmupAccounts.filter(a => a.id !== account.id);
             } else {
-              // admin_pool (default)
-              pool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
-            }
-          }
-          if (pool.length === 0) continue;
-
-          let sent = 0;
-          for (let i = 0; i < emailsToday; i++) {
-            const toAccount = pool[Math.floor(Math.random() * pool.length)];
-            const pair = WARMUP_PAIRS[Math.floor(Math.random() * WARMUP_PAIRS.length)];
-            const { subject, body } = pair;
-
-            try {
-              await sendEmail(
-                { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-                { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
-              );
-              await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
-              sent++;
-            } catch (e: any) {
-              console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
-              if (e.responseCode === 535 || e.code === 'EAUTH') {
-                await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', account.id);
-                break;
+              const mode = account.warmup_pool_mode || 'admin_pool';
+              if (mode === 'user_to_user') {
+                pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
+              } else if (mode === 'both') {
+                pool = allWarmupAccounts.filter(a => a.id !== account.id);
+              } else {
+                pool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
               }
             }
+            if (pool.length === 0) return;
+
+            let sent = 0;
+            // Shuffle pool so send order is random
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < emailsToday; i++) {
+              // Pick a recipient that hasn't already received from this account
+              // AND hasn't sent to this account this cycle (no connect-back)
+              const toAccount = shuffled.find(a => {
+                const fwd = `${account.id}→${a.id}`;
+                const rev = `${a.id}→${account.id}`;
+                return !sentPairs.has(fwd) && !sentPairs.has(rev);
+              }) || shuffled[i % shuffled.length]; // fallback if all pairs used
+
+              const pair = WARMUP_PAIRS[Math.floor(Math.random() * WARMUP_PAIRS.length)];
+              const { subject, body } = pair;
+              const pairKey = `${account.id}→${toAccount.id}`;
+
+              try {
+                await sendEmail(
+                  { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
+                  { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
+                );
+                sentPairs.add(pairKey);
+                warmupEmailRows.push({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
+                sent++;
+              } catch (e: any) {
+                console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
+                if (e.responseCode === 535 || e.code === 'EAUTH') {
+                  errorAccountIds.add(account.id);
+                  break;
+                }
+              }
+            }
+
+            const newHealth = Math.min(100, Math.round((account.health_score ?? 50) + (sent / Math.max(emailsToday, 1)) * 2));
+            accountUpdates.set(account.id, { warmup_day: day, health_score: newHealth, sent_today: sent });
+            console.log(`[warmup-send] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
+          } catch (e: any) {
+            console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
-
-          const newHealth = Math.min(100, Math.round((account.health_score ?? 50) + (sent / Math.max(emailsToday, 1)) * 2));
-          await supabase.from('email_accounts').update({
-            warmup_day: day,
-            health_score: newHealth,
-            sent_today: (account.sent_today ?? 0) + sent,
-          }).eq('id', account.id);
-
-          console.log(`[warmup-send] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
-        } catch (e: any) {
-          console.error(`[warmup-send] ${account.email}: ${e.message}`);
-        }
+        }));
       }
+
+      // Flush batched warmup_emails inserts (chunks of 100)
+      for (let i = 0; i < warmupEmailRows.length; i += 100) {
+        await supabase.from('warmup_emails').insert(warmupEmailRows.slice(i, i + 100));
+      }
+
+      // Flush account updates individually (Supabase upsert can't bulk-update different values)
+      await Promise.all([
+        ...Array.from(accountUpdates.entries()).map(([id, upd]) =>
+          supabase.from('email_accounts').update(upd).eq('id', id)
+        ),
+        ...Array.from(errorAccountIds).map(id =>
+          supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', id)
+        ),
+      ]);
 
       // ── PHASE 2: RECEIVE — rescue from spam, mark-read, auto-reply ───────
       for (const account of allWarmupAccounts) {
