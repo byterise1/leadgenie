@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/Logo';
 
@@ -72,17 +72,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Prevents the 5s interval from re-populating notifs while a mark-all-read PATCH is in-flight
   const clearingRef = useRef(false);
 
+  const fetchSupportBadge = useCallback(() => {
+    fetch('/api/admin/support?count=1')
+      .then(r => r.json())
+      .then(d => { if (typeof d.unread === 'number') setSupportBadge(d.unread); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
-    const fetchUnread = () => {
-      fetch('/api/admin/support?count=1')
-        .then(r => r.json())
-        .then(d => { if (typeof d.unread === 'number') setSupportBadge(d.unread); })
-        .catch(() => {});
-    };
-    fetchUnread();
-    const id = setInterval(fetchUnread, 30000);
+    fetchSupportBadge();
+    const id = setInterval(fetchSupportBadge, 30000);
     return () => clearInterval(id);
-  }, [pathname]);
+  }, [pathname, fetchSupportBadge]);
+
+  // When admin opens a support ticket detail, clear that ticket's bell notification
+  // and refresh the badge 1.5s later (after the GET handler marks it seen in DB)
+  useEffect(() => {
+    const match = pathname.match(/^\/admin\/support\/([^/]+)$/);
+    if (!match) return;
+    const ticketId = match[1];
+    setNotifs(prev => {
+      const toRead = prev.filter(n => n.link?.includes(ticketId));
+      if (toRead.length > 0) {
+        fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: toRead.map(n => n.id) }),
+        }).catch(() => {});
+      }
+      return prev.filter(n => !n.link?.includes(ticketId));
+    });
+    const t = setTimeout(fetchSupportBadge, 1500);
+    return () => clearTimeout(t);
+  }, [pathname, fetchSupportBadge]);
 
   const fetchNotifs = () => {
     if (clearingRef.current) return; // don't re-populate while mark-all-read PATCH is in-flight
