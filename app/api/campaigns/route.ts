@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
   if (campErr) return NextResponse.json({ error: campErr.message }, { status: 500 });
 
-  // Insert email steps — always insert without template_id first (safe, no migration dependency)
+  // Insert email steps including thread_mode (requires migration 20260625_ensure_all_columns.sql)
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const baseStepRows = steps.map((s: any, i: number) => ({
     campaign_id: campaign.id,
@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
     body: s.body,
     delay_days: s.delay || 0,
     include_unsub: s.includeUnsub || false,
+    thread_mode: (s.threadMode === 'reply' || s.threadMode === 'new_thread') ? s.threadMode : 'new_thread',
   }));
 
   const { data: insertedSteps, error: stepsErr } = await supabaseAdmin
@@ -125,17 +126,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save email steps: ' + stepsErr.message }, { status: 500 });
   }
 
-  // Best-effort: write template_id and thread_mode (depends on DB migration)
+  // Best-effort: write template_id if provided (separate update to avoid blocking step insert)
   if (insertedSteps?.length) {
     for (const row of insertedSteps) {
       const src = steps[row.step_number as number];
-      const updates: Record<string, unknown> = {};
       const tid = src?.templateId;
-      if (tid && UUID_RE.test(tid)) updates.template_id = tid;
-      const threadMode = src?.threadMode;
-      if (threadMode === 'reply' || threadMode === 'new_thread') updates.thread_mode = threadMode;
-      if (Object.keys(updates).length > 0) {
-        await supabaseAdmin.from('email_steps').update(updates).eq('id', row.id);
+      if (tid && UUID_RE.test(tid)) {
+        await supabaseAdmin.from('email_steps').update({ template_id: tid }).eq('id', row.id);
       }
     }
   }
