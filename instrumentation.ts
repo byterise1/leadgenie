@@ -635,6 +635,13 @@ export async function register() {
     const warmupQueue = new Queue('warmup', { connection });
     await warmupQueue.upsertJobScheduler('warmup-daily', { every: 6 * 60 * 60_000 }, { name: 'warmup', data: {} });
 
+    // Fire immediately on first startup if no warmup emails exist yet
+    const { count: warmupCount } = await supabase.from('warmup_emails').select('id', { count: 'exact', head: true });
+    if ((warmupCount ?? 0) === 0) {
+      await warmupQueue.add('warmup-bootstrap', {}, { delay: 5000 }); // 5s delay to let worker register first
+      console.log('[warmup] No prior warmup emails found — triggering bootstrap run in 5s');
+    }
+
     // Paired templates: each entry = { subject, body, reply }
     // Reply is contextually matched to the initial email topic
     const WARMUP_PAIRS: { subject: string; body: string; reply: string }[] = [
