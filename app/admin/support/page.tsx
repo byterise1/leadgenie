@@ -63,12 +63,6 @@ export default function AdminSupportPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Mark all currently-open tickets as seen when admin visits the list
-  // This clears the badge for tickets that haven't had new user activity
-  useEffect(() => {
-    fetch('/api/admin/support/mark-all-seen', { method: 'POST' }).catch(() => {});
-  }, []);
-
   useEffect(() => { load(); }, [load]);
 
   const isUnread = (t: Ticket) => {
