@@ -216,6 +216,20 @@ export async function register() {
       }
 
       const lead = cl.lead;
+
+      // Idempotency: if this step was already sent (BullMQ retry after a partial failure),
+      // skip to avoid sending duplicate emails
+      const { count: alreadySentCount } = await supabase
+        .from('sent_emails')
+        .select('id', { count: 'exact', head: true })
+        .eq('campaign_id', campaign.id)
+        .eq('lead_id', lead.id)
+        .eq('step_number', stepNumber);
+      if ((alreadySentCount ?? 0) > 0) {
+        console.log(`[idempotency] step ${stepNumber} already sent to ${lead.email} — skipping retry duplicate`);
+        return;
+      }
+
       const isReplyThread = stepNumber > 0 && step.thread_mode === 'reply';
 
       // For reply-in-thread follow-ups: look up step 0's message_id + subject
@@ -223,30 +237,31 @@ export async function register() {
       let gmailThreadId: string | undefined;
       let originalSubject: string | undefined;
       if (isReplyThread) {
+        // Fetch earliest step 0 row — use limit(1) + order to handle rare duplicate sends
         const { data: firstSent } = await supabase
           .from('sent_emails')
           .select('message_id, subject')
           .eq('campaign_id', campaign.id)
           .eq('lead_id', lead.id)
           .eq('step_number', 0)
-          .not('message_id', 'is', null)
+          .order('sent_at', { ascending: true })
+          .limit(1)
           .maybeSingle();
         if (firstSent?.message_id) {
           if (account.type === 'gmail-oauth') {
-            // Gmail OAuth: stored message_id is the Gmail threadId — use to force thread join
             gmailThreadId = firstSent.message_id;
           } else {
-            // SMTP/App Pass: stored message_id is the RFC 2822 Message-ID we generated
             inReplyTo = firstSent.message_id;
           }
-          originalSubject = firstSent.subject || undefined;
         }
+        // Always capture original subject for reply steps — used even when threading fails
+        originalSubject = firstSent?.subject || undefined;
       }
 
-      // Follow-up subject: use original step 0 subject so Gmail can thread by subject too
-      // (empty subject breaks threading with non-Gmail clients)
-      const isThreaded = inReplyTo || gmailThreadId;
-      const subject = isReplyThread && isThreaded
+      // Follow-up subject: ALWAYS use original step 0 subject for reply-in-thread steps.
+      // Using the step's own subject (usually empty) breaks threading in non-Gmail clients
+      // and shows "(no subject)" to recipients.
+      const subject = isReplyThread
         ? (originalSubject ?? replaceVars(step.subject || '', lead))
         : replaceVars(step.subject || '', lead);
       const rawBody = replaceVars(step.body, lead);

@@ -600,7 +600,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Lead', 'Email', 'Company', 'Step', 'Status', 'Last Sent'].map(col => (
+                  {['Lead', 'Email', 'Company', 'Step', 'Status', 'Last Sent', ''].map(col => (
                     <th key={col} className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{col}</th>
                   ))}
                 </tr>
@@ -625,6 +625,24 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {cl.last_sent_at ? new Date(cl.last_sent_at).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {cl.status === 'active' && cl.current_step > 0 && (
+                        <button
+                          onClick={async () => {
+                            const res = await fetch(`/api/campaigns/${campaign.id}/retry-lead`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ campaign_lead_id: cl.id }),
+                            });
+                            const d = await res.json();
+                            showMsg(res.ok ? d.message : (d.error || 'Retry failed'));
+                          }}
+                          title={`Re-queue step ${cl.current_step + 1} for this lead`}
+                          className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap">
+                          Retry
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
