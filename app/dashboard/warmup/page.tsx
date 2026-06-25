@@ -69,6 +69,7 @@ export default function WarmupPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -78,7 +79,13 @@ export default function WarmupPage() {
   useEffect(() => {
     fetch('/api/warmup')
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setAccounts(data); })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAccounts(data);
+        } else if (data?.error) {
+          setApiError(data.error);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -130,6 +137,17 @@ export default function WarmupPage() {
           <p className="text-sm text-gray-400 mt-0.5">Automatically build sender reputation to avoid the spam folder.</p>
         </div>
       </div>
+
+      {apiError && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+          <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div>
+            <p className="text-sm font-bold text-red-800">Could not load warmup accounts</p>
+            <p className="text-xs text-red-600 mt-0.5 font-mono">{apiError}</p>
+            <p className="text-xs text-red-500 mt-1">Run the missing column SQL in Supabase → SQL Editor to fix this.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[

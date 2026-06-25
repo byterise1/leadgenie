@@ -7,11 +7,16 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: accounts } = await supabaseAdmin
+  const { data: accounts, error: accountsErr } = await supabaseAdmin
     .from('email_accounts')
     .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
+
+  if (accountsErr) {
+    console.error('[warmup GET] accounts query failed:', accountsErr.message);
+    return NextResponse.json({ error: accountsErr.message }, { status: 500 });
+  }
 
   const warmupStats = await Promise.all(
     (accounts ?? []).filter(a => a.warmup_enabled).map(async a => {

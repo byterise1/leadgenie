@@ -81,6 +81,7 @@ export async function register() {
     const { Worker } = await import('bullmq');
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
     const { sendEmail, replaceVars } = await import('./lib/mailer');
+    const crypto = await import('crypto');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -217,22 +218,37 @@ export async function register() {
       const lead = cl.lead;
       const isReplyThread = stepNumber > 0 && step.thread_mode === 'reply';
 
-      // For reply-in-thread follow-ups: look up step 0's message_id for this lead
+      // For reply-in-thread follow-ups: look up step 0's message_id + subject
       let inReplyTo: string | undefined;
+      let gmailThreadId: string | undefined;
+      let originalSubject: string | undefined;
       if (isReplyThread) {
         const { data: firstSent } = await supabase
           .from('sent_emails')
-          .select('message_id')
+          .select('message_id, subject')
           .eq('campaign_id', campaign.id)
           .eq('lead_id', lead.id)
           .eq('step_number', 0)
           .not('message_id', 'is', null)
           .maybeSingle();
-        if (firstSent?.message_id) inReplyTo = firstSent.message_id;
+        if (firstSent?.message_id) {
+          if (account.type === 'gmail-oauth') {
+            // Gmail OAuth: stored message_id is the Gmail threadId — use to force thread join
+            gmailThreadId = firstSent.message_id;
+          } else {
+            // SMTP/App Pass: stored message_id is the RFC 2822 Message-ID we generated
+            inReplyTo = firstSent.message_id;
+          }
+          originalSubject = firstSent.subject || undefined;
+        }
       }
 
-      // Reply mode sends with no subject (thread subject comes from original email)
-      const subject = isReplyThread && inReplyTo ? '' : replaceVars(step.subject || '', lead);
+      // Follow-up subject: use original step 0 subject so Gmail can thread by subject too
+      // (empty subject breaks threading with non-Gmail clients)
+      const isThreaded = inReplyTo || gmailThreadId;
+      const subject = isReplyThread && isThreaded
+        ? (originalSubject ?? replaceVars(step.subject || '', lead))
+        : replaceVars(step.subject || '', lead);
       const rawBody = replaceVars(step.body, lead);
 
       // Insert sent_email record FIRST to get ID for tracking pixel + unsubscribe link
@@ -303,18 +319,33 @@ export async function register() {
       try {
         const fromName = campaign.from_name?.trim();
         const fromHeader = fromName ? `"${fromName}" <${account.email}>` : account.email;
+        // Generate a stable Message-ID for step 0 so we control what's stored
+        // and can reliably reference it in follow-up In-Reply-To headers
+        const explicitMessageId = stepNumber === 0
+          ? `<${crypto.randomUUID().replace(/-/g, '')}@leadgenie.app>`
+          : undefined;
+
         const { threadId } = await sendEmail(account, {
           from: fromHeader,
           to: lead.email,
           subject,
           text: body,
           html: fullHtml,
+          ...(explicitMessageId ? { messageId: explicitMessageId } : {}),
           ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
+          ...(gmailThreadId ? { gmailThreadId, inReplyTo: gmailThreadId, references: gmailThreadId } : {}),
         });
 
-        // Store Gmail threadId for reply detection
-        if (sentEmail?.id && threadId) {
-          await supabase.from('sent_emails').update({ message_id: threadId }).eq('id', sentEmail.id);
+        // What to store in message_id:
+        // - Step 0 SMTP: our explicit Message-ID (used as In-Reply-To by follow-ups)
+        // - Step 0 Gmail OAuth: threadId from API (used as gmailThreadId by follow-ups)
+        // - Follow-up steps: don't overwrite step 0's stored value
+        const storeMessageId = stepNumber === 0
+          ? (account.type === 'gmail-oauth' ? threadId : explicitMessageId)
+          : null;
+
+        if (sentEmail?.id && storeMessageId) {
+          await supabase.from('sent_emails').update({ message_id: storeMessageId }).eq('id', sentEmail.id);
         }
       } catch (err: any) {
         if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);

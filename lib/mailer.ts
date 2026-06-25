@@ -55,8 +55,10 @@ type SendOptions = {
   subject: string;
   text: string;
   html: string;
+  messageId?: string;      // explicit Message-ID header (set on step 0, stored, reused in In-Reply-To)
   inReplyTo?: string;
   references?: string;
+  gmailThreadId?: string;  // Gmail thread ID — forces follow-up into existing thread via API
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -137,7 +139,7 @@ function httpsPost(
   });
 }
 
-async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string }> {
+async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string; sentMessageId?: string }> {
   const accessToken = await getAccessToken(account);
 
   const boundary = `----=_Part_${Date.now()}`;
@@ -152,6 +154,7 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     `MIME-Version: 1.0`,
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
   ];
+  if (opts.messageId) headers.push(`Message-ID: ${opts.messageId}`);
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
   headers.push('');
@@ -171,15 +174,27 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
     `--${boundary}--`,
   ].join('\r\n');
 
-  const result = await httpsPost(
-    'gmail.googleapis.com',
-    '/upload/gmail/v1/users/me/messages/send?uploadType=media',
-    rawMessage,
-    {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'message/rfc822',
-    },
-  );
+  const rawBase64 = Buffer.from(rawMessage).toString('base64url');
+  let result: Awaited<ReturnType<typeof httpsPost>>;
+
+  if (opts.gmailThreadId) {
+    // Follow-up: use JSON endpoint with threadId to explicitly join the existing Gmail thread
+    const jsonBody = JSON.stringify({ raw: rawBase64, threadId: opts.gmailThreadId });
+    result = await httpsPost(
+      'gmail.googleapis.com',
+      '/gmail/v1/users/me/messages/send',
+      jsonBody,
+      { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    );
+  } else {
+    // Initial email: use upload endpoint (raw RFC 2822)
+    result = await httpsPost(
+      'gmail.googleapis.com',
+      '/upload/gmail/v1/users/me/messages/send?uploadType=media',
+      rawMessage,
+      { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'message/rfc822' },
+    );
+  }
 
   if (result.status < 200 || result.status >= 300) {
     let body: any = {};
@@ -195,7 +210,7 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
   try {
     const body = JSON.parse(result.body) as { id: string; threadId: string };
-    return { threadId: body.threadId };
+    return { threadId: body.threadId, sentMessageId: opts.messageId };
   } catch {
     return {};
   }
@@ -325,12 +340,19 @@ function evictTransport(account: EmailAccount) {
 
 // ─── Unified send ─────────────────────────────────────────────────────────────
 
-export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string }> {
+export async function sendEmail(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string; sentMessageId?: string }> {
   if (account.type === 'gmail-oauth') {
     return sendViaGmailApi(account, opts);
   }
 
+  // Build nodemailer options — set explicit Message-ID and thread headers
   const mailOpts: any = { ...opts };
+  if (opts.messageId || opts.inReplyTo || opts.references) {
+    mailOpts.headers = {
+      ...(mailOpts.headers || {}),
+      ...(opts.messageId ? { 'Message-ID': opts.messageId } : {}),
+    };
+  }
   if (opts.inReplyTo) mailOpts.inReplyTo = opts.inReplyTo;
   if (opts.references) mailOpts.references = opts.references;
 
@@ -339,7 +361,8 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
     const transport = await createSmtpTransport(account);
     try {
       const info = await transport.sendMail(mailOpts);
-      return { threadId: (info as any).messageId || undefined };
+      const sentMsgId = opts.messageId || (info as any).messageId;
+      return { threadId: sentMsgId, sentMessageId: sentMsgId };
     } finally {
       try { (transport as any).close(); } catch { /* ignore */ }
     }
@@ -349,13 +372,15 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
   const transport = await getTransport(account);
   try {
     const info = await transport.sendMail(mailOpts);
-    return { threadId: (info as any).messageId || undefined };
+    const sentMsgId = opts.messageId || (info as any).messageId;
+    return { threadId: sentMsgId, sentMessageId: sentMsgId };
   } catch (err: any) {
     evictTransport(account);
     if (err?.message?.toLowerCase().includes('pool') || err?.message?.toLowerCase().includes('closed')) {
       const fresh = await getTransport(account);
       const info = await fresh.sendMail(mailOpts);
-      return { threadId: (info as any).messageId || undefined };
+      const sentMsgId = opts.messageId || (info as any).messageId;
+      return { threadId: sentMsgId, sentMessageId: sentMsgId };
     }
     throw err;
   }
