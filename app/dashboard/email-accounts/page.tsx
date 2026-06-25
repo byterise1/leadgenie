@@ -203,6 +203,232 @@ function GmailAppForm({ onBack, onConnect, connecting }: { onBack: () => void; o
   );
 }
 
+type CredDetails = {
+  id: string; email: string; type: Account['type'];
+  smtp_host: string | null; smtp_port: number | null;
+  smtp_user: string | null; smtp_pass: string | null;
+  imap_host: string | null; imap_port: number | null;
+};
+
+function EditCredentialsModal({ accountId, onClose, onSaved }: {
+  accountId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [creds, setCreds] = useState<CredDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [showImap, setShowImap] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/email-accounts/${accountId}`)
+      .then(r => r.json())
+      .then(d => {
+        setCreds(d);
+        setShowImap(!!(d.imap_host));
+      })
+      .finally(() => setLoading(false));
+  }, [accountId]);
+
+  const set = (k: keyof CredDetails, v: string) =>
+    setCreds(c => c ? { ...c, [k]: v } : c);
+
+  const save = async () => {
+    if (!creds) return;
+    setSaving(true);
+    setError('');
+    const updates: Record<string, unknown> = {};
+    if (creds.type === 'gmail-app') {
+      updates.smtp_pass = creds.smtp_pass;
+    } else if (creds.type === 'imap') {
+      updates.smtp_host = creds.smtp_host;
+      updates.smtp_port = Number(creds.smtp_port) || 465;
+      updates.smtp_pass = creds.smtp_pass;
+      updates.imap_host = creds.imap_host;
+      updates.imap_port = Number(creds.imap_port) || 993;
+    } else if (creds.type === 'smtp') {
+      updates.smtp_host = creds.smtp_host;
+      updates.smtp_port = Number(creds.smtp_port) || 587;
+      updates.smtp_user = creds.smtp_user;
+      updates.smtp_pass = creds.smtp_pass;
+      if (showImap && creds.imap_host) {
+        updates.imap_host = creds.imap_host;
+        updates.imap_port = Number(creds.imap_port) || 993;
+      }
+    }
+    const patchRes = await fetch(`/api/email-accounts/${accountId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!patchRes.ok) {
+      const d = await patchRes.json().catch(() => ({}));
+      setError(d.error || 'Save failed');
+      setSaving(false);
+      return;
+    }
+    // Verify with a test
+    const testRes = await fetch(`/api/email-accounts/${accountId}/test`, { method: 'POST' });
+    setSaving(false);
+    if (!testRes.ok) {
+      const d = await testRes.json().catch(() => ({}));
+      setError(d.error || 'Credentials saved but connection test failed');
+      return;
+    }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Edit Credentials</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="p-6 space-y-3">
+          {loading && <p className="text-sm text-gray-400 text-center py-4">Loading…</p>}
+          {!loading && creds && (
+            <>
+              <div className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+                {creds.email} — <span className="capitalize">{creds.type}</span>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-medium">{error}</div>
+              )}
+
+              {creds.type === 'gmail-oauth' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">OAuth credentials are managed by Google. If this account shows an error, use the Re-auth button on the accounts list.</p>
+                  <a href="/api/email-accounts/oauth/google"
+                    className="block w-full text-center py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors">
+                    Re-authorise with Google
+                  </a>
+                </div>
+              )}
+
+              {creds.type === 'gmail-app' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">New App Password (16 chars)</label>
+                  <input type="text" placeholder="xxxx xxxx xxxx xxxx"
+                    value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value.replace(/\s/g, ''))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  <p className="text-[11px] text-gray-400 mt-1">IMAP/SMTP servers are set automatically for Gmail.</p>
+                </div>
+              )}
+
+              {creds.type === 'imap' && (
+                <>
+                  {[
+                    { label: 'IMAP Host', key: 'imap_host' as const, ph: 'imap.titan.email' },
+                    { label: 'SMTP Host', key: 'smtp_host' as const, ph: 'smtp.titan.email' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+                      <input placeholder={f.ph} value={String(creds[f.key] || '')} onChange={e => set(f.key, e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+                      <select value={String(creds.imap_port || 993)} onChange={e => set('imap_port', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        {['993', '143'].map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+                      <select value={String(creds.smtp_port || 465)} onChange={e => set('smtp_port', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        {['465', '587', '25'].map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+                    <input type="password" placeholder="••••••••" value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  </div>
+                </>
+              )}
+
+              {creds.type === 'smtp' && (
+                <>
+                  {[
+                    { label: 'SMTP Host', key: 'smtp_host' as const, ph: 'smtp.titan.email' },
+                    { label: 'SMTP Username', key: 'smtp_user' as const, ph: 'Same as email usually' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+                      <input placeholder={f.ph} value={String(creds[f.key] || '')} onChange={e => set(f.key, e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+                      <select value={String(creds.smtp_port || 587)} onChange={e => set('smtp_port', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        {['587', '465', '25', '2525'].map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Password</label>
+                      <input type="password" placeholder="••••••••" value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setShowImap(v => !v)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-blue-600 hover:text-blue-700 py-1 transition-colors">
+                    <span>{showImap ? '− Remove' : '+ Add'} IMAP credentials (reply detection / warmup receive)</span>
+                    <svg className={`w-3.5 h-3.5 transition-transform ${showImap ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
+                  {showImap && (
+                    <div className="space-y-2 border border-blue-100 bg-blue-50 rounded-xl p-3">
+                      <p className="text-[11px] text-blue-600">Titan: imap.titan.email:993 · Zoho: imap.zoho.com:993</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Host</label>
+                          <input placeholder="imap.titan.email" value={creds.imap_host || ''} onChange={e => set('imap_host', e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+                          <select value={String(creds.imap_port || 993)} onChange={e => set('imap_port', e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            {['993', '143'].map(p => <option key={p}>{p}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {creds.type !== 'gmail-oauth' && (
+                <div className="flex gap-2 pt-2">
+                  <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button disabled={saving} onClick={save}
+                    className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                    {saving ? <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Saving & Testing…</> : 'Save & Test'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CONNECT_OPTIONS = [
   {
     id: 'gmail-oauth' as const,
@@ -268,6 +494,7 @@ export default function EmailAccountsPage() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editCredId, setEditCredId] = useState<string | null>(null);
 
   const fetchAccounts = useCallback(() => {
     fetch('/api/email-accounts')
@@ -517,6 +744,11 @@ export default function EmailAccountsPage() {
                   className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50">
                   {testingId === acc.id ? '…' : 'Test'}
                 </button>
+                <button onClick={() => setEditCredId(acc.id)}
+                  title="Edit credentials (SMTP/IMAP host, password)"
+                  className="text-gray-300 hover:text-blue-500 transition-colors p-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
                 <button onClick={() => setConfirmDeleteId(acc.id)}
                   className="text-gray-300 hover:text-red-400 transition-colors p-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -568,6 +800,14 @@ export default function EmailAccountsPage() {
           />
         );
       })()}
+
+      {editCredId && (
+        <EditCredentialsModal
+          accountId={editCredId}
+          onClose={() => setEditCredId(null)}
+          onSaved={() => { fetchAccounts(); setToast('Credentials updated & verified!'); }}
+        />
+      )}
 
       {step && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setStep(null)}>
