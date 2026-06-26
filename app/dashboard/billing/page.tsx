@@ -202,7 +202,7 @@ export default function BillingPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center shrink-0">
@@ -313,7 +313,7 @@ export default function BillingPage() {
 
       <div className="grid sm:grid-cols-2 gap-6">
         {/* Payment Method */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
           <h2 className="text-sm font-bold text-gray-900">Payment Method</h2>
 
           <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl">
@@ -356,7 +356,7 @@ export default function BillingPage() {
         </div>
 
         {/* Invoice History */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900">Invoice History</h2>
           </div>

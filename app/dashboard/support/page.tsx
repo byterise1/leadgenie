@@ -164,7 +164,7 @@ export default function SupportPage() {
       )}
 
       {/* Ticket list */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
           <div className="divide-y divide-gray-50">
             {Array.from({ length: 3 }).map((_, i) => (

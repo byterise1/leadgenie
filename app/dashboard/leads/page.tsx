@@ -695,7 +695,7 @@ export default function LeadsPage() {
             )}
           </div>
 
-          <div className="flex-1 bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
             <div className="overflow-auto flex-1">
               <table className="w-full">
                 <thead className="sticky top-0 z-10">

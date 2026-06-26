@@ -605,8 +605,8 @@ export default function EmailAccountsPage() {
           { label: 'Warming Up', value: String(warming) },
           { label: 'Avg Health Score', value: totalAccounts ? `${avgHealth}%` : '—' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
         ))}
@@ -631,7 +631,7 @@ export default function EmailAccountsPage() {
       })()}
 
       {accounts.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
           <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[750px]">
             <span className="pl-11">Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
