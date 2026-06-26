@@ -1,12 +1,12 @@
-﻿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 import { helpSections, toSlug } from '@/lib/help-articles';
 
 export const metadata = {
-  title: 'Help Center — Leads Add',
-  description: 'Browse guides and tutorials for every part of Leads Add.',
+  title: 'Help Center � Leads Genie',
+  description: 'Browse guides and tutorials for every part of Leads Genie.',
 };
 
 export default function HelpPage() {
@@ -19,8 +19,8 @@ export default function HelpPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Help Center</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">How can we help?</h1>
             <p className="mt-4 text-gray-500 text-base max-w-lg mx-auto leading-relaxed">
-              Browse guides and tutorials for every part of Leads Add. Can&apos;t find what you need?{' '}
-              <Link href="/contact" className="text-blue-600 hover:underline">Contact support →</Link>
+              Browse guides and tutorials for every part of Leads Genie. Can&apos;t find what you need?{' '}
+              <Link href="/contact" className="text-blue-600 hover:underline">Contact support ?</Link>
             </p>
           </div>
         </section>

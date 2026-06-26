@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    SVG ICON COMPONENTS
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 function IcMail({ c = 'w-4 h-4' }: { c?: string }) {
   return (
     <svg className={c} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -123,9 +123,9 @@ function IcAtSign({ c = 'w-4 h-4' }: { c?: string }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    REAL PERSON AVATARS
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 const AVATAR_PHOTOS = [
   'https://i.pravatar.cc/150?img=47',
   'https://i.pravatar.cc/150?img=68',
@@ -149,19 +149,19 @@ function PersonAvatar({ idx, size = 40 }: { idx: number; size?: number }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    BRAND LOGO DATA
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 type Brand = { name: string; icon?: React.ReactNode; label?: string };
 
 const BRANDS: Brand[] = [
-  // Slack — 4-part interlocked symbol
+  // Slack � 4-part interlocked symbol
   { name: 'Slack', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
       <path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 01-2.523 2.521 2.527 2.527 0 01-2.52-2.521V2.522A2.527 2.527 0 0115.165 0a2.528 2.528 0 012.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 012.523 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 01-2.52-2.523 2.526 2.526 0 012.52-2.52h6.313A2.527 2.527 0 0124 15.165a2.528 2.528 0 01-2.522 2.523h-6.313z"/>
     </svg>
   )},
-  // Instagram — rounded square + circle + dot
+  // Instagram � rounded square + circle + dot
   { name: 'Instagram', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-9 h-9">
       <rect x="2" y="2" width="20" height="20" rx="6" ry="6"/>
@@ -169,13 +169,13 @@ const BRANDS: Brand[] = [
       <circle cx="17.6" cy="6.4" r="1" fill="currentColor" stroke="none"/>
     </svg>
   )},
-  // Facebook — f in filled circle (authentic FB logo shape)
+  // Facebook � f in filled circle (authentic FB logo shape)
   { name: 'Facebook', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
       <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/>
     </svg>
   )},
-  // Microsoft — 4-square Windows logo
+  // Microsoft � 4-square Windows logo
   { name: 'Microsoft', icon: (
     <svg viewBox="0 0 21 21" fill="currentColor" className="w-9 h-9">
       <rect x="1" y="1" width="9" height="9"/>
@@ -184,7 +184,7 @@ const BRANDS: Brand[] = [
       <rect x="11" y="11" width="9" height="9"/>
     </svg>
   )},
-  // AWS — "aws" text + signature curved arrow
+  // AWS � "aws" text + signature curved arrow
   { name: 'AWS', icon: (
     <svg viewBox="0 0 60 32" className="w-16 h-8" fill="currentColor">
       <text x="1" y="22" fontSize="23" fontWeight="800" fontFamily="Arial,sans-serif" letterSpacing="-0.5">aws</text>
@@ -192,7 +192,7 @@ const BRANDS: Brand[] = [
       <path d="M52 24.5 L56 27 L52 29.5" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
-  // Cloudflare — puffy cumulus cloud + CLOUDFLARE text
+  // Cloudflare � puffy cumulus cloud + CLOUDFLARE text
   { name: 'Cloudflare', icon: (
     <svg viewBox="0 0 80 40" fill="currentColor" className="w-20 h-10">
       {/* cloud body */}
@@ -203,55 +203,55 @@ const BRANDS: Brand[] = [
       <text x="0" y="38" fontSize="7.5" fontWeight="600" fontFamily="Arial,sans-serif" letterSpacing="0.5">CLOUDFLARE</text>
     </svg>
   ) },
-  // Google — wordmark text
+  // Google � wordmark text
   { name: 'Google', label: 'Google' },
-  // LinkedIn — in box
+  // LinkedIn � in box
   { name: 'LinkedIn', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
       <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
       <circle cx="4" cy="4" r="2"/>
     </svg>
   )},
-  // HubSpot — sprocket icon + label
+  // HubSpot � sprocket icon + label
   { name: 'HubSpot', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
       <path d="M22.162 5.656a8.383 8.383 0 00-3.402-3.12 8.556 8.556 0 00-4.33-.9c-2.174.156-4.22 1.04-5.78 2.526C7.09 5.647 6.175 7.56 6.033 9.62c-.13 1.905.414 3.79 1.535 5.33L5.5 19H9l.73-1.45a8.446 8.446 0 004.27 1.145c2.298 0 4.5-.878 6.13-2.44a8.307 8.307 0 002.32-5.932c.07-1.682-.4-3.34-1.288-4.667zM12 16a4 4 0 110-8 4 4 0 010 8z"/>
     </svg>
   ), label: 'HubSpot' },
-  // Notion — N block icon
+  // Notion � N block icon
   { name: 'Notion', icon: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9">
       <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/>
     </svg>
   )},
-  // Stripe — S wordmark
+  // Stripe � S wordmark
   { name: 'Stripe', label: 'stripe' },
-  // Zapier — Z text
+  // Zapier � Z text
   { name: 'Zapier', label: 'Zapier' },
 ];
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    TESTIMONIALS DATA
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 const testimonials = [
-  { quote: "Leads Add completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains — zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
-  { quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — 5-step sequence running in under 20 minutes. Managing replies in the Unibox is effortless.", name: 'Briken Bufi', role: 'CEO, Aella Creative Force', company: 'Aella', avatarIdx: 1 },
-  { quote: "I've tried Instantly, Lemlist, and Mailshake. Leads Add beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
+  { quote: "Leads Genie completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains � zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
+  { quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive � 5-step sequence running in under 20 minutes. Managing replies in the Unibox is effortless.", name: 'Briken Bufi', role: 'CEO, Aella Creative Force', company: 'Aella', avatarIdx: 1 },
+  { quote: "I've tried Instantly, Lemlist, and Mailshake. Leads Genie beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
   { quote: "The AI warmup is a total game changer. We went from landing in spam 40% of the time to virtually zero. Deliverability scores are the best they've ever been across 30 sending accounts.", name: 'David Park', role: 'Head of Growth, Ripple Labs', company: 'Ripple', avatarIdx: 5 },
-  { quote: "I manage 8 client accounts from one dashboard. Leads Add saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
-  { quote: "Switched from Apollo + Lemlist combo. Leads Add does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
+  { quote: "I manage 8 client accounts from one dashboard. Leads Genie saves me 20+ hours a week. The Unibox alone is worth the subscription � seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
+  { quote: "Switched from Apollo + Lemlist combo. Leads Genie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
   { quote: "Finally a platform that handles everything in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+. Unbelievable ROI.", name: 'Tom Brady', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2 },
-  { quote: "Leads Add's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
-  { quote: "We run a 12-person SDR team. Leads Add scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
+  { quote: "Leads Genie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
+  { quote: "We run a 12-person SDR team. Leads Genie scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
 ];
 
 type AIResult =
   | { type: 'email'; to: string; subject: string; body: string }
   | { type: 'answer'; answer: string };
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    HELPERS
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 function SectionBadge({ icon, label, dark = false }: { icon: React.ReactNode; label: string; dark?: boolean }) {
   return (
     <div className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold mb-5 ${
@@ -305,17 +305,17 @@ const maskFade = {
   maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
 };
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    FAQ ACCORDION
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 function FAQAccordion() {
   const [open, setOpen] = useState<number | null>(0);
   const faqs = [
-    { q: 'Is there a free plan?', a: 'Yes — our Free plan lets you run 3 campaigns, import up to 500 leads, and send 1,000 emails per month with no credit card required.' },
-    { q: 'How does email warmup work?', a: 'Leads Add automatically exchanges warmup emails between a pool of real inboxes to build your sender reputation. This tells email providers your domain is legitimate before you launch campaigns.' },
+    { q: 'Is there a free plan?', a: 'Yes � our Free plan lets you run 3 campaigns, import up to 500 leads, and send 1,000 emails per month with no credit card required.' },
+    { q: 'How does email warmup work?', a: 'Leads Genie automatically exchanges warmup emails between a pool of real inboxes to build your sender reputation. This tells email providers your domain is legitimate before you launch campaigns.' },
     { q: 'Can I use my Gmail or Outlook account?', a: 'Yes. Connect Gmail via OAuth or App Password, Outlook/Office 365, or any IMAP/SMTP account in seconds.' },
-    { q: 'How is Leads Add different from Instantly or Lemlist?', a: 'Leads Add combines unlimited sending accounts, built-in email verification, AI personalisation, and a unified inbox — all in one platform at a fraction of the cost.' },
-    { q: 'Is cold email legal?', a: 'Yes, when done right. Leads Add enforces CAN-SPAM and GDPR compliance with mandatory unsubscribe links, opt-out tracking, and suppression lists.' },
+    { q: 'How is Leads Genie different from Instantly or Lemlist?', a: 'Leads Genie combines unlimited sending accounts, built-in email verification, AI personalisation, and a unified inbox � all in one platform at a fraction of the cost.' },
+    { q: 'Is cold email legal?', a: 'Yes, when done right. Leads Genie enforces CAN-SPAM and GDPR compliance with mandatory unsubscribe links, opt-out tracking, and suppression lists.' },
     { q: 'What happens after my trial?', a: 'You stay on the Free plan automatically. No charges, no surprises. Upgrade only when you need more sending volume or accounts.' },
   ];
   return (
@@ -323,7 +323,7 @@ function FAQAccordion() {
       <div className="max-w-[1400px] mx-auto px-4">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-2">Frequently Asked Questions</h2>
-          <p className="text-center text-gray-500 mb-10">Everything you need to know about Leads Add.</p>
+          <p className="text-center text-gray-500 mb-10">Everything you need to know about Leads Genie.</p>
           <div className="space-y-3">
             {faqs.map((faq, i) => (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -349,9 +349,9 @@ function FAQAccordion() {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------
    PAGE
-════════════════════════════════════════════════════════════ */
+------------------------------------------------------------ */
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -377,9 +377,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           HERO
-      ══════════════════════════════════════════ */}
+      ------------------------------------------ */}
       <section className="hero-gradient pb-24 pt-20">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
@@ -387,7 +387,7 @@ export default function HomePage() {
             <Link href="/signup"
               className="inline-flex items-center gap-2 border border-white/25 bg-white/12 rounded-full px-4 py-1.5 text-xs font-semibold text-white/90 hover:bg-white/20 transition-colors backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-              New: AI-powered email warmup is live — try it free
+              New: AI-powered email warmup is live � try it free
               <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -401,13 +401,13 @@ export default function HomePage() {
 
           <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08 }}
             className="mt-4 text-sm font-semibold text-blue-200 tracking-widest uppercase">
-            Built for sales teams · agencies · SaaS founders
+            Built for sales teams � agencies � SaaS founders
           </motion.p>
 
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.12 }}
             className="mt-4 text-base sm:text-lg text-blue-100/90 max-w-xl mx-auto leading-relaxed font-medium">
             Connect unlimited sending accounts, warm up your domains automatically, and run
-            AI-personalised cold email campaigns that land in the inbox — not spam.
+            AI-personalised cold email campaigns that land in the inbox � not spam.
           </motion.p>
 
           {/* AI search bar */}
@@ -435,13 +435,13 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[600px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
               {error && <div className="flex items-center gap-3 px-5 py-4"><span className="text-red-500 shrink-0"><IcWarning c="w-5 h-5" /></span><p className="text-sm text-red-600 font-medium">{error}</p></div>}
-              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Leads Add AI is thinking...</p></div>}
+              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Leads Genie AI is thinking...</p></div>}
               {result?.type === 'answer' && <>
-                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Leads Add AI</p></div>
+                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Leads Genie AI</p></div>
                 <div className="px-5 py-4"><p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p></div>
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-400">Want to see it in action?</p>
-                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Leads Add Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
+                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Leads Genie Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
                 </div>
               </>}
               {result?.type === 'email' && <>
@@ -458,7 +458,7 @@ export default function HomePage() {
                       try { localStorage.setItem('prefill_template', JSON.stringify({ subject: result.subject, body: result.body })); } catch {}
                     }
                     window.location.href = '/login?next=/dashboard/campaigns/new';
-                  }} className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use this template — Start Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></button>
+                  }} className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use this template � Start Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></button>
                 </div>
               </>}
             </motion.div>
@@ -486,23 +486,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          TRUSTED BY — continuous marquee, no pause
-      ══════════════════════════════════════════ */}
+      {/* ------------------------------------------
+          TRUSTED BY � continuous marquee, no pause
+      ------------------------------------------ */}
       <section className="bg-white border-b border-gray-100 py-16 overflow-hidden">
-        <div className="container mb-10 text-center">
-          <p className="text-sm text-gray-400 tracking-wide">Trusted by companies worldwide</p>
+        <div className="container text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Trusted by companies worldwide</p>
         </div>
-        <div className="relative" style={maskFade}>
+        <div className="relative mt-10 pb-2" style={maskFade}>
           <div className="flex w-max animate-marquee">
             {[...BRANDS, ...BRANDS, ...BRANDS, ...BRANDS].map((b, i) => <BrandPill key={i} brand={b} />)}
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          STATS — horizontal icon + number
-      ══════════════════════════════════════════ */}
+      {/* ------------------------------------------
+          STATS � horizontal icon + number
+      ------------------------------------------ */}
       <section className="bg-white border-b border-gray-100">
         <div className="container">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
@@ -530,10 +530,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           1. UNLIMITED SENDING ACCOUNTS
-          Layout: text LEFT · card RIGHT
-      ══════════════════════════════════════════ */}
+          Layout: text LEFT � card RIGHT
+      ------------------------------------------ */}
       <section id="sending-accounts" className="bg-white py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -547,7 +547,7 @@ export default function HomePage() {
                 Add Unlimited Sending Accounts
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
-                Connect Gmail, Outlook, and custom SMTP accounts — as many as you need.
+                Connect Gmail, Outlook, and custom SMTP accounts � as many as you need.
                 Rotate between senders automatically to stay under daily limits and
                 protect your domain reputation.
               </p>
@@ -603,10 +603,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           2. EMAIL WARMUP
-          Layout: card LEFT · text RIGHT
-      ══════════════════════════════════════════ */}
+          Layout: card LEFT � text RIGHT
+      ------------------------------------------ */}
       <section id="warmup" className="bg-gray-50 py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
@@ -621,7 +621,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
                 Our AI warmup network automatically builds your sender reputation by sending, opening,
-                and replying to emails on your behalf — 24/7 in the background, before you launch
+                and replying to emails on your behalf � 24/7 in the background, before you launch
                 a single cold email campaign.
               </p>
               <Link href="/signup"
@@ -639,7 +639,7 @@ export default function HomePage() {
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <div>
                     <p className="text-sm font-bold text-gray-900">Warmup Dashboard</p>
-                    <p className="text-xs text-gray-400 mt-0.5">alex@company.io · Running 18 days</p>
+                    <p className="text-xs text-gray-400 mt-0.5">alex@company.io � Running 18 days</p>
                   </div>
                   <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Warming Up
@@ -658,15 +658,15 @@ export default function HomePage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inbox Score — Last 30 Days</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inbox Score � Last 30 Days</p>
                   <div className="h-20 flex items-end gap-0.5">
                     {[42,51,58,63,60,69,72,75,78,82,80,85,83,88,86,91,89,93,90,95,92,96,94,97,95,97,96,98,97,98].map((h, i) => (
                       <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `rgba(59,130,246,${0.18 + i * 0.028})` }} />
                     ))}
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                    <span>Day 1 — 42%</span>
-                    <span className="text-green-600 font-bold">Today — 98% ↑</span>
+                    <span>Day 1 � 42%</span>
+                    <span className="text-green-600 font-bold">Today � 98% ?</span>
                   </div>
                 </div>
               </div>
@@ -676,10 +676,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           3. CAMPAIGN BUILDER
-          Layout: text LEFT · card RIGHT
-      ══════════════════════════════════════════ */}
+          Layout: text LEFT � card RIGHT
+      ------------------------------------------ */}
       <section id="campaigns" className="bg-white py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -694,7 +694,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
                 Build multi-step email sequences with AI personalisation, smart follow-ups,
-                and inbox rotation. Schedule, A/B test, pause, or scale — all from one dashboard.
+                and inbox rotation. Schedule, A/B test, pause, or scale � all from one dashboard.
               </p>
               <Link href="/signup"
                 className="mt-7 inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors shadow-sm">
@@ -740,13 +740,13 @@ export default function HomePage() {
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
                         <PersonAvatar idx={0} size={24} />
-                        <span className="text-xs text-gray-700 font-semibold truncate">John Doe · VP Sales, Acme Corp</span>
+                        <span className="text-xs text-gray-700 font-semibold truncate">John Doe � VP Sales, Acme Corp</span>
                       </div>
                       <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 text-xs text-gray-800 font-semibold">
                         Quick question about Acme&apos;s outbound stack
                       </div>
                       <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-700 leading-relaxed">
-                        Hi John,<br /><br />I noticed Acme Corp just expanded into enterprise — congrats on the Series B!<br /><br />We help VP Sales teams book 30–50 meetings/month...
+                        Hi John,<br /><br />I noticed Acme Corp just expanded into enterprise � congrats on the Series B!<br /><br />We help VP Sales teams book 30�50 meetings/month...
                       </div>
                       <button className="w-full bg-blue-600 text-white text-xs font-bold rounded-xl py-2.5 hover:bg-blue-700 transition-colors">Send Campaign</button>
                     </div>
@@ -759,10 +759,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           4. UNIBOX
-          Layout: card LEFT · text RIGHT
-      ══════════════════════════════════════════ */}
+          Layout: card LEFT � text RIGHT
+      ------------------------------------------ */}
       <section id="unibox" className="bg-gray-50 py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
@@ -776,8 +776,8 @@ export default function HomePage() {
                 Every Reply. One Smart Inbox.
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
-                Stop switching between 20 different email accounts. Leads Add&apos;s Unibox pulls every
-                reply into one place — filter by campaign, label by intent, assign to teammates,
+                Stop switching between 20 different email accounts. Leads Genie&apos;s Unibox pulls every
+                reply into one place � filter by campaign, label by intent, assign to teammates,
                 and close deals faster.
               </p>
               <Link href="/signup"
@@ -807,7 +807,7 @@ export default function HomePage() {
                     { from: 'Sarah Chen', co: 'Stripe',  time: '2m',  preview: "Hi, this looks interesting! Can we schedule a...", tag: 'Interested', tagColor: 'bg-green-100 text-green-700',   read: false, idx: 0 },
                     { from: 'James Park', co: 'Notion',  time: '14m', preview: "Sure, let's chat. What times work for you...",    tag: 'Meeting Set',tagColor: 'bg-blue-100 text-blue-700',    read: false, idx: 1 },
                     { from: 'Lena Wolf',  co: 'Linear',  time: '1h',  preview: "We actually just signed with another vendor...",  tag: 'Not Now',    tagColor: 'bg-yellow-100 text-yellow-700', read: true,  idx: 2 },
-                    { from: 'Tom Reid',   co: 'Vercel',  time: '3h',  preview: "Thanks — we're open to exploring this...",         tag: 'Interested', tagColor: 'bg-green-100 text-green-700',   read: true,  idx: 3 },
+                    { from: 'Tom Reid',   co: 'Vercel',  time: '3h',  preview: "Thanks � we're open to exploring this...",         tag: 'Interested', tagColor: 'bg-green-100 text-green-700',   read: true,  idx: 3 },
                     { from: 'Amy Tran',   co: 'Figma',   time: '5h',  preview: "Could you send over more info about pricing...",   tag: 'Needs Info', tagColor: 'bg-purple-100 text-purple-700', read: true,  idx: 4 },
                   ].map(mail => (
                     <div key={mail.from}
@@ -816,7 +816,7 @@ export default function HomePage() {
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-1.5">
                           <span className={`text-sm text-gray-900 ${!mail.read ? 'font-extrabold' : 'font-semibold'}`}>{mail.from}</span>
-                          <span className="text-xs text-gray-400">· {mail.co}</span>
+                          <span className="text-xs text-gray-400">� {mail.co}</span>
                           {!mail.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
                         </div>
                         <p className="text-xs text-gray-500 truncate mt-0.5">{mail.preview}</p>
@@ -834,10 +834,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           5. ANALYTICS
-          Layout: text LEFT · card RIGHT
-      ══════════════════════════════════════════ */}
+          Layout: text LEFT � card RIGHT
+      ------------------------------------------ */}
       <section id="analytics" className="bg-white py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -852,7 +852,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
                 Track opens, clicks, replies, bounces, and unsubscribes in real-time. See which
-                subject lines and follow-up steps drive the most meetings — then double down
+                subject lines and follow-up steps drive the most meetings � then double down
                 on what works.
               </p>
               <Link href="/signup"
@@ -869,7 +869,7 @@ export default function HomePage() {
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
                 <div>
                   <p className="text-sm font-bold text-gray-900">Campaign Analytics</p>
-                  <p className="text-xs text-gray-400 mt-0.5">SaaS Founders Q3 · Last 30 days</p>
+                  <p className="text-xs text-gray-400 mt-0.5">SaaS Founders Q3 � Last 30 days</p>
                 </div>
                 <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Live
@@ -905,7 +905,7 @@ export default function HomePage() {
                         <PersonAvatar idx={a.idx} size={24} />
                         <span className={`shrink-0 ${a.color}`}>{a.icon}</span>
                         <span className="text-xs font-bold text-gray-700 whitespace-nowrap">{a.event}</span>
-                        <span className="text-xs text-gray-400 truncate">— {a.who}</span>
+                        <span className="text-xs text-gray-400 truncate">� {a.who}</span>
                       </div>
                       <span className="text-[10px] text-gray-400 shrink-0">{a.time} ago</span>
                     </div>
@@ -918,9 +918,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           6. AI WORKFLOWS
-      ══════════════════════════════════════════ */}
+      ------------------------------------------ */}
       <section id="workflows" className="bg-gray-50 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
@@ -930,7 +930,7 @@ export default function HomePage() {
               Automate Every Follow-Up
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-              Set your triggers once — Leads Add automatically handles follow-ups, tags leads by
+              Set your triggers once � Leads Genie automatically handles follow-ups, tags leads by
               intent, and routes hot prospects to your team. No missed opportunities, ever.
             </p>
             <Link href="/signup"
@@ -941,9 +941,9 @@ export default function HomePage() {
           </motion.div>
           <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
             {[
-              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Leads Add queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
-              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Leads Add auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
-              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Leads Add instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
+              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Leads Genie queues a personalised follow-up automatically � no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
+              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Leads Genie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
+              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Leads Genie instantly stops all outreach, syncs to your CRM, and notifies your team � zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
             ].map((wf, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
@@ -967,9 +967,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
-          7. TESTIMONIALS — continuous slow marquee
-      ══════════════════════════════════════════ */}
+      {/* ------------------------------------------
+          7. TESTIMONIALS � continuous slow marquee
+      ------------------------------------------ */}
       <section className="bg-white py-24">
         <div className="container mb-12 text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
@@ -1000,9 +1000,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* ------------------------------------------
           8. FAQ ACCORDION
-      ══════════════════════════════════════════ */}
+      ------------------------------------------ */}
       <FAQAccordion />
 
       <Footer />

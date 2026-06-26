@@ -1,4 +1,4 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ const templates = [
 
 Most {{job_title}}s at {{company_size}} SaaS companies are still spending 3+ hours a day on manual prospecting.
 
-We built Leads Add to fix that â€” automated outreach that books qualified demos without an SDR.
+We built Leads Genie to fix that — automated outreach that books qualified demos without an SDR.
 
 Worth a 15-minute call this week?
 
@@ -23,7 +23,7 @@ Worth a 15-minute call this week?
     title: 'The Social Proof Agency Pitch',
     preview: `Hi {{first_name}},
 
-We helped {{similar_company}} generate 47 qualified leads in their first month using cold email â€” without adding headcount.
+We helped {{similar_company}} generate 47 qualified leads in their first month using cold email — without adding headcount.
 
 I think we can do the same for {{company_name}}.
 
@@ -35,7 +35,7 @@ Mind if I share what we did specifically?
   {
     category: 'B2B Sales',
     title: 'The Short & Direct Opener',
-    preview: `{{first_name}} â€” quick question.
+    preview: `{{first_name}} — quick question.
 
 Are you currently happy with how many qualified leads your team is generating each month?
 
@@ -49,7 +49,7 @@ Asking because most {{job_title}}s I speak with say they're leaving pipeline on 
     title: 'The Passive Candidate Outreach',
     preview: `Hi {{first_name}},
 
-I came across your background on LinkedIn â€” your experience at {{current_company}} is exactly what we're looking for.
+I came across your background on LinkedIn — your experience at {{current_company}} is exactly what we're looking for.
 
 We're hiring a {{role}} at {{our_company}} and I'd love to have a no-pressure chat to see if it might be a fit.
 
@@ -65,7 +65,7 @@ Would you be open to a quick call this week?
 
 Just wanted to bump this to the top of your inbox in case it got buried.
 
-Still happy to share how {{similar_company}} used Leads Add to book 30 meetings in 3 weeks.
+Still happy to share how {{similar_company}} used Leads Genie to book 30 meetings in 3 weeks.
 
 Worth a quick chat?
 
@@ -77,7 +77,7 @@ Worth a quick chat?
     title: 'The Break-up Email',
     preview: `{{first_name}},
 
-I've reached out a few times but haven't heard back â€” I'll assume the timing isn't right and won't follow up again.
+I've reached out a few times but haven't heard back — I'll assume the timing isn't right and won't follow up again.
 
 If that ever changes, I'm here.
 
@@ -106,7 +106,7 @@ export default function TemplatesPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Templates</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Templates That Work</h1>
             <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
-              Proven cold email templates used by 30,000+ Leads Add users.
+              Proven cold email templates used by 30,000+ Leads Genie users.
               Copy, customise, and launch in minutes.
             </p>
           </div>
@@ -135,7 +135,7 @@ export default function TemplatesPage() {
                   <div className="p-4 bg-white">
                     <Link href="/signup"
                       className="w-full flex items-center justify-center text-xs font-semibold bg-blue-600 text-white rounded-xl py-2.5 hover:bg-blue-700 transition-colors">
-                      Use This Template â†’
+                      Use This Template ?
                     </Link>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function TemplatesPage() {
               <p className="text-gray-500 text-sm mb-4">Sign up to access 100+ templates and import them directly into your campaigns.</p>
               <Link href="/signup"
                 className="inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
-                Get All Templates Free â†’
+                Get All Templates Free ?
               </Link>
             </div>
           </div>

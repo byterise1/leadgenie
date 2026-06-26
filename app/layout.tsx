@@ -11,12 +11,12 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   icons: { icon: '/logo.png', apple: '/logo.png' },
-  title: 'Leads Add — Cold Email Outreach That Books Meetings',
+  title: 'Leads Genie — Cold Email Outreach That Books Meetings',
   description:
-    'Leads Add is the #1 cold email outreach platform. Send unlimited emails, auto-warm your domains, and book more meetings with AI-personalised sequences. Trusted by 8,500+ sales teams.',
+    'Leads Genie is the #1 cold email outreach platform. Send unlimited emails, auto-warm your domains, and book more meetings with AI-personalised sequences. Trusted by 8,500+ sales teams.',
   metadataBase: new URL('https://leadgenie.io'),
   openGraph: {
-    title: 'Leads Add — Cold Email Outreach That Books Meetings',
+    title: 'Leads Genie — Cold Email Outreach That Books Meetings',
     description:
       'Send unlimited cold emails, auto-warm your domains, and book more B2B meetings with AI outreach. Start free — no credit card.',
     type: 'website',

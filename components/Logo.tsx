@@ -10,8 +10,8 @@ type LogoProps = {
 export function Logo({ size = 34, textSize = 'text-[15px]', textColor = 'text-gray-900', className = '' }: LogoProps) {
   return (
     <span className={`flex items-center gap-2 ${className}`}>
-      <Image src="/logo.png" alt="Leads Add" width={size} height={size} className="shrink-0" priority />
-      <span className={`font-extrabold ${textSize} ${textColor}`}>Leads Add</span>
+      <Image src="/logo.png" alt="Leads Genie" width={size} height={size} className="shrink-0" priority />
+      <span className={`font-extrabold ${textSize} ${textColor}`}>Leads Genie</span>
     </span>
   );
 }

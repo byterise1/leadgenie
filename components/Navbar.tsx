@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
-/* ── icon helpers ─────────────────────────────────────────────────────────── */
+/* -- icon helpers ----------------------------------------------------------- */
 const Ic = {
   Lightning: ({ c='w-4 h-4' }:{c?:string}) => (
     <svg className={c} viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -108,7 +108,7 @@ const Ic = {
   ),
 };
 
-/* ── Nav data ──────────────────────────────────────────────────────────────── */
+/* -- Nav data ---------------------------------------------------------------- */
 const products = [
   {
     col: 'Cold Email',
@@ -152,7 +152,7 @@ const resources: ResItem[] = [
 
 type DropKey = 'products' | 'usecases' | 'resources' | null;
 
-/* ── colour lookup ─────────────────────────────────────────────────────────── */
+/* -- colour lookup ----------------------------------------------------------- */
 const colColors: Record<string, string> = {
   blue:   'text-blue-600 bg-blue-50 group-hover:bg-blue-100 group-hover:text-blue-700',
   indigo: 'text-indigo-600 bg-indigo-50 group-hover:bg-indigo-100 group-hover:text-indigo-700',
@@ -229,7 +229,7 @@ export function Navbar() {
           </Link>
         </nav>
 
-        {/* CTAs — auth-aware */}
+        {/* CTAs � auth-aware */}
         <div className="hidden md:flex items-center gap-2">
           {user ? (
             <>
@@ -270,7 +270,7 @@ export function Navbar() {
         </button>
       </div>
 
-      {/* ── Products dropdown ── */}
+      {/* -- Products dropdown -- */}
       {drop === 'products' && (
         <div className="absolute inset-x-0 top-[64px] bg-white border-b border-gray-100 shadow-2xl z-50">
           <div className="container py-8">
@@ -307,16 +307,16 @@ export function Navbar() {
                     </div>
                     <div className="p-4 bg-white">
                       <p className="text-sm font-bold text-gray-900">Start free today</p>
-                      <p className="text-xs text-gray-400 mt-0.5 mb-3">No credit card · 5-min setup</p>
+                      <p className="text-xs text-gray-400 mt-0.5 mb-3">No credit card � 5-min setup</p>
                       <Link href="/signup" onClick={close}
                         className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors">
-                        Create Account →
+                        Create Account ?
                       </Link>
                     </div>
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-4 leading-relaxed">
-                  Join <strong className="text-gray-600">8,500+</strong> teams using Leads Add to book more meetings.
+                  Join <strong className="text-gray-600">8,500+</strong> teams using Leads Genie to book more meetings.
                 </p>
               </div>
             </div>
@@ -324,7 +324,7 @@ export function Navbar() {
         </div>
       )}
 
-      {/* ── Solutions (Use Cases) dropdown ── */}
+      {/* -- Solutions (Use Cases) dropdown -- */}
       {drop === 'usecases' && (
         <div className="absolute inset-x-0 top-[64px] bg-white border-b border-gray-100 shadow-2xl z-50">
           <div className="container py-8">
@@ -346,7 +346,7 @@ export function Navbar() {
         </div>
       )}
 
-      {/* ── Resources dropdown ── */}
+      {/* -- Resources dropdown -- */}
       {drop === 'resources' && (
         <div className="absolute inset-x-0 top-[64px] bg-white border-b border-gray-100 shadow-2xl z-50">
           <div className="container py-8">
@@ -368,7 +368,7 @@ export function Navbar() {
         </div>
       )}
 
-      {/* ── Mobile menu ── */}
+      {/* -- Mobile menu -- */}
       {mob && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 max-h-[80vh] overflow-y-auto shadow-xl">
           {products.map(col => (

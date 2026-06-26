@@ -1,23 +1,23 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
 const cookieTypes = [
   {
     name: 'Strictly Necessary Cookies',
     required: true,
-    desc: 'These cookies are essential for the Leads Add platform to function. They enable core features such as user authentication, session management, and security. You cannot opt out of these cookies.',
+    desc: 'These cookies are essential for the Leads Genie platform to function. They enable core features such as user authentication, session management, and security. You cannot opt out of these cookies.',
     examples: ['Session token', 'CSRF protection', 'Load balancer affinity'],
   },
   {
     name: 'Analytics Cookies',
     required: false,
-    desc: 'We use analytics cookies to understand how users interact with Leads Add â€” which features are most used, where users drop off, and how to improve the product. Data is aggregated and anonymised.',
+    desc: 'We use analytics cookies to understand how users interact with Leads Genie — which features are most used, where users drop off, and how to improve the product. Data is aggregated and anonymised.',
     examples: ['Page views', 'Feature usage', 'Session duration', 'Funnel analysis'],
   },
   {
     name: 'Functional Cookies',
     required: false,
-    desc: 'These cookies remember your preferences and settings to provide a more personalised experience â€” such as your timezone, notification preferences, and UI layout choices.',
+    desc: 'These cookies remember your preferences and settings to provide a more personalised experience — such as your timezone, notification preferences, and UI layout choices.',
     examples: ['UI preferences', 'Language settings', 'Dashboard layout'],
   },
   {
@@ -42,7 +42,7 @@ export default function CookiesPage() {
               Last updated: June 1, 2026
             </p>
             <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
-              This Cookie Policy explains how Leads Add uses cookies and similar tracking
+              This Cookie Policy explains how Leads Genie uses cookies and similar tracking
               technologies when you visit our website or use our platform.
             </p>
           </div>
@@ -114,10 +114,10 @@ export default function CookiesPage() {
                 You can control cookies in the following ways:
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">â€¢</span><span><strong>Cookie banner:</strong> When you first visit Leads Add, you can accept or reject optional cookies via our consent banner.</span></li>
-                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">â€¢</span><span><strong>Browser settings:</strong> Most browsers allow you to block or delete cookies. See your browser&apos;s help documentation for instructions.</span></li>
-                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">â€¢</span><span><strong>Google Analytics opt-out:</strong> Install the Google Analytics Opt-out Browser Add-on at tools.google.com/dlpage/gaoptout.</span></li>
-                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">â€¢</span><span><strong>Account settings:</strong> Logged-in users can manage preferences in Settings â†’ Privacy.</span></li>
+                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">•</span><span><strong>Cookie banner:</strong> When you first visit Leads Genie, you can accept or reject optional cookies via our consent banner.</span></li>
+                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">•</span><span><strong>Browser settings:</strong> Most browsers allow you to block or delete cookies. See your browser&apos;s help documentation for instructions.</span></li>
+                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">•</span><span><strong>Google Analytics opt-out:</strong> Install the Google Analytics Opt-out Browser Add-on at tools.google.com/dlpage/gaoptout.</span></li>
+                <li className="flex items-start gap-2"><span className="text-blue-500 mt-1">•</span><span><strong>Account settings:</strong> Logged-in users can manage preferences in Settings ? Privacy.</span></li>
               </ul>
               <p className="text-sm text-gray-500 mt-4">
                 Note: Blocking strictly necessary cookies will prevent the platform from functioning correctly.

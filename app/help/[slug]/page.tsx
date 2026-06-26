@@ -16,12 +16,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const article = section.articles.find(a => toSlug(a.q) === slug);
     if (article) {
       return {
-        title: `${article.q} — Leads Add Help`,
+        title: `${article.q} — Leads Genie Help`,
         description: article.a.slice(0, 160).replace(/\*\*/g, '').replace(/\n/g, ' '),
       };
     }
   }
-  return { title: 'Help — Leads Add' };
+  return { title: 'Help — Leads Genie' };
 }
 
 function renderBody(text: string) {

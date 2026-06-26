@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -55,7 +55,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Email already exists — Supabase returns a fake user with identities:[] to prevent enumeration
+    // Email already exists � Supabase returns a fake user with identities:[] to prevent enumeration
     // Must check identities length, not just data.user (which is non-null in this case)
     if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
       setError('An account with this email already exists. Sign in instead.');
@@ -68,7 +68,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Confirmation disabled — session created immediately
+    // Confirmation disabled � session created immediately
     router.push('/dashboard');
     router.refresh();
   };
@@ -84,7 +84,7 @@ export default function SignupPage() {
               No credit card required
             </span>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Start finding leads today</h1>
-            <p className="text-sm text-gray-500">Join 30,000+ companies using Leads Add to grow.</p>
+            <p className="text-sm text-gray-500">Join 30,000+ companies using Leads Genie to grow.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -102,7 +102,7 @@ export default function SignupPage() {
                   <br/>Click it to activate your account, then sign in.
                 </p>
                 <Link href="/login" className="inline-block mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                  Go to Sign In →
+                  Go to Sign In ?
                 </Link>
               </div>
             ) : (
@@ -130,7 +130,7 @@ export default function SignupPage() {
                     {error}
                     {error.includes('already exists') && (
                       <Link href="/login" className="block mt-1 font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                        Sign in instead →
+                        Sign in instead ?
                       </Link>
                     )}
                   </div>
@@ -202,10 +202,10 @@ export default function SignupPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Creating account…
+                        Creating account�
                       </>
                     ) : (
-                      'Create Free Account →'
+                      'Create Free Account ?'
                     )}
                   </button>
                 </form>
@@ -221,7 +221,7 @@ export default function SignupPage() {
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-6">
-            {['30k+ users', '500M+ emails sent', '4.9★ rating'].map((item) => (
+            {['30k+ users', '500M+ emails sent', '4.9? rating'].map((item) => (
               <p key={item} className="text-xs font-semibold text-gray-500">{item}</p>
             ))}
           </div>

@@ -1,4 +1,4 @@
-ï»¿'use client';
+'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -73,7 +73,7 @@ function FooterCol({ heading, links }: { heading: string; links: { label: string
           <li key={item.label}>
             <Link href={item.href}
               className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors duration-150">
-              <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400">â€º</span>
+              <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400">›</span>
               {item.label}
             </Link>
           </li>
@@ -101,7 +101,7 @@ export function Footer() {
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs mb-6">
               The cold email outreach platform built for modern sales teams. Send smarter,
-              land in more inboxes, and book more meetings â€” on autopilot.
+              land in more inboxes, and book more meetings — on autopilot.
             </p>
 
             {/* Stats row */}
@@ -109,7 +109,7 @@ export function Footer() {
               {[
                 { v: '8,500+', l: 'Teams' },
                 { v: '42M+',   l: 'Emails' },
-                { v: '4.9â˜…',   l: 'G2 Score' },
+                { v: '4.9?',   l: 'G2 Score' },
               ].map(s => (
                 <div key={s.l} className="bg-gray-900 rounded-xl p-3 text-center border border-gray-800">
                   <p className="text-sm font-extrabold text-white">{s.v}</p>
@@ -139,7 +139,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link href={item.href}
                     className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
-                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">â€º</span>
+                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
                 </li>
@@ -154,7 +154,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link href={item.href}
                     className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
-                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">â€º</span>
+                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
                 </li>
@@ -169,7 +169,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link href={item.href}
                     className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
-                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">â€º</span>
+                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
                 </li>
@@ -184,7 +184,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link href={item.href}
                     className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
-                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">â€º</span>
+                    <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
                 </li>
@@ -196,7 +196,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-600 order-2 sm:order-1">
-            Â© 2026 Leads Add, Inc. All rights reserved. Built for cold email professionals.
+            © 2026 Leads Genie, Inc. All rights reserved. Built for cold email professionals.
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 order-1 sm:order-2">
             {legal.map((item, i) => (
@@ -205,7 +205,7 @@ export function Footer() {
                   className="text-xs text-gray-600 hover:text-gray-300 transition-colors duration-150">
                   {item.label}
                 </Link>
-                {i < legal.length - 1 && <span className="text-gray-800 text-xs">Â·</span>}
+                {i < legal.length - 1 && <span className="text-gray-800 text-xs">·</span>}
               </span>
             ))}
           </div>

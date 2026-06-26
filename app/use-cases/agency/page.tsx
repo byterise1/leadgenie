@@ -1,4 +1,4 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -37,13 +37,13 @@ export default function AgencyPage() {
       <main>
         <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case Â· Agency</span>
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case · Agency</span>
             <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
               Run Cold Email Campaigns<br />for All Your Clients
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               Manage unlimited client campaigns from one dashboard. Separate workspaces, dedicated
-              sending domains, and white-label reporting â€” built for agencies that scale.
+              sending domains, and white-label reporting — built for agencies that scale.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
@@ -56,7 +56,7 @@ export default function AgencyPage() {
           <div className="container">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
               {[
-                { v: '500+', l: 'Agencies Trust Leads Add', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
+                { v: '500+', l: 'Agencies Trust Leads Genie', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
                 { v: '20%+', l: 'Avg Client Reply Rate', color: '#10b981', bg: '#f0fdf4', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg> },
                 { v: 'Unlimited', l: 'Client Workspaces', color: '#8b5cf6', bg: '#f5f3ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg> },
                 { v: '4.9/5', l: 'Agency Rating on G2', color: '#f59e0b', bg: '#fffbeb', icon: <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg> },
@@ -90,7 +90,7 @@ export default function AgencyPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Leads Add is the backbone of our agency. We manage 40+ client campaigns from one dashboard, and our average client sees 20%+ reply rates within the first month. Nothing else comes close.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Leads Genie is the backbone of our agency. We manage 40+ client campaigns from one dashboard, and our average client sees 20%+ reply rates within the first month. Nothing else comes close.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=47" alt="Mike Ellis" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">

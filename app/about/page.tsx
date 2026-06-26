@@ -1,4 +1,4 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -15,9 +15,9 @@ export default function AboutPage() {
               Built for cold email teams<br />who want real results
             </h1>
             <p className="mt-6 text-gray-500 text-lg leading-relaxed max-w-2xl mx-auto">
-              Leads Add was built by a team of outbound sales practitioners who were frustrated
+              Leads Genie was built by a team of outbound sales practitioners who were frustrated
               with tools that promised deliverability but couldn&apos;t deliver. We built the platform
-              we always wanted â€” and opened it up to the world.
+              we always wanted — and opened it up to the world.
             </p>
             <div className="mt-8 flex items-center justify-center gap-4">
               <Link href="/signup" className="bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
@@ -47,7 +47,7 @@ export default function AboutPage() {
 
             <div className="grid sm:grid-cols-2 gap-6">
               {[
-                { title: 'Our Mission', desc: 'To make professional cold email outreach accessible to every business â€” from solo founders to enterprise sales teams â€” with tools that actually improve deliverability and drive real pipeline.' },
+                { title: 'Our Mission', desc: 'To make professional cold email outreach accessible to every business — from solo founders to enterprise sales teams — with tools that actually improve deliverability and drive real pipeline.' },
                 { title: 'Our Values',  desc: 'We believe in ethical outreach. We help businesses reach the right people with the right message. We actively fight spam, maintain strict acceptable use policies, and cooperate with email providers to keep the ecosystem healthy.' },
               ].map(item => (
                 <div key={item.title} className="border border-gray-200 rounded-2xl p-8">

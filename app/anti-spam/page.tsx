@@ -1,4 +1,4 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 
@@ -13,7 +13,7 @@ export default function AntiSpamPage() {
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">Anti-Spam Policy</h1>
             <p className="mt-4 text-gray-500 text-base">Last updated: June 1, 2026</p>
             <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
-              Leads Add is a tool for professional outreach. We have zero tolerance for spam.
+              Leads Genie is a tool for professional outreach. We have zero tolerance for spam.
               This policy explains what is and isn&apos;t allowed on our platform.
             </p>
           </div>
@@ -21,25 +21,25 @@ export default function AntiSpamPage() {
         <section className="py-16">
           <div className="container max-w-3xl space-y-10">
             {[
-              { title: 'What Is Prohibited', content: `The following uses of Leads Add are strictly prohibited and will result in immediate account termination:
+              { title: 'What Is Prohibited', content: `The following uses of Leads Genie are strictly prohibited and will result in immediate account termination:
 
-â€¢ Sending unsolicited bulk email (spam) to recipients who have not opted in
-â€¢ Purchasing or using scraped/harvested email lists
-â€¢ Sending emails with false or misleading "From" names or subject lines
-â€¢ Disguising the origin of emails (header spoofing)
-â€¢ Continuing to email recipients who have opted out or unsubscribed
-â€¢ Using Leads Add for phishing, malware distribution, or fraud
-â€¢ Violating CAN-SPAM, GDPR, CASL, or any applicable anti-spam law` },
-              { title: 'What Is Permitted', content: `Leads Add is designed for legitimate business outreach, including:
+• Sending unsolicited bulk email (spam) to recipients who have not opted in
+• Purchasing or using scraped/harvested email lists
+• Sending emails with false or misleading "From" names or subject lines
+• Disguising the origin of emails (header spoofing)
+• Continuing to email recipients who have opted out or unsubscribed
+• Using Leads Genie for phishing, malware distribution, or fraud
+• Violating CAN-SPAM, GDPR, CASL, or any applicable anti-spam law` },
+              { title: 'What Is Permitted', content: `Leads Genie is designed for legitimate business outreach, including:
 
-â€¢ Cold emailing prospects who fit your ideal customer profile for a relevant business offer
-â€¢ Following up on previous conversations or warm leads
-â€¢ Outreach to contacts you have a legitimate business reason to contact
-â€¢ Emailing existing customers about relevant products or updates (with opt-out mechanism)
+• Cold emailing prospects who fit your ideal customer profile for a relevant business offer
+• Following up on previous conversations or warm leads
+• Outreach to contacts you have a legitimate business reason to contact
+• Emailing existing customers about relevant products or updates (with opt-out mechanism)
 
-All emails sent through Leads Add must include a clear, functional unsubscribe mechanism. Opt-out requests must be honoured within 10 business days.` },
+All emails sent through Leads Genie must include a clear, functional unsubscribe mechanism. Opt-out requests must be honoured within 10 business days.` },
               { title: 'Our Enforcement', content: 'We actively monitor for spam-related activity including high bounce rates, spam complaint rates, and unsubscribe patterns. Accounts that exceed our thresholds are automatically flagged and reviewed. Accounts in violation of this policy are suspended without refund.' },
-              { title: 'Reporting Spam', content: 'If you believe a Leads Add customer is sending spam, please report it to abuse@leadgenie.io with a copy of the email including full headers. We investigate all reports and take swift action against violators.' },
+              { title: 'Reporting Spam', content: 'If you believe a Leads Genie customer is sending spam, please report it to abuse@leadgenie.io with a copy of the email including full headers. We investigate all reports and take swift action against violators.' },
               { title: 'Legal Compliance', content: 'Users are solely responsible for ensuring their campaigns comply with all applicable laws, including CAN-SPAM (US), CASL (Canada), GDPR (EU/UK), and any other jurisdiction-specific regulations. When in doubt, consult legal counsel before launching a campaign.' },
             ].map(s => (
               <div key={s.title}>

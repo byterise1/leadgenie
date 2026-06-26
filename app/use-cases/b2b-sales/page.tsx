@@ -1,4 +1,4 @@
-ï»¿import { Navbar } from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ const features = [
   },
   {
     icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>,
-    title: 'Automated Follow-ups', desc: 'Set it and forget it. Leads Add sends follow-ups at the right time and stops when someone replies.',
+    title: 'Automated Follow-ups', desc: 'Set it and forget it. Leads Genie sends follow-ups at the right time and stops when someone replies.',
   },
   {
     icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/></svg>,
@@ -37,13 +37,13 @@ export default function B2BSalesPage() {
       <main>
         <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case Â· B2B Sales</span>
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case · B2B Sales</span>
             <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
               Fill Your Pipeline With<br />Qualified Meetings
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              Stop relying on inbound alone. Leads Add automates your outbound so your sales team
-              spends time closing â€” not prospecting.
+              Stop relying on inbound alone. Leads Genie automates your outbound so your sales team
+              spends time closing — not prospecting.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
@@ -58,7 +58,7 @@ export default function B2BSalesPage() {
               {[
                 { v: '47', l: 'Avg Meetings / Month', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> },
                 { v: '18%', l: 'Avg Reply Rate', color: '#10b981', bg: '#f0fdf4', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg> },
-                { v: '3Ã—', l: 'Faster Than Manual', color: '#8b5cf6', bg: '#f5f3ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg> },
+                { v: '3×', l: 'Faster Than Manual', color: '#8b5cf6', bg: '#f5f3ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg> },
                 { v: '$0', l: 'Extra SDR Cost', color: '#059669', bg: '#ecfdf5', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
               ].map(s => (
                 <div key={s.l} className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
@@ -90,7 +90,7 @@ export default function B2BSalesPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive â€” I had our first 5-step sequence running in under 20 minutes.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — I had our first 5-step sequence running in under 20 minutes.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=68" alt="Briken Bufi" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
