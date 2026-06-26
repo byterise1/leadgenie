@@ -109,7 +109,7 @@ export function Footer() {
               {[
                 { v: '8,500+', l: 'Teams' },
                 { v: '42M+',   l: 'Emails' },
-                { v: '4.9?',   l: 'G2 Score' },
+                { v: '4.9★',   l: 'G2 Score' },
               ].map(s => (
                 <div key={s.l} className="bg-gray-900 rounded-xl p-3 text-center border border-gray-800">
                   <p className="text-sm font-extrabold text-white">{s.v}</p>

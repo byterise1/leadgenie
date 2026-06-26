@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 import { blogPosts } from '@/lib/blog-data';
 
@@ -15,10 +16,11 @@ export default function BlogPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
-          <div className="container max-w-3xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Resources</h1>
-            <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
+        <section className="hero-gradient py-20 text-center">
+          <div className="container">
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Blog</span>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">Cold Email Resources</h1>
+            <p className="mt-4 text-blue-100 text-lg leading-relaxed max-w-lg mx-auto">
               Guides, strategies, and data-driven insights to help you land in the inbox,
               write better emails, and book more meetings.
             </p>
@@ -47,6 +49,7 @@ export default function BlogPage() {
             </div>
           </div>
         </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

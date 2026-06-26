@@ -457,8 +457,8 @@ export default function HomePage() {
                     if (result?.type === 'email') {
                       try { localStorage.setItem('prefill_template', JSON.stringify({ subject: result.subject, body: result.body })); } catch {}
                     }
-                    window.location.href = '/login?next=/dashboard/campaigns/new';
-                  }} className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use this template → Start Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></button>
+                    window.location.href = '/dashboard/campaigns/new';
+                  }} className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use This Template <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></button>
                 </div>
               </>}
             </motion.div>

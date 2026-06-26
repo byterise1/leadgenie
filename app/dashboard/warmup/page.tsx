@@ -345,7 +345,7 @@ export default function WarmupPage() {
             ) : (
               <div className="space-y-4">
                 {accounts.filter(a => a.warmup_enabled).map(acc => {
-                  const pct = Math.min(100, Math.round((Math.min(acc.warmup_day || 0, 30) / 30) * 100));
+                  const pct = Math.min(100, Math.round((Math.min(acc.warmup_day || 0, 14) / 14) * 100));
                   return (
                     <div key={acc.id} className="border border-gray-100 rounded-xl p-4">
                       <div className="flex items-start justify-between mb-3">
@@ -360,13 +360,13 @@ export default function WarmupPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-xs font-semibold text-gray-700">Warmup progress</span>
-                          <span className="text-xs text-gray-500">Day {acc.warmup_day || 0} / 30</span>
+                          <span className="text-xs text-gray-500">Day {acc.warmup_day || 0} / 14</span>
                         </div>
                         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
                         </div>
                         <p className="text-[10px] text-gray-400 mt-1">
-                          {pct >= 100 ? 'Fully warmed — maintaining at target volume' : `${pct}% complete — ramping up to ${acc.warmup_target || 40}/day`}
+                          {pct >= 100 ? '14-day warmup complete — maintaining at target volume' : `${pct}% complete — ramping to ${WARMUP_DAILY_TARGETS[Math.min(acc.warmup_day || 0, 14)]}/day`}
                         </p>
                       </div>
                     </div>
