@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -59,7 +59,7 @@ export default function UserTicketPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ mark_seen: true }),
             });
-            window.dispatchEvent(new Event('leadgenie:support-seen'));
+            window.dispatchEvent(new Event('LeadsAdd:support-seen'));
           }
         }
       })
@@ -212,7 +212,7 @@ export default function UserTicketPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1.5 justify-end">
                   <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
-                  <span className="text-sm font-semibold text-gray-700">LeadGenie Support</span>
+                  <span className="text-sm font-semibold text-gray-700">LeadsAdd Support</span>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
                   <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>

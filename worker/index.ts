@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import { createTransport, replaceVars } from '../lib/mailer';
@@ -161,4 +161,4 @@ warmupWorker.on('failed', (job, err) => console.error(`Warmup job ${job?.id} fai
 validationWorker.on('completed', job => console.log(`Validation job ${job.id} done`));
 validationWorker.on('failed', (job, err) => console.error(`Validation job ${job?.id} failed:`, err.message));
 
-console.log('🚀 Lead Genie worker started');
+console.log('🚀 Leads Add worker started');

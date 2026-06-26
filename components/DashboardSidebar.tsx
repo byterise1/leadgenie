@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -94,8 +94,8 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
     const interval = setInterval(fetchUnread, 30000);
     // Instantly decrement badge when inbox marks a thread as read
     const onRead = () => setUnreadCount(c => Math.max(0, c - 1));
-    window.addEventListener('leadgenie:thread-read', onRead);
-    return () => { clearInterval(interval); window.removeEventListener('leadgenie:thread-read', onRead); };
+    window.addEventListener('LeadsAdd:thread-read', onRead);
+    return () => { clearInterval(interval); window.removeEventListener('LeadsAdd:thread-read', onRead); };
   }, []);
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
     fetchSupport();
     const id = setInterval(fetchSupport, 60000);
     const onSeen = () => setSupportBadge(0);
-    window.addEventListener('leadgenie:support-seen', onSeen);
-    return () => { clearInterval(id); window.removeEventListener('leadgenie:support-seen', onSeen); };
+    window.addEventListener('LeadsAdd:support-seen', onSeen);
+    return () => { clearInterval(id); window.removeEventListener('LeadsAdd:support-seen', onSeen); };
   }, [pathname]);
 
   useEffect(() => {

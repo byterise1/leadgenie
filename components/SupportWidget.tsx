@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,15 +63,15 @@ export default function SupportWidget() {
   // When user opens ticket via full page (bell click), instantly clear widget badge
   useEffect(() => {
     const onSeen = () => setTickets(prev => prev.map(t => ({ ...t, user_seen_at: t.user_seen_at ?? new Date().toISOString() })));
-    window.addEventListener('leadgenie:support-seen', onSeen);
-    return () => window.removeEventListener('leadgenie:support-seen', onSeen);
+    window.addEventListener('LeadsAdd:support-seen', onSeen);
+    return () => window.removeEventListener('LeadsAdd:support-seen', onSeen);
   }, []);
 
   // When a new support notification arrives (Realtime push in layout), refresh ticket list immediately
   useEffect(() => {
     const onNotify = () => { if (!open) fetchSilent(); };
-    window.addEventListener('leadgenie:support-notify', onNotify);
-    return () => window.removeEventListener('leadgenie:support-notify', onNotify);
+    window.addEventListener('LeadsAdd:support-notify', onNotify);
+    return () => window.removeEventListener('LeadsAdd:support-notify', onNotify);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 

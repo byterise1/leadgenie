@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -316,7 +316,7 @@ export function Navbar() {
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-4 leading-relaxed">
-                  Join <strong className="text-gray-600">8,500+</strong> teams using Lead Genie to book more meetings.
+                  Join <strong className="text-gray-600">8,500+</strong> teams using Leads Add to book more meetings.
                 </p>
               </div>
             </div>

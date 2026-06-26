@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/Skeleton';
@@ -167,7 +167,7 @@ export default function InboxPage() {
 
     if (!thread.read) {
       setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, read: true } : t));
-      window.dispatchEvent(new CustomEvent('leadgenie:thread-read'));
+      window.dispatchEvent(new CustomEvent('LeadsAdd:thread-read'));
       fetch('/api/inbox', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+﻿import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -16,12 +16,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const article = section.articles.find(a => toSlug(a.q) === slug);
     if (article) {
       return {
-        title: `${article.q} — Lead Genie Help`,
+        title: `${article.q} — Leads Add Help`,
         description: article.a.slice(0, 160).replace(/\*\*/g, '').replace(/\n/g, ' '),
       };
     }
   }
-  return { title: 'Help — Lead Genie' };
+  return { title: 'Help — Leads Add' };
 }
 
 function renderBody(text: string) {

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -196,7 +196,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-600 order-2 sm:order-1">
-            © 2026 Lead Genie, Inc. All rights reserved. Built for cold email professionals.
+            © 2026 Leads Add, Inc. All rights reserved. Built for cold email professionals.
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 order-1 sm:order-2">
             {legal.map((item, i) => (

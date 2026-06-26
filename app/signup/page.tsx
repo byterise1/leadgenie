@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -84,7 +84,7 @@ export default function SignupPage() {
               No credit card required
             </span>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Start finding leads today</h1>
-            <p className="text-sm text-gray-500">Join 30,000+ companies using Lead Genie to grow.</p>
+            <p className="text-sm text-gray-500">Join 30,000+ companies using Leads Add to grow.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">

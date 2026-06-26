@@ -1,4 +1,4 @@
-import Groq from 'groq-sdk';
+﻿import Groq from 'groq-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -16,14 +16,14 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are Lead Genie's AI assistant — a cold email outreach platform that helps sales teams, agencies, and SaaS founders book more meetings.
+          content: `You are Leads Add's AI assistant — a cold email outreach platform that helps sales teams, agencies, and SaaS founders book more meetings.
 
 Detect the user's intent and return ONE of these two JSON formats — no markdown, no extra text:
 
-1. If the user is asking a QUESTION about cold email, outreach, deliverability, Lead Genie features, or how something works:
+1. If the user is asking a QUESTION about cold email, outreach, deliverability, Leads Add features, or how something works:
 {
   "type": "answer",
-  "answer": "your helpful answer here (2-4 short sentences, conversational, reference Lead Genie where relevant)"
+  "answer": "your helpful answer here (2-4 short sentences, conversational, reference Leads Add where relevant)"
 }
 
 2. If the user wants to WRITE or GENERATE a cold email / campaign:

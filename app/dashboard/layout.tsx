@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             });
             // Tell SupportWidget to refresh immediately if this is a support notification
             if ((payload.new as Notification).link?.includes('/support')) {
-              window.dispatchEvent(new Event('leadgenie:support-notify'));
+              window.dispatchEvent(new Event('LeadsAdd:support-notify'));
             }
           }
         )
@@ -89,12 +89,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // When user opens a support ticket, clear the related bell notification immediately
     const onSupportSeen = () => fetchNotifications();
-    window.addEventListener('leadgenie:support-seen', onSupportSeen);
+    window.addEventListener('LeadsAdd:support-seen', onSupportSeen);
 
     return () => {
       clearInterval(interval);
       if (channel) supabase.removeChannel(channel);
-      window.removeEventListener('leadgenie:support-seen', onSupportSeen);
+      window.removeEventListener('LeadsAdd:support-seen', onSupportSeen);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
