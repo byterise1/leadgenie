@@ -12,11 +12,11 @@ export default function ContactPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-20 text-center">
+        <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Contact</p>
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">Get in Touch</h1>
-            <p className="mt-4 text-gray-500 text-lg leading-relaxed">
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Contact</span>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">Get in Touch</h1>
+            <p className="mt-4 text-blue-100 text-lg leading-relaxed">
               Have a question, a sales inquiry, or need support? We&apos;re here to help.
             </p>
           </div>

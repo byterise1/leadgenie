@@ -118,24 +118,24 @@ export default function PricingPage() {
       <main>
 
         {/* Header */}
-        <section className="border-b border-gray-100 py-20 text-center">
+        <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
               Simple, transparent pricing
             </h1>
-            <p className="mt-4 text-gray-500 text-lg leading-relaxed max-w-lg mx-auto">
+            <p className="mt-4 text-blue-100 text-lg leading-relaxed max-w-lg mx-auto">
               Start free. No credit card required. Upgrade when you&apos;re ready to scale.
             </p>
 
             <div className="mt-8 flex items-center justify-center gap-3">
-              <span className={`text-sm font-semibold ${!yearly ? 'text-gray-900' : 'text-gray-400'}`}>Monthly</span>
+              <span className={`text-sm font-semibold ${!yearly ? 'text-white' : 'text-blue-200'}`}>Monthly</span>
               <button
                 onClick={() => setYearly(v => !v)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? 'bg-blue-600' : 'bg-gray-300'}`}
                 aria-label="Toggle yearly billing">
                 <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${yearly ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
-              <span className={`text-sm font-semibold ${yearly ? 'text-gray-900' : 'text-gray-400'}`}>
+              <span className={`text-sm font-semibold ${yearly ? 'text-white' : 'text-blue-200'}`}>
                 Yearly
                 <span className="ml-2 text-[11px] font-bold bg-green-100 text-green-700 rounded-full px-2 py-0.5">Save 20%</span>
               </span>
@@ -176,15 +176,15 @@ export default function PricingPage() {
                   )}
 
                   <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>{plan.tagline}</p>
+                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>{plan.tagline}</p>
 
                   <div className="mb-5">
                     <span className={`text-4xl font-extrabold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
                       ${yearly ? plan.annual_price : plan.monthly_price}
                     </span>
-                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>/mo</span>
+                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>/mo</span>
                     {yearly && plan.annual_price !== plan.monthly_price && (
-                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>
                         Billed ${(plan.annual_price * 12).toLocaleString()} yearly
                       </p>
                     )}
