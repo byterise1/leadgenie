@@ -129,6 +129,9 @@ export default function LeadsPage() {
   }, []);
 
   const loadActiveJob = useCallback(async (listId: string | null) => {
+    // Clear previous job immediately so switching lists never shows the wrong job's banner
+    setActiveJob(null);
+    setShowJobModal(false);
     const p = listId ? `?list_id=${listId}` : '';
     const res = await fetch(`/api/leads/import-jobs${p}`);
     if (!res.ok) return;
@@ -603,8 +606,14 @@ export default function LeadsPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {activeJob.status === 'done' && (
-              <button onClick={() => setShowJobModal(true)}
-                className="text-xs font-bold bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors">
+              <button onClick={async () => {
+                // If results weren't loaded (e.g. from list-route which omitted them), fetch full job first
+                if (!activeJob.results) {
+                  const full = await loadJobById(activeJob.id);
+                  if (full) setActiveJob(full);
+                }
+                setShowJobModal(true);
+              }} className="text-xs font-bold bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors">
                 View Results →
               </button>
             )}

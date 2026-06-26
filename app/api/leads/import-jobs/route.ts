@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('lead_import_jobs')
-    .select('id, status, progress, total_emails, filename, list_id, list_name, summary, created_at, completed_at')
+    .select('id, status, progress, total_emails, filename, list_id, list_name, results, summary, created_at, completed_at')
     .eq('user_id', user.id)
     .neq('status', 'imported')
     .order('created_at', { ascending: false })
