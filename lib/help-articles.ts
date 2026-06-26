@@ -24,11 +24,11 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'Connecting Gmail or Outlook',
-        a: `Go to **Email Accounts** in the sidebar ? click **"+ Add Account"** ? choose Gmail OAuth (recommended for best deliverability).\n\nYou'll be redirected to Google to authorize Leads Genie. Once approved, your account appears with a green "Active" badge.\n\nFor Outlook or any other provider, choose Custom SMTP — enter your host, port, username and password.`,
+        a: `Go to **Email Accounts** in the sidebar ? click **"+ Add Account"** ? choose Gmail OAuth (recommended for best deliverability).\n\nYou'll be redirected to Google to authorize Leads Genie. Once approved, your account appears with a green "Active" badge.\n\nFor Outlook or any other provider, choose Custom SMTP ï¿½ enter your host, port, username and password.`,
       },
       {
         q: 'Setting up email warmup',
-        a: `Before sending cold campaigns, warm up your inbox for 2–3 weeks.\n\nGo to **Warmup** ? toggle warmup ON for your account. Leads Genie automatically sends small batches of real-looking emails that get opened and replied to, building your sender reputation.\n\nYou'll see your Health Score increase daily. Aim for 80+ before launching your first campaign.`,
+        a: `Before sending cold campaigns, warm up your inbox for 2ï¿½3 weeks.\n\nGo to **Warmup** ? toggle warmup ON for your account. Leads Genie automatically sends small batches of real-looking emails that get opened and replied to, building your sender reputation.\n\nYou'll see your Health Score increase daily. Aim for 80+ before launching your first campaign.`,
       },
       {
         q: 'Uploading your first prospect list',
@@ -36,7 +36,7 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'Launching your first campaign',
-        a: `Go to **Campaigns** ? **New Campaign**.\n\n**Step 1 — Leads**: Choose the list you uploaded.\n**Step 2 — Schedule**: Set your sending window (e.g., 9 AM–5 PM), active days (Mon–Fri), and min/max delay between emails.\n**Step 3 — Review**: Confirm settings and click **Launch**.\n\nYour campaign will start sending during the next active window.`,
+        a: `Go to **Campaigns** ? **New Campaign**.\n\n**Step 1 ï¿½ Leads**: Choose the list you uploaded.\n**Step 2 ï¿½ Schedule**: Set your sending window (e.g., 9 AMï¿½5 PM), active days (Monï¿½Fri), and min/max delay between emails.\n**Step 3 ï¿½ Review**: Confirm settings and click **Launch**.\n\nYour campaign will start sending during the next active window.`,
       },
     ],
   },
@@ -52,15 +52,15 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'Setting sending schedules',
-        a: `**Sending window**: Hours of day to send (e.g., 9 AM–5 PM in your timezone).\n**Active days**: Days of the week (e.g., Mon–Fri only).\n**Min / Max delay**: Random gap between each email send. This makes sending look natural to spam filters.\n**Daily limit**: Max emails per day across all connected accounts.\n\nThe **Completes In** estimate shows how many days until all leads get all steps.`,
+        a: `**Sending window**: Hours of day to send (e.g., 9 AMï¿½5 PM in your timezone).\n**Active days**: Days of the week (e.g., Monï¿½Fri only).\n**Min / Max delay**: Random gap between each email send. This makes sending look natural to spam filters.\n**Daily limit**: Max emails per day across all connected accounts.\n\nThe **Completes In** estimate shows how many days until all leads get all steps.`,
       },
       {
         q: 'A/B testing subject lines',
-        a: `Currently, Leads Genie doesn't have built-in A/B testing.\n\nBest practice: create two separate campaigns with different subject lines and split your lead list. Compare open rates in Analytics after 3–5 days.`,
+        a: `Currently, Leads Genie doesn't have built-in A/B testing.\n\nBest practice: create two separate campaigns with different subject lines and split your lead list. Compare open rates in Analytics after 3ï¿½5 days.`,
       },
       {
         q: 'Adding personalisation variables',
-        a: `Use double curly braces in your email body and subject:\n\n- {{first_name}} — lead's first name\n- {{last_name}} — lead's last name\n- {{email}} — lead's email address\n- {{company}} — lead's company\n- {{website}} — lead's website\n\nIf the field is empty for a lead, the variable is left blank. Fill in your CSV columns to avoid blank personalisations.`,
+        a: `Use double curly braces in your email body and subject:\n\n- {{first_name}} ï¿½ lead's first name\n- {{last_name}} ï¿½ lead's last name\n- {{email}} ï¿½ lead's email address\n- {{company}} ï¿½ lead's company\n- {{website}} ï¿½ lead's website\n\nIf the field is empty for a lead, the variable is left blank. Fill in your CSV columns to avoid blank personalisations.`,
       },
       {
         q: 'Pausing and resuming campaigns',
@@ -76,23 +76,23 @@ export const helpSections: HelpSection[] = [
     articles: [
       {
         q: 'How email warmup works',
-        a: `When you send cold emails from a fresh inbox, spam filters are suspicious — they've never seen volume from this address before.\n\nWarmup fixes this by gradually sending real-looking emails between real inboxes. These emails get opened and marked "Not Spam", signalling to Gmail, Outlook, and others that this is a trustworthy sender.\n\nLeads Genie automates this entirely — no manual action needed once enabled.`,
+        a: `When you send cold emails from a fresh inbox, spam filters are suspicious ï¿½ they've never seen volume from this address before.\n\nWarmup fixes this by gradually sending real-looking emails between real inboxes. These emails get opened and marked "Not Spam", signalling to Gmail, Outlook, and others that this is a trustworthy sender.\n\nLeads Genie automates this entirely ï¿½ no manual action needed once enabled.`,
       },
       {
         q: 'Reading your warmup score',
-        a: `Your **Health Score** (0–100) is shown on the Email Accounts page.\n\n- **80–100**: Ready to run campaigns at full volume\n- **60–79**: Warming up, limit campaign volume to 20–30 emails/day\n- **Below 60**: Not ready — continue warming, do not run cold campaigns yet\n\nThe score updates daily based on inbox placement rates.`,
+        a: `Your **Health Score** (0ï¿½100) is shown on the Email Accounts page.\n\n- **80ï¿½100**: Ready to run campaigns at full volume\n- **60ï¿½79**: Warming up, limit campaign volume to 20ï¿½30 emails/day\n- **Below 60**: Not ready ï¿½ continue warming, do not run cold campaigns yet\n\nThe score updates daily based on inbox placement rates.`,
       },
       {
         q: 'Warmup best practices',
-        a: `- Enable warmup before you connect an account to any campaign\n- Run warmup for at least 14 days before your first cold send\n- Start campaigns at low volume (20–30 emails/day) even after warmup is complete\n- Don't turn off warmup while running campaigns — it should always run in the background\n- Use a real domain, not a free Gmail/Yahoo address, for best results`,
+        a: `- Enable warmup before you connect an account to any campaign\n- Run warmup for at least 14 days before your first cold send\n- Start campaigns at low volume (20ï¿½30 emails/day) even after warmup is complete\n- Don't turn off warmup while running campaigns ï¿½ it should always run in the background\n- Use a real domain, not a free Gmail/Yahoo address, for best results`,
       },
       {
         q: 'How long does warmup take?',
-        a: `Typically **2–4 weeks** to reach a Health Score of 80+.\n\nBrand-new domains with no email history take longer. Domains that have sent emails before (even if not cold outreach) warm up faster.\n\nYou'll see the score climb daily on the Email Accounts page.`,
+        a: `Typically **2ï¿½4 weeks** to reach a Health Score of 80+.\n\nBrand-new domains with no email history take longer. Domains that have sent emails before (even if not cold outreach) warm up faster.\n\nYou'll see the score climb daily on the Email Accounts page.`,
       },
       {
         q: 'Troubleshooting spam placement',
-        a: `If emails are landing in spam:\n\n1. **Check your Health Score** — if below 70, pause campaigns and keep warming\n2. **Check your content** — avoid spam trigger words: Free!, Guaranteed!, Unsubscribe, Click here\n3. **Add SPF/DKIM records** to your domain's DNS\n4. **Lower volume** — reduce daily limit and increase min delay\n5. **Avoid too many links or images** — plain text emails land in inbox more reliably`,
+        a: `If emails are landing in spam:\n\n1. **Check your Health Score** ï¿½ if below 70, pause campaigns and keep warming\n2. **Check your content** ï¿½ avoid spam trigger words: Free!, Guaranteed!, Unsubscribe, Click here\n3. **Add SPF/DKIM records** to your domain's DNS\n4. **Lower volume** ï¿½ reduce daily limit and increase min delay\n5. **Avoid too many links or images** ï¿½ plain text emails land in inbox more reliably`,
       },
     ],
   },
@@ -108,19 +108,19 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'Labelling replies by intent',
-        a: `Open a thread ? scroll to the bottom of the right panel ? click one of the **"Mark as"** buttons:\n\n- **Interested** — lead wants to know more (hot lead, follow up manually)\n- **Not Interested** — lead declined\n- **Out of Office** — auto-reply, revisit after they're back\n- **Do Not Contact** — removes lead from all future campaigns permanently\n\nOnce labelled, use the **filter dropdown** at the top of the thread list to see only leads of that type (e.g., all "Interested" replies).`,
+        a: `Open a thread ? scroll to the bottom of the right panel ? click one of the **"Mark as"** buttons:\n\n- **Interested** ï¿½ lead wants to know more (hot lead, follow up manually)\n- **Not Interested** ï¿½ lead declined\n- **Out of Office** ï¿½ auto-reply, revisit after they're back\n- **Do Not Contact** ï¿½ removes lead from all future campaigns permanently\n\nOnce labelled, use the **filter dropdown** at the top of the thread list to see only leads of that type (e.g., all "Interested" replies).`,
       },
       {
         q: 'Filtering by campaign or account',
-        a: `Use the filter dropdown at the top of the thread list to show:\n- **All** — every reply\n- **Interested** — hot leads ready for follow-up\n- **Not Interested** — declined leads\n- **Out of Office** — temporary out-of-office replies\n- **Do Not Contact** — leads who must not be emailed again\n\nEach thread shows the campaign it came from as a blue badge under the sender's name.`,
+        a: `Use the filter dropdown at the top of the thread list to show:\n- **All** ï¿½ every reply\n- **Interested** ï¿½ hot leads ready for follow-up\n- **Not Interested** ï¿½ declined leads\n- **Out of Office** ï¿½ temporary out-of-office replies\n- **Do Not Contact** ï¿½ leads who must not be emailed again\n\nEach thread shows the campaign it came from as a blue badge under the sender's name.`,
       },
       {
         q: 'Replying from the Unibox',
-        a: `Currently, Unibox is read-only — you can read and label replies, but must reply directly from Gmail or your email client.\n\nThis keeps your reply in the same email thread and ensures proper deliverability. We're working on adding native reply functionality.`,
+        a: `Currently, Unibox is read-only ï¿½ you can read and label replies, but must reply directly from Gmail or your email client.\n\nThis keeps your reply in the same email thread and ensures proper deliverability. We're working on adding native reply functionality.`,
       },
       {
         q: 'Syncing new replies',
-        a: `Replies sync automatically every 2 minutes in the background — you don't need to stay on the Unibox page.\n\nTo sync immediately, click the **Sync** button at the top right of the Unibox. A message will confirm how many new replies were found.`,
+        a: `Replies sync automatically every 2 minutes in the background ï¿½ you don't need to stay on the Unibox page.\n\nTo sync immediately, click the **Sync** button at the top right of the Unibox. A message will confirm how many new replies were found.`,
       },
     ],
   },
@@ -132,11 +132,11 @@ export const helpSections: HelpSection[] = [
     articles: [
       {
         q: 'Understanding your dashboard',
-        a: `The **Analytics** page shows:\n\n- **Emails Sent** — total across all campaigns\n- **Open Rate** — % of recipients who opened (tracked via a 1×1 pixel)\n- **Click Rate** — % who clicked a link\n- **Reply Rate** — % who replied (most important metric)\n- **Bounce Rate** — % of undeliverable addresses\n\nThe table below shows per-campaign breakdown. Active campaigns sort to the top.`,
+        a: `The **Analytics** page shows:\n\n- **Emails Sent** ï¿½ total across all campaigns\n- **Open Rate** ï¿½ % of recipients who opened (tracked via a 1ï¿½1 pixel)\n- **Click Rate** ï¿½ % who clicked a link\n- **Reply Rate** ï¿½ % who replied (most important metric)\n- **Bounce Rate** ï¿½ % of undeliverable addresses\n\nThe table below shows per-campaign breakdown. Active campaigns sort to the top.`,
       },
       {
         q: 'Open rate vs. reply rate',
-        a: `**Open rate** tells you if your subject line works. A good cold email open rate is 40–70%.\n\n**Reply rate** tells you if your email body and offer work. A good cold reply rate is 3–8%. Above 10% is excellent.\n\nFocus on reply rate — it's the true measure of campaign effectiveness. Open rate can be inflated by email security scanners.`,
+        a: `**Open rate** tells you if your subject line works. A good cold email open rate is 40ï¿½70%.\n\n**Reply rate** tells you if your email body and offer work. A good cold reply rate is 3ï¿½8%. Above 10% is excellent.\n\nFocus on reply rate ï¿½ it's the true measure of campaign effectiveness. Open rate can be inflated by email security scanners.`,
       },
       {
         q: 'Click tracking explained',
@@ -148,7 +148,7 @@ export const helpSections: HelpSection[] = [
       },
       {
         q: 'How are opens tracked?',
-        a: `A tiny invisible 1×1 pixel image is inserted at the bottom of each email. When the recipient's email client loads images, the pixel fires and we record an open.\n\nGmail loads images through its own servers about 5–15 seconds after delivery (to protect user privacy). Leads Genie filters these out by only counting opens that happen **30+ seconds after send time**, ensuring you only see real human opens.`,
+        a: `A tiny invisible 1ï¿½1 pixel image is inserted at the bottom of each email. When the recipient's email client loads images, the pixel fires and we record an open.\n\nGmail loads images through its own servers about 5ï¿½15 seconds after delivery (to protect user privacy). Leads Genie filters these out by only counting opens that happen **30+ seconds after send time**, ensuring you only see real human opens.`,
       },
     ],
   },
@@ -160,7 +160,7 @@ export const helpSections: HelpSection[] = [
     articles: [
       {
         q: 'What are the available plans?',
-        a: `**Free** — 3 campaigns, 500 leads, 1 email account, 1,000 emails/month\n**Pro** — Unlimited campaigns, unlimited leads, unlimited accounts, 50,000 emails/month\n**Agency** — Everything in Pro + 200,000 emails/month + priority support\n\nGo to **Billing** in the sidebar to see current usage and upgrade.`,
+        a: `**Free** ï¿½ 3 campaigns, 500 leads, 1 email account, 1,000 emails/month\n**Pro** ï¿½ Unlimited campaigns, unlimited leads, unlimited accounts, 50,000 emails/month\n**Agency** ï¿½ Everything in Pro + 200,000 emails/month + priority support\n\nGo to **Billing** in the sidebar to see current usage and upgrade.`,
       },
       {
         q: 'What are AI credits?',

@@ -11,7 +11,7 @@ const templates = [
 
 Most {{job_title}}s at {{company_size}} SaaS companies are still spending 3+ hours a day on manual prospecting.
 
-We built Leads Genie to fix that — automated outreach that books qualified demos without an SDR.
+We built Leads Genie to fix that ï¿½ automated outreach that books qualified demos without an SDR.
 
 Worth a 15-minute call this week?
 
@@ -23,7 +23,7 @@ Worth a 15-minute call this week?
     title: 'The Social Proof Agency Pitch',
     preview: `Hi {{first_name}},
 
-We helped {{similar_company}} generate 47 qualified leads in their first month using cold email — without adding headcount.
+We helped {{similar_company}} generate 47 qualified leads in their first month using cold email ï¿½ without adding headcount.
 
 I think we can do the same for {{company_name}}.
 
@@ -35,7 +35,7 @@ Mind if I share what we did specifically?
   {
     category: 'B2B Sales',
     title: 'The Short & Direct Opener',
-    preview: `{{first_name}} — quick question.
+    preview: `{{first_name}} ï¿½ quick question.
 
 Are you currently happy with how many qualified leads your team is generating each month?
 
@@ -49,7 +49,7 @@ Asking because most {{job_title}}s I speak with say they're leaving pipeline on 
     title: 'The Passive Candidate Outreach',
     preview: `Hi {{first_name}},
 
-I came across your background on LinkedIn — your experience at {{current_company}} is exactly what we're looking for.
+I came across your background on LinkedIn ï¿½ your experience at {{current_company}} is exactly what we're looking for.
 
 We're hiring a {{role}} at {{our_company}} and I'd love to have a no-pressure chat to see if it might be a fit.
 
@@ -77,7 +77,7 @@ Worth a quick chat?
     title: 'The Break-up Email',
     preview: `{{first_name}},
 
-I've reached out a few times but haven't heard back — I'll assume the timing isn't right and won't follow up again.
+I've reached out a few times but haven't heard back ï¿½ I'll assume the timing isn't right and won't follow up again.
 
 If that ever changes, I'm here.
 
@@ -101,11 +101,11 @@ export default function TemplatesPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 py-20 text-center">
           <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Templates</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Templates That Work</h1>
-            <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">Cold Email Templates That Work</h1>
+            <p className="mt-4 text-gray-500 text-lg leading-relaxed max-w-lg mx-auto">
               Proven cold email templates used by 30,000+ Leads Genie users.
               Copy, customise, and launch in minutes.
             </p>
@@ -116,8 +116,8 @@ export default function TemplatesPage() {
           <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {templates.map(t => (
-                <div key={t.title} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="p-5 border-b border-gray-100">
+                <div key={t.title} className="border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="p-6 border-b border-gray-50">
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${catColors[t.category]}`}>{t.category}</span>
                       <div className="flex items-center gap-3 text-[11px] text-gray-400 font-medium">
@@ -127,7 +127,7 @@ export default function TemplatesPage() {
                     </div>
                     <h2 className="text-sm font-bold text-gray-900">{t.title}</h2>
                   </div>
-                  <div className="p-5 bg-gray-50">
+                  <div className="p-6 bg-gray-50 flex-1">
                     <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">
                       {t.preview}
                     </pre>

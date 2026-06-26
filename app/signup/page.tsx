@@ -55,7 +55,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Email already exists — Supabase returns a fake user with identities:[] to prevent enumeration
+    // Email already exists ï¿½ Supabase returns a fake user with identities:[] to prevent enumeration
     // Must check identities length, not just data.user (which is non-null in this case)
     if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
       setError('An account with this email already exists. Sign in instead.');
@@ -68,7 +68,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Confirmation disabled — session created immediately
+    // Confirmation disabled ï¿½ session created immediately
     router.push('/dashboard');
     router.refresh();
   };
@@ -202,7 +202,7 @@ export default function SignupPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Creating account…
+                        Creating accountï¿½
                       </>
                     ) : (
                       'Create Free Account ?'

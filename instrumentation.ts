@@ -1,4 +1,4 @@
-﻿const TZ_MAP: Record<string, string> = {
+const TZ_MAP: Record<string, string> = {
   'UTC': 'UTC',
   'US/Eastern (EST)': 'America/New_York',
   'US/Pacific (PST)': 'America/Los_Angeles',

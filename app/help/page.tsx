@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { helpSections, toSlug } from '@/lib/help-articles';
 
 export const metadata = {
-  title: 'Help Center — Leads Genie',
+  title: 'Help Center ï¿½ Leads Genie',
   description: 'Browse guides and tutorials for every part of Leads Genie.',
 };
 
@@ -14,11 +14,11 @@ export default function HelpPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 py-20 text-center">
           <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Help Center</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">How can we help?</h1>
-            <p className="mt-4 text-gray-500 text-base max-w-lg mx-auto leading-relaxed">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">How can we help?</h1>
+            <p className="mt-4 text-gray-500 text-lg max-w-lg mx-auto leading-relaxed">
               Browse guides and tutorials for every part of Leads Genie. Can&apos;t find what you need?{' '}
               <Link href="/contact" className="text-blue-600 hover:underline">Contact support ?</Link>
             </p>
@@ -29,7 +29,7 @@ export default function HelpPage() {
           <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {helpSections.map(section => (
-                <div key={section.id} id={section.id} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
+                <div key={section.id} id={section.id} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow">
                   <span className="text-3xl">{section.emoji}</span>
                   <h2 className="mt-3 text-base font-bold text-gray-900">{section.title}</h2>
                   <p className="mt-1 text-sm text-gray-500 leading-relaxed mb-4">{section.subtitle}</p>
@@ -52,7 +52,7 @@ export default function HelpPage() {
               ))}
             </div>
 
-            <div className="mt-14 border border-gray-200 rounded-2xl p-8 text-center">
+            <div className="mt-14 border border-gray-100 rounded-2xl p-6 text-center">
               <p className="text-lg font-bold text-gray-900 mb-2">Still need help?</p>
               <p className="text-gray-500 text-sm mb-6">Our support team responds within a few hours on business days.</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

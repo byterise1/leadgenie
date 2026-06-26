@@ -12,11 +12,11 @@ export default function ContactPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
-          <div className="container max-w-2xl">
+        <section className="border-b border-gray-100 py-20 text-center">
+          <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Contact</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Get in Touch</h1>
-            <p className="mt-4 text-gray-500 text-base leading-relaxed">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">Get in Touch</h1>
+            <p className="mt-4 text-gray-500 text-lg leading-relaxed">
               Have a question, a sales inquiry, or need support? We&apos;re here to help.
             </p>
           </div>
@@ -33,7 +33,7 @@ export default function ContactPage() {
                   { icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>, title: 'Partners', desc: 'Explore affiliate and reseller opportunities.', email: 'partners@leadgenie.io' },
                   { icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"/></svg>, title: 'Press', desc: 'Media inquiries and press kit requests.', email: 'press@leadgenie.io' },
                 ].map(c => (
-                  <div key={c.title} className="flex items-start gap-4 border border-gray-200 rounded-2xl p-5">
+                  <div key={c.title} className="flex items-start gap-4 border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow">
                     <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">{c.icon}</span>
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{c.title}</p>
@@ -45,7 +45,7 @@ export default function ContactPage() {
               </div>
 
               {/* Form */}
-              <div className="border border-gray-200 rounded-2xl p-7">
+              <div className="border border-gray-100 rounded-2xl p-6">
                 {sent ? (
                   <div className="text-center py-8">
                     <span className="text-4xl mb-4 block">✅</span>

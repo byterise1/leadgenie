@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -118,12 +118,12 @@ export default function PricingPage() {
       <main>
 
         {/* Header */}
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 py-20 text-center">
           <div className="container max-w-3xl">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
               Simple, transparent pricing
             </h1>
-            <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
+            <p className="mt-4 text-gray-500 text-lg leading-relaxed max-w-lg mx-auto">
               Start free. No credit card required. Upgrade when you&apos;re ready to scale.
             </p>
 
@@ -167,7 +167,7 @@ export default function PricingPage() {
                   className={`relative rounded-2xl p-6 flex flex-col ${
                     plan.highlighted
                       ? 'bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-2xl ring-2 ring-blue-500 ring-offset-2 scale-[1.03] z-10'
-                      : 'bg-white border border-gray-200 shadow-sm'
+                      : 'bg-white border border-gray-100 hover:shadow-sm transition-shadow'
                   }`}>
                   {plan.highlighted && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">

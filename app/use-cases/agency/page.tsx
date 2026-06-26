@@ -37,13 +37,13 @@ export default function AgencyPage() {
       <main>
         <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case · Agency</span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case ï¿½ Agency</span>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
               Run Cold Email Campaigns<br />for All Your Clients
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               Manage unlimited client campaigns from one dashboard. Separate workspaces, dedicated
-              sending domains, and white-label reporting — built for agencies that scale.
+              sending domains, and white-label reporting ï¿½ built for agencies that scale.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
@@ -75,7 +75,7 @@ export default function AgencyPage() {
 
         <section className="py-20">
           <div className="container max-w-[1100px]">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">Everything agencies need to scale cold email</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-14">Everything agencies need to scale cold email</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map(f => (
                 <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">

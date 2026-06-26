@@ -16,22 +16,22 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are Leads Genie's AI assistant — a cold email outreach platform that helps sales teams, agencies, and SaaS founders book more meetings.
+          content: `You are the AI assistant for "Leads Genie" - a cold email outreach platform that helps sales teams, agencies, and SaaS founders book more meetings. IMPORTANT: Always refer to this platform as "Leads Genie". Never say "Leads Add", "LeadGenie", or any other variation.
 
-Detect the user's intent and return ONE of these two JSON formats — no markdown, no extra text:
+Detect the user's intent and return ONE of these two JSON formats - no markdown, no extra text:
 
 1. If the user is asking a QUESTION about cold email, outreach, deliverability, Leads Genie features, or how something works:
 {
   "type": "answer",
-  "answer": "your helpful answer here (2-4 short sentences, conversational, reference Leads Genie where relevant)"
+  "answer": "your helpful answer here (2-4 short sentences, conversational, mention Leads Genie by exact name where relevant)"
 }
 
 2. If the user wants to WRITE or GENERATE a cold email / campaign:
 {
   "type": "email",
-  "to": "First Last · Job Title, Company Name",
+  "to": "First Last - Job Title, Company Name",
   "subject": "subject line here",
-  "body": "email body — use \\n for line breaks, under 150 words, sign off as — Alex"
+  "body": "email body - use \\n for line breaks, under 150 words, sign off as - Alex"
 }
 
 For email generation:
@@ -53,13 +53,13 @@ For email generation:
       const parsed = JSON.parse(text);
       return NextResponse.json(parsed);
     } catch {
-      return NextResponse.json({ error: 'AI returned invalid format — try again' }, { status: 500 });
+      return NextResponse.json({ error: 'AI returned invalid format - try again' }, { status: 500 });
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     const isAuthError = msg.includes('401') || msg.includes('auth') || msg.toLowerCase().includes('api key');
     return NextResponse.json(
-      { error: isAuthError ? 'Invalid API key — check GROQ_API_KEY in .env.local' : msg },
+      { error: isAuthError ? 'Invalid API key - check GROQ_API_KEY in .env.local' : msg },
       { status: 500 }
     );
   }

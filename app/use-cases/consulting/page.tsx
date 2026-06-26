@@ -10,13 +10,13 @@ export default function ConsultingPage() {
       <main>
         <section className="hero-gradient py-20 text-center">
           <div className="container max-w-3xl">
-            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case · Consulting</span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case ï¿½ Consulting</span>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
               Fill Your Calendar With<br />Qualified Discovery Calls
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               Consultants and advisory firms use Leads Genie to automate outreach to their ideal
-              clients — so they spend less time prospecting and more time delivering results.
+              clients ï¿½ so they spend less time prospecting and more time delivering results.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
@@ -51,7 +51,7 @@ export default function ConsultingPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>5×</p>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>5ï¿½</p>
                   <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">More Leads vs Referrals</p>
                 </div>
               </div>
@@ -70,7 +70,7 @@ export default function ConsultingPage() {
 
         <section className="py-20">
           <div className="container max-w-[1100px]">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">Stop relying only on referrals</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-14">Stop relying only on referrals</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>, title:'Discovery Call Booking', desc:'Automate outreach to decision-makers and link directly to your Calendly. Prospects book calls without manual back-and-forth.' },
@@ -92,7 +92,7 @@ export default function ConsultingPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now Leads Genie does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now Leads Genie does it automatically and I get 8ï¿½12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=12" alt="David Marsh" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
