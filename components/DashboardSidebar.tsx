@@ -154,7 +154,7 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
 
         <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0">
           <Link href="/">
-            <Logo size={48} textSize="text-[12px]" />
+            <Logo size={48} textSize="text-[15px]" />
           </Link>
         </div>
 
