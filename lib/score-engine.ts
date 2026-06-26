@@ -79,9 +79,16 @@ export function scoreEmail(params: {
   if (prevBounced) return { score: 0, decision: 'suppressed', reasons: ['Previously hard-bounced in campaign'] };
   if (isUnsub)    return { score: 0, decision: 'suppressed', reasons: ['Unsubscribed — cannot contact'] };
 
-  // Hard invalid — 550 from any domain is treated as confirmed non-existent
-  if (smtp === 'invalid') {
+  // Hard invalid — 550 only trusted from business domains (custom MX servers)
+  // Consumer providers (Gmail, Yahoo etc.) rate-limit unknown IPs and return false 550s
+  if (smtp === 'invalid' && !isConsumer) {
     return { score: 0, decision: 'invalid', reasons: ['SMTP 550: mailbox does not exist'] };
+  }
+
+  // Consumer 550 → Risky (not a hard block — consumer providers give false 550s from unknown IPs)
+  if (smtp === 'invalid' && isConsumer) {
+    const name = provider.charAt(0).toUpperCase() + provider.slice(1);
+    return { score: 45, decision: 'risky', reasons: [`${name} 550 — consumer providers rate-limit probes; treating as risky`] };
   }
 
   // Catch-all — cannot verify specific mailbox → Risky
@@ -89,9 +96,9 @@ export function scoreEmail(params: {
     return { score: 45, decision: 'risky', reasons: ['Catch-All domain: accepts all addresses — specific mailbox unverifiable'] };
   }
 
-  // Unknown — timeout or blocked probe → Risky
+  // Unknown — temporary error (421/450/451/452), timeout, or blocked probe → Risky
   if (smtp === 'unknown') {
-    return { score: 45, decision: 'risky', reasons: ['SMTP probe blocked or timed out — could not verify mailbox'] };
+    return { score: 45, decision: 'risky', reasons: ['SMTP probe blocked, timed out, or temporary server error — could not verify mailbox'] };
   }
 
   // ── Scored path ─────────────────────────────────────────────────────────────

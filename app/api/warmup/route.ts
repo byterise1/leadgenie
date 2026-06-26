@@ -52,12 +52,9 @@ export async function PATCH(req: NextRequest) {
   if (typeof enabled === 'boolean') {
     updates.warmup_enabled = enabled;
     updates.status = enabled ? 'warming' : 'active';
-    if (enabled) {
-      // Only reset day counter after completing a full 14-day course; resume mid-course otherwise
-      const { data: current } = await supabaseAdmin
-        .from('email_accounts').select('warmup_day').eq('id', account_id).eq('user_id', user.id).single();
-      if ((current?.warmup_day ?? 0) >= 14) updates.warmup_day = 0;
-    }
+    // Never reset warmup_day on re-enable — mid-course resumes from same day,
+    // post-completion (day >= 14) continues at 40/day indefinitely
+
   }
   if (typeof warmup_target === 'number') {
     updates.warmup_target = warmup_target;

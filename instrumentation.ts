@@ -898,15 +898,16 @@ export async function register() {
             }
 
             const newHealth = sent > 0 ? Math.min(100, (account.health_score ?? 50) + 2) : (account.health_score ?? 50);
-            const completed = day >= 14;
+            // Auto-stop only at exactly day 14 (initial completion). Day > 14 = user re-enabled → keep running at 40/day.
+            const justCompleted = day === 14;
             accountUpdates.set(account.id, {
               warmup_day: day,
               health_score: newHealth,
               sent_today: sent,
               warmup_last_run_date: new Date().toISOString().slice(0, 10),
-              ...(completed ? { warmup_enabled: false, status: 'active' } : {}),
+              ...(justCompleted ? { warmup_enabled: false, status: 'active' } : {}),
             });
-            console.log(`[warmup-send] ${account.email} day=${day}${completed ? ' (COMPLETE)' : ''} sent=${sent}/${emailsToday} score=${newHealth}`);
+            console.log(`[warmup-send] ${account.email} day=${day}${justCompleted ? ' (COMPLETE)' : ''} sent=${sent}/${emailsToday} score=${newHealth}`);
           } catch (e: any) {
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
@@ -919,7 +920,8 @@ export async function register() {
       }
 
       // Flush account updates individually (Supabase upsert can't bulk-update different values)
-      const completedAccounts = allWarmupAccounts.filter(a => (accountUpdates.get(a.id)?.warmup_day ?? 0) >= 14);
+      // Only notify on the day warmup_day first hits exactly 14 (justCompleted = true in accountUpdates)
+      const completedAccounts = allWarmupAccounts.filter(a => accountUpdates.get(a.id)?.warmup_enabled === false && (accountUpdates.get(a.id)?.warmup_day ?? 0) === 14);
       await Promise.all([
         ...Array.from(accountUpdates.entries()).map(([id, upd]) =>
           supabase.from('email_accounts').update(upd).eq('id', id)

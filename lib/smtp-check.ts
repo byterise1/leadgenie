@@ -101,16 +101,13 @@ function doSmtpConversation(
         } else if (step === 4) {
           socket.write('QUIT\r\n');
           if (code === 250 || code === 251) {
-            // mailbox_exists — confirmed valid
+            // mailbox confirmed valid
             done('valid');
-          } else if (code === 452) {
-            // mailbox_full — will hard bounce for cold email, treat as invalid
-            done('invalid');
           } else if (code >= 500) {
-            // mailbox_does_not_exist (550, 551, 553, 554) — confirmed invalid
+            // permanent failure (550, 551, 553, 554) — mailbox does not exist
             done('invalid');
           } else {
-            // is_greylisting (451) or inconclusive (other 4xx) — unknown, use caution
+            // temporary errors (421, 450, 451, 452) or inconclusive 4xx — treat as risky, not invalid
             done('unknown');
           }
 

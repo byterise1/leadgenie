@@ -96,8 +96,7 @@ export default function WarmupPage() {
     const enabled = !currentlyEnabled;
     setAccounts(prev => prev.map(a => {
       if (a.id !== id) return a;
-      const resetDay = enabled && (a.warmup_day ?? 0) >= 14;
-      return { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active', warmup_day: resetDay ? 0 : a.warmup_day };
+      return { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' };
     }));
     setSavingId(id);
     const res = await fetch('/api/warmup', {
@@ -228,12 +227,17 @@ export default function WarmupPage() {
                     )}
                   </div>
                   <ScoreRing score={acc.health_score || 0}/>
-                  {acc.warmup_enabled ? (
+                  {acc.warmup_enabled && (acc.warmup_day ?? 0) < 14 ? (
                     <RampBar day={acc.warmup_day || 0}/>
+                  ) : acc.warmup_enabled && (acc.warmup_day ?? 0) >= 14 ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
+                      <span className="text-[10px] text-gray-400">14-day ramp complete — maintaining</span>
+                    </div>
                   ) : (acc.warmup_day ?? 0) >= 14 ? (
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[10px] font-semibold text-emerald-600">14-day warmup complete ✓</span>
-                      <span className="text-[10px] text-gray-400">Toggle on to continue</span>
+                      <span className="text-[10px] text-gray-400">Toggle on to continue at 40/day</span>
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400">Warmup off</span>
