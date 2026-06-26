@@ -504,7 +504,7 @@ export default function HomePage() {
           STATS — horizontal icon + number
       ------------------------------------------ */}
       <section className="bg-white border-b border-gray-100">
-        <div className="container">
+        <div className="container px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
             {[
               { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',   icon: <IcUsers c="w-5 h-5" />,    color: '#3b82f6', bg: 'bg-blue-50'    },

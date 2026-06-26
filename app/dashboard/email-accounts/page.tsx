@@ -633,7 +633,7 @@ export default function EmailAccountsPage() {
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            <span>Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
+            <span className="pl-11">Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
           </div>
           {accounts.map((acc, i) => (
             <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 items-center">

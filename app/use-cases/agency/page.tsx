@@ -53,7 +53,7 @@ export default function AgencyPage() {
         </section>
 
         <section className="border-b border-gray-100">
-          <div className="container">
+          <div className="container px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
               {[
                 { v: '500+', l: 'Agencies Trust Leads Genie', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },

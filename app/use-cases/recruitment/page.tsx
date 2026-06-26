@@ -26,7 +26,7 @@ export default function RecruitmentPage() {
         </section>
 
         <section className="border-b border-gray-100">
-          <div className="container">
+          <div className="container px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
               <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#3b82f6' }}>
