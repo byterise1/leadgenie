@@ -79,10 +79,9 @@ export function scoreEmail(params: {
   if (prevBounced) return { score: 0, decision: 'suppressed', reasons: ['Previously hard-bounced in campaign'] };
   if (isUnsub)    return { score: 0, decision: 'suppressed', reasons: ['Unsubscribed — cannot contact'] };
 
-  // Hard invalid — only trust 550 from business domains
-  // Consumer providers (Gmail, Yahoo etc.) return false 550s for rate-limiting/IP reputation
-  if (smtp === 'invalid' && !isConsumer) {
-    return { score: 0, decision: 'invalid', reasons: ['SMTP 550: mailbox confirmed does not exist'] };
+  // Hard invalid — 550 from any domain is treated as confirmed non-existent
+  if (smtp === 'invalid') {
+    return { score: 0, decision: 'invalid', reasons: ['SMTP 550: mailbox does not exist'] };
   }
 
   // Catch-all — cannot verify specific mailbox → Risky
@@ -90,12 +89,9 @@ export function scoreEmail(params: {
     return { score: 45, decision: 'risky', reasons: ['Catch-All domain: accepts all addresses — specific mailbox unverifiable'] };
   }
 
-  // Unknown — timeout, blocked probe, OR consumer 550 → Risky
-  if (smtp === 'unknown' || (smtp === 'invalid' && isConsumer)) {
-    const reason = (smtp === 'invalid' && isConsumer)
-      ? `${provider.charAt(0).toUpperCase() + provider.slice(1)} returned 550 — consumer providers give false 550s, treated as risky`
-      : 'SMTP probe blocked or timed out — could not verify mailbox';
-    return { score: 45, decision: 'risky', reasons: [reason] };
+  // Unknown — timeout or blocked probe → Risky
+  if (smtp === 'unknown') {
+    return { score: 45, decision: 'risky', reasons: ['SMTP probe blocked or timed out — could not verify mailbox'] };
   }
 
   // ── Scored path ─────────────────────────────────────────────────────────────
@@ -131,8 +127,7 @@ export function scoreEmail(params: {
     score += 10;
     reasons.push('Business domain (+10)');
   }
-  // Major consumer providers (Outlook, Yahoo, iCloud, ProtonMail) — trusted infrastructure
-  // Probe is blocked, but MX is confirmed and provider is globally recognised
+  // Major consumer providers — MX confirmed, provider globally recognised
   if (smtp === 'valid_major' && CONSUMER_PROVIDERS.includes(provider)) {
     score += 10;
     reasons.push('Recognised major email provider (+10)');
