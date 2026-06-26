@@ -1036,10 +1036,17 @@ export async function register() {
     // ── Validation worker ────────────────────────────────────────────────────────
     new Worker('lead-validation', async (job) => {
       const { runValidationJob } = await import('./lib/run-validation-job');
-      await runValidationJob(supabase, job.data.jobId, job.data.userId);
+      try {
+        await runValidationJob(supabase, job.data.jobId, job.data.userId);
+      } catch (err: any) {
+        await supabase.from('lead_import_jobs')
+          .update({ status: 'failed', progress: 0 })
+          .eq('id', job.data.jobId);
+        throw err;
+      }
     }, { connection, concurrency: 2 })
       .on('completed', j => console.log(`✓ Validation job ${j.id} done`))
-      .on('failed', (j, err) => console.error(`✗ Validation job ${j?.id} failed:`, err.message));
+      .on('failed', (j, err) => console.error(`✗ Validation job ${j?.id} failed:`, err?.message));
 
     console.log('✅ Validation worker started');
   }

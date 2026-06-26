@@ -595,7 +595,10 @@ export default function LeadsPage() {
                 {activeJob.filename && <span className="font-normal text-emerald-700"> · {activeJob.filename}</span>}
               </p>
             ) : (
-              <p className="text-sm font-semibold text-red-700">Validation failed</p>
+              <div>
+                <p className="text-sm font-semibold text-red-700">Validation failed — the email checker timed out or hit an error.</p>
+                <p className="text-xs text-red-500 mt-0.5">Dismiss and try uploading the file again.</p>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">

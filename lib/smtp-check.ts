@@ -62,7 +62,7 @@ function doSmtpConversation(
     let buf = '';
     let step = 0;
 
-    socket.setTimeout(6000);
+    socket.setTimeout(4000);
     socket.once('timeout', () => done('unknown'));
     socket.once('error', () => done('unknown'));
 
@@ -153,7 +153,7 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
             command: 'connect',
             destination: { host: mxHost, port: 25 },
           }),
-          new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 5000)),
+          new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 3000)),
         ]) as Promise<Awaited<ReturnType<typeof SocksClient.createConnection>>>);
         socket = conn.socket;
       } catch {
@@ -174,21 +174,28 @@ export async function smtpCheck(email: string): Promise<SmtpResult> {
   }
 }
 
+// Hard ceiling per email — prevents any single probe from blocking the batch
+async function smtpCheckSafe(email: string): Promise<SmtpResult> {
+  return Promise.race([
+    smtpCheck(email),
+    new Promise<SmtpResult>(resolve => setTimeout(() => resolve('unknown'), 7000)),
+  ]);
+}
+
 export async function batchSmtp(emails: string[], concurrency = 15): Promise<Map<string, SmtpResult>> {
   const results = new Map<string, SmtpResult>();
   const domainCache = new Map<string, SmtpResult>();
 
   for (let i = 0; i < emails.length; i += concurrency) {
     const batch = emails.slice(i, i + concurrency);
-    await Promise.all(batch.map(async (email) => {
+    await Promise.allSettled(batch.map(async (email) => {
       const domain = email.split('@')[1];
       if (domainCache.has(domain)) {
         results.set(email, domainCache.get(domain)!);
         return;
       }
-      const result = await smtpCheck(email);
+      const result = await smtpCheckSafe(email);
       results.set(email, result);
-      // Cache structural domain-level results — same for every address on that domain
       if (result === 'invalid' || result === 'catchall' || result === 'valid_major') domainCache.set(domain, result);
     }));
   }
