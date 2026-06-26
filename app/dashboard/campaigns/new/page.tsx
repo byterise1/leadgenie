@@ -221,8 +221,20 @@ export default function NewCampaignPage() {
     fetch('/api/templates').then(r => r.json()).then(d => { if (Array.isArray(d)) setApiTemplates(d); });
     fetch('/api/profile').then(r => r.json()).then(d => { if (d?.default_from_name) setFromName(d.default_from_name); });
 
-    // Auto-save draft to localStorage on navigate away
+    // Save draft on tab close / refresh (beforeunload fires; React cleanup does not)
+    const saveDraftNow = () => {
+      if (launchedRef.current) return;
+      try {
+        const state = formRef.current;
+        if (!String(state.name || '').trim()) return;
+        localStorage.setItem('campaign_draft', JSON.stringify(state));
+      } catch {}
+    };
+    window.addEventListener('beforeunload', saveDraftNow);
+
+    // Auto-save draft on in-app navigation (cleanup fires on unmount)
     return () => {
+      window.removeEventListener('beforeunload', saveDraftNow);
       if (launchedRef.current) return;
       try {
         const state = formRef.current;

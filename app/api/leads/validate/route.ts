@@ -31,6 +31,7 @@ function expandRow(r: Record<string, string>) {
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -56,8 +57,10 @@ export async function POST(req: NextRequest) {
     try {
       const { read, utils } = await import('xlsx');
       const wb = read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
-      rawRows = utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-    } catch {
+      // raw:false converts every cell to its formatted string (avoids TypeErrors when cells are numbers/booleans)
+      rawRows = utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: false });
+    } catch (e) {
+      console.error('[validate] xlsx parse error:', e);
       return NextResponse.json({ error: 'Could not read the Excel file. Make sure it is not corrupted or password-protected.' }, { status: 400 });
     }
   } else {
@@ -231,6 +234,10 @@ export async function POST(req: NextRequest) {
   await validationQueue.add('validate', { jobId, userId: user.id });
 
   return NextResponse.json({ job_id: jobId, status: 'processing', quick_summary });
+  } catch (err: unknown) {
+    console.error('[validate] unhandled error:', err);
+    return NextResponse.json({ error: 'Import failed. Please try again or contact support.' }, { status: 500 });
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
