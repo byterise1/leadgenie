@@ -172,12 +172,31 @@ export default function NewCampaignPage() {
   });
 
   useEffect(() => {
-    // Check for a saved draft from a previous navigation-away
+    // Auto-restore draft from a previous navigation-away (silently, without requiring user action)
     try {
       const saved = localStorage.getItem('campaign_draft');
       if (saved) {
-        const draft = JSON.parse(saved);
-        if (draft?.name?.trim()) setDraftBanner({ name: draft.name });
+        const d = JSON.parse(saved);
+        if (d?.name?.trim()) {
+          if (d.name) setName(d.name);
+          if (d.goal) setGoal(d.goal);
+          if (d.fromName) setFromName(d.fromName);
+          if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
+          if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
+          if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
+          if (d.selectedListId) setSelectedListId(d.selectedListId);
+          if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
+          if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
+          if (d.fromTime) setFromTime(d.fromTime);
+          if (d.toTime) setToTime(d.toTime);
+          if (d.timezone) setTimezone(d.timezone);
+          if (d.startDate) setStartDate(d.startDate);
+          if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
+          if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
+          if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
+          setDraftBanner({ name: d.name }); // show "draft restored" notice
+          localStorage.removeItem('campaign_draft');
+        }
       }
     } catch {}
 
@@ -232,31 +251,6 @@ export default function NewCampaignPage() {
   const updateEmail = (idx: number, key: keyof EmailStep, val: unknown) =>
     setEmails(em => em.map((x, i) => i === idx ? { ...x, [key]: val } : x));
 
-  const restoreDraft = () => {
-    try {
-      const saved = localStorage.getItem('campaign_draft');
-      if (!saved) return;
-      const d = JSON.parse(saved);
-      if (d.name) setName(d.name);
-      if (d.goal) setGoal(d.goal);
-      if (d.fromName) setFromName(d.fromName);
-      if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
-      if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
-      if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
-      if (d.selectedListId) setSelectedListId(d.selectedListId);
-      if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
-      if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
-      if (d.fromTime) setFromTime(d.fromTime);
-      if (d.toTime) setToTime(d.toTime);
-      if (d.timezone) setTimezone(d.timezone);
-      if (d.startDate) setStartDate(d.startDate);
-      if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
-      if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
-      if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
-    } catch {}
-    localStorage.removeItem('campaign_draft');
-    setDraftBanner(null);
-  };
 
   const okAccounts = realAccounts.filter(a => a.status !== 'error');
   const activeAccountCount = allAccounts ? okAccounts.length : selectedAccounts.filter(id => okAccounts.some(a => a.id === id)).length;
@@ -282,11 +276,18 @@ export default function NewCampaignPage() {
 
         {/* Draft restore banner */}
         {draftBanner && (
-          <div className="mb-5 flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-            <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p className="text-sm text-amber-800 flex-1">You have an unsaved draft: <strong>{draftBanner.name}</strong></p>
-            <button onClick={restoreDraft} className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg px-3 py-1.5 transition-colors">Restore</button>
-            <button onClick={() => { localStorage.removeItem('campaign_draft'); setDraftBanner(null); }} className="text-xs font-semibold text-amber-500 hover:text-amber-700 transition-colors">Dismiss</button>
+          <div className="mb-5 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+            <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p className="text-sm text-blue-800 flex-1">Draft restored: <strong>{draftBanner.name}</strong> — your progress was saved automatically.</p>
+            <button onClick={() => {
+              setName(''); setGoal('Book a Meeting'); setFromName(''); setEmails([{ ...DEFAULT_EMAIL }]);
+              setSelectedAccounts([]); setAllAccounts(false); setSelectedListId(''); setDailyLimitStr('50');
+              setActiveDays([true,true,true,true,true,false,false]);
+              setDraftBanner(null);
+            }} className="text-xs font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap">Start fresh</button>
+            <button onClick={() => setDraftBanner(null)} className="text-blue-400 hover:text-blue-600 transition-colors p-0.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
         )}
 
