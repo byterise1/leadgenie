@@ -33,7 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const rowData: Record<string, Record<string, string | null>> = job.probe_data?.row_data || {};
 
   // Determine which emails to import
-  // safe + likely_safe: always imported; risky: toggled; rest: never imported
   const toImport = results.filter(r => {
     if (!IMPORTABLE_DECISIONS.includes(r.decision)) return false;
     if (r.decision === 'risky' && !include_risky) return false;
@@ -41,40 +40,64 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return true;
   });
 
-  // ── Batch upsert leads ───────────────────────────────────────────────────────
-  const leadsPayload = toImport.map(r => {
-    const extra = rowData[r.email] || {};
-    return {
-      user_id: user.id,
-      email: r.email,
-      first_name: extra.first_name || null,
-      last_name: extra.last_name || null,
-      company: extra.company || null,
-      title: extra.title || null,
-      website: extra.website || null,
-      linkedin: extra.linkedin || null,
-      phone: extra.phone || null,
-    };
-  });
-
-  const { data: upsertedLeads, error: upsertErr } = await supabaseAdmin
-    .from('leads')
-    .upsert(leadsPayload, { onConflict: 'user_id,email', ignoreDuplicates: false })
-    .select('id, email');
-
-  if (upsertErr) {
-    console.error('Batch upsert failed:', upsertErr.message);
-    return NextResponse.json({ error: 'Import failed' }, { status: 500 });
+  if (toImport.length === 0) {
+    await supabaseAdmin.from('lead_import_jobs').update({ status: 'imported', probe_data: null }).eq('id', id);
+    return NextResponse.json({ imported: 0, skipped: 0 });
   }
 
-  const imported = upsertedLeads?.length ?? 0;
+  const emailsToImport = toImport.map(r => r.email);
 
-  // ── Batch upsert list members ────────────────────────────────────────────────
-  if (job.list_id && upsertedLeads?.length) {
-    const members = upsertedLeads.map((l: { id: string; email: string }) => ({
-      list_id: job.list_id,
-      lead_id: l.id,
-    }));
+  // ── Step 1: find which emails already exist for this user ────────────────────
+  const { data: existingRows } = await supabaseAdmin
+    .from('leads')
+    .select('id, email')
+    .eq('user_id', user.id)
+    .in('email', emailsToImport);
+
+  const existingMap = new Map<string, string>((existingRows || []).map((r: any) => [r.email, r.id]));
+  const brandNewEmails = emailsToImport.filter(e => !existingMap.has(e));
+
+  // ── Step 2: insert only new leads ───────────────────────────────────────────
+  let newlyInserted: { id: string; email: string }[] = [];
+  if (brandNewEmails.length > 0) {
+    const insertPayload = brandNewEmails.map(email => {
+      const extra = rowData[email] || {};
+      return {
+        user_id: user.id,
+        email,
+        first_name: extra.first_name || null,
+        last_name: extra.last_name || null,
+        company: extra.company || null,
+        title: extra.title || null,
+        website: extra.website || null,
+        linkedin: extra.linkedin || null,
+        phone: extra.phone || null,
+      };
+    });
+
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('leads')
+      .insert(insertPayload)
+      .select('id, email');
+
+    if (insertErr) {
+      console.error('Lead insert failed:', insertErr.message);
+      return NextResponse.json({ error: 'Import failed: ' + insertErr.message }, { status: 500 });
+    }
+    newlyInserted = inserted || [];
+  }
+
+  // ── Step 3: collect all lead IDs (existing + new) for list membership ────────
+  const allLeadIds = [
+    ...newlyInserted.map(l => l.id),
+    ...Array.from(existingMap.values()),
+  ];
+
+  const imported = newlyInserted.length;
+
+  // ── Step 4: upsert list members ──────────────────────────────────────────────
+  if (job.list_id && allLeadIds.length > 0) {
+    const members = allLeadIds.map(lead_id => ({ list_id: job.list_id, lead_id }));
     await supabaseAdmin
       .from('lead_list_members')
       .upsert(members, { onConflict: 'list_id,lead_id', ignoreDuplicates: true });
