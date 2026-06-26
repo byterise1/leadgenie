@@ -60,6 +60,39 @@ const faqs = [
   { q: 'Is there a limit on team members?', a: 'Pro and Agency plans include unlimited team seats.' },
 ];
 
+function FAQAccordion() {
+  const [open, setOpen] = useState<number | null>(0);
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="max-w-[1400px] mx-auto px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-2">Frequently Asked Questions</h2>
+          <p className="text-center text-gray-500 mb-10">Everything you need to know about pricing and plans.</p>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <button
+                  onClick={() => setOpen(open === i ? null : i)}
+                  className="w-full flex items-center justify-between px-6 py-4 text-left gap-4">
+                  <span className="text-sm font-bold text-gray-900">{faq.q}</span>
+                  <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                {open === i && (
+                  <div className="px-6 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -194,20 +227,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* FAQ */}
-        <section className="py-16 bg-gray-50">
-          <div className="container max-w-3xl">
-            <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">Frequently Asked Questions</h2>
-            <div className="space-y-4">
-              {faqs.map(faq => (
-                <div key={faq.q} className="border border-gray-200 rounded-2xl p-6 bg-white">
-                  <h3 className="text-base font-bold text-gray-900 mb-2">{faq.q}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{faq.a}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FAQAccordion />
 
 
       </main>
