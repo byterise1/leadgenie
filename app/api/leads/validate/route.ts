@@ -53,9 +53,13 @@ export async function POST(req: NextRequest) {
   // ── Parse file ───────────────────────────────────────────────────────────────
   let rawRows: Record<string, string>[] = [];
   if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-    const { read, utils } = await import('xlsx');
-    const wb = read(await file.arrayBuffer(), { type: 'array' });
-    rawRows = utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    try {
+      const { read, utils } = await import('xlsx');
+      const wb = read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+      rawRows = utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    } catch {
+      return NextResponse.json({ error: 'Could not read the Excel file. Make sure it is not corrupted or password-protected.' }, { status: 400 });
+    }
   } else {
     const { data } = Papa.parse<Record<string, string>>(await file.text(), {
       header: true, skipEmptyLines: true, transformHeader: h => h.trim(),

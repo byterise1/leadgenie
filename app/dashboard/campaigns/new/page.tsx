@@ -173,32 +173,38 @@ export default function NewCampaignPage() {
 
   useEffect(() => {
     // Auto-restore draft from a previous navigation-away (silently, without requiring user action)
-    try {
-      const saved = localStorage.getItem('campaign_draft');
-      if (saved) {
-        const d = JSON.parse(saved);
-        if (d?.name?.trim()) {
-          if (d.name) setName(d.name);
-          if (d.goal) setGoal(d.goal);
-          if (d.fromName) setFromName(d.fromName);
-          if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
-          if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
-          if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
-          if (d.selectedListId) setSelectedListId(d.selectedListId);
-          if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
-          if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
-          if (d.fromTime) setFromTime(d.fromTime);
-          if (d.toTime) setToTime(d.toTime);
-          if (d.timezone) setTimezone(d.timezone);
-          if (d.startDate) setStartDate(d.startDate);
-          if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
-          if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
-          if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
-          setDraftBanner({ name: d.name }); // show "draft restored" notice
-          localStorage.removeItem('campaign_draft');
+    // Skip if ?fresh=1 (user explicitly clicked "New Campaign" button)
+    const isFresh = new URLSearchParams(window.location.search).get('fresh') === '1';
+    if (isFresh) {
+      try { localStorage.removeItem('campaign_draft'); } catch {}
+    } else {
+      try {
+        const saved = localStorage.getItem('campaign_draft');
+        if (saved) {
+          const d = JSON.parse(saved);
+          if (d?.name?.trim()) {
+            if (d.name) setName(d.name);
+            if (d.goal) setGoal(d.goal);
+            if (d.fromName) setFromName(d.fromName);
+            if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
+            if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
+            if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
+            if (d.selectedListId) setSelectedListId(d.selectedListId);
+            if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
+            if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
+            if (d.fromTime) setFromTime(d.fromTime);
+            if (d.toTime) setToTime(d.toTime);
+            if (d.timezone) setTimezone(d.timezone);
+            if (d.startDate) setStartDate(d.startDate);
+            if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
+            if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
+            if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
+            setDraftBanner({ name: d.name });
+            localStorage.removeItem('campaign_draft');
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
 
     // Pre-fill from template when coming via "Use →" on templates page
     try {
@@ -357,12 +363,12 @@ export default function NewCampaignPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-gray-700">Lead List</label>
-                <Link href="/dashboard/leads" className="text-xs font-bold text-blue-600 hover:underline">Manage lists →</Link>
+                <Link href="/dashboard/leads" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">Manage lists ↗</Link>
               </div>
               {leadLists.length === 0 ? (
                 <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
                   <p className="text-sm text-gray-400 mb-2">No lists yet — create one first</p>
-                  <Link href="/dashboard/leads" className="text-xs font-bold text-blue-600 hover:underline">+ Create a lead list →</Link>
+                  <Link href="/dashboard/leads" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">+ Create a lead list ↗</Link>
                 </div>
               ) : (
                 <select

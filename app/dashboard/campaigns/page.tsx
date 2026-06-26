@@ -52,6 +52,7 @@ export default function CampaignsPage() {
   const [tab, setTab] = useState('All');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [localDraft, setLocalDraft] = useState<{ name: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -59,6 +60,11 @@ export default function CampaignsPage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    try {
+      const d = localStorage.getItem('campaign_draft');
+      if (d) { const p = JSON.parse(d); if (p?.name?.trim()) setLocalDraft({ name: p.name }); }
+    } catch {}
+
     try { const c = sessionStorage.getItem(CACHE_KEY); if (c) { setCampaigns(JSON.parse(c)); setLoading(false); } } catch {}
     const fetchCampaigns = () =>
       fetch('/api/campaigns').then(r => r.json()).then(data => {
@@ -159,7 +165,7 @@ export default function CampaignsPage() {
           <h1 className="text-xl font-bold text-gray-900">Campaigns</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage all your cold email campaigns.</p>
         </div>
-        <Link href="/dashboard/campaigns/new"
+        <Link href="/dashboard/campaigns/new?fresh=1"
           className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           New Campaign
@@ -177,6 +183,29 @@ export default function CampaignsPage() {
       </div>
 
       {/* Campaign cards */}
+      {/* In-progress draft from localStorage (only visible in Draft or All tab) */}
+      {localDraft && (tab === 'Draft' || tab === 'All') && (
+        <div className="mb-2 bg-white rounded-2xl border border-amber-200 flex items-center overflow-hidden">
+          <div className="w-1.5 self-stretch shrink-0 rounded-l-2xl bg-amber-300" />
+          <div className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3.5">
+            <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-700 truncate">{localDraft.name}</p>
+              <p className="text-[11px] text-amber-600 font-semibold mt-0.5">Unsaved draft — not yet launched</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-4 shrink-0">
+            <Link href="/dashboard/campaigns/new" className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">
+              Continue →
+            </Link>
+            <button onClick={() => { try { localStorage.removeItem('campaign_draft'); } catch {} setLocalDraft(null); }}
+              className="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors px-2 py-1.5">
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
@@ -212,7 +241,7 @@ export default function CampaignsPage() {
               </div>
               <p className="text-sm font-semibold text-gray-700 mb-1">No campaigns yet</p>
               <p className="text-xs text-gray-400 mb-5">Launch your first campaign to start booking meetings.</p>
-              <Link href="/dashboard/campaigns/new" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
+              <Link href="/dashboard/campaigns/new?fresh=1" className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">
                 Create Campaign →
               </Link>
             </div>
