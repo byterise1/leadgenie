@@ -52,7 +52,7 @@ export default function SaaSPage() {
           </div>
         </section>
 
-        <section className="py-12 border-b border-gray-100">
+        <section className="border-b border-gray-100">
           <div className="container">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
               {[
@@ -62,10 +62,10 @@ export default function SaaSPage() {
                 { v: '14 days', l: 'To First Meetings', color: '#f59e0b', bg: '#fffbeb', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> },
               ].map(s => (
                 <div key={s.l} className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
                   <div>
-                    <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">{s.l}</p>
+                    <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
+                    <p className="text-xs font-bold text-gray-700 mt-0.5">{s.l}</p>
                   </div>
                 </div>
               ))}

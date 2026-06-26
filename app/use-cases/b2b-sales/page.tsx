@@ -52,7 +52,7 @@ export default function B2BSalesPage() {
           </div>
         </section>
 
-        <section className="py-12 border-b border-gray-100">
+        <section className="border-b border-gray-100">
           <div className="container">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
               {[
@@ -62,10 +62,10 @@ export default function B2BSalesPage() {
                 { v: '$0', l: 'Extra SDR Cost', color: '#059669', bg: '#ecfdf5', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
               ].map(s => (
                 <div key={s.l} className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
                   <div>
-                    <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">{s.l}</p>
+                    <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
+                    <p className="text-xs font-bold text-gray-700 mt-0.5">{s.l}</p>
                   </div>
                 </div>
               ))}
