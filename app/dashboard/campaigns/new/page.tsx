@@ -11,6 +11,8 @@ type RealAccount = {
   id: string;
   email: string;
   type: string;
+  status?: string;
+  health_score?: number;
   daily_limit?: number;
   remaining_today?: number;
   sent_today_real?: number;
@@ -217,8 +219,9 @@ export default function NewCampaignPage() {
     setAllAccounts(false);
   };
   const toggleAllAccounts = () => {
+    const okAccounts = realAccounts.filter(a => a.status !== 'error');
     if (allAccounts) { setAllAccounts(false); setSelectedAccounts([]); }
-    else { setAllAccounts(true); setSelectedAccounts(realAccounts.map(a => a.id)); }
+    else { setAllAccounts(true); setSelectedAccounts(okAccounts.map(a => a.id)); }
   };
 
   const applyTemplate = (idx: number, t: { id: string; subject: string; body: string }) => {
@@ -255,7 +258,8 @@ export default function NewCampaignPage() {
     setDraftBanner(null);
   };
 
-  const activeAccountCount = allAccounts ? realAccounts.length : selectedAccounts.length;
+  const okAccounts = realAccounts.filter(a => a.status !== 'error');
+  const activeAccountCount = allAccounts ? okAccounts.length : selectedAccounts.filter(id => okAccounts.some(a => a.id === id)).length;
 
   // Capacity calculation for review step
   const activeAccountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
@@ -380,33 +384,63 @@ export default function NewCampaignPage() {
                 <label className="text-sm font-semibold text-gray-700">Sending Accounts</label>
                 <span className="text-xs text-gray-400">Round-robin rotation</span>
               </div>
-              {realAccounts.length === 0 ? (
-                <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
-                  <p className="text-sm text-gray-400 mb-2">No accounts connected yet</p>
-                  <Link href="/dashboard/email-accounts" className="text-xs font-bold text-blue-600 hover:underline">+ Connect account →</Link>
-                </div>
-              ) : (
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
-                    <input type="checkbox" checked={allAccounts} onChange={toggleAllAccounts} className="w-4 h-4 rounded accent-blue-600"/>
-                    <span className="text-sm font-semibold text-gray-700">All accounts ({realAccounts.length})</span>
-                  </label>
-                  {realAccounts.map(acc => (
-                    <label key={acc.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors">
-                      <input type="checkbox" checked={allAccounts || selectedAccounts.includes(acc.id)} onChange={() => toggleAccount(acc.id)} className="w-4 h-4 rounded accent-blue-600"/>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-800 font-medium">{acc.email}</p>
-                        <p className="text-xs text-gray-400">{acc.type}</p>
+              {(() => {
+                const okAccounts = realAccounts.filter(a => a.status !== 'error');
+                const errorAccounts = realAccounts.filter(a => a.status === 'error');
+                if (realAccounts.length === 0) return (
+                  <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
+                    <p className="text-sm text-gray-400 mb-2">No accounts connected yet</p>
+                    <Link href="/dashboard/email-accounts" className="text-xs font-bold text-blue-600 hover:underline">+ Connect account →</Link>
+                  </div>
+                );
+                return (
+                  <div className="space-y-2">
+                    {okAccounts.length > 0 && (
+                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                        <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
+                          <input type="checkbox" checked={allAccounts} onChange={toggleAllAccounts} className="w-4 h-4 rounded accent-blue-600"/>
+                          <span className="text-sm font-semibold text-gray-700">All accounts ({okAccounts.length})</span>
+                        </label>
+                        {okAccounts.map(acc => (
+                          <label key={acc.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" checked={allAccounts || selectedAccounts.includes(acc.id)} onChange={() => toggleAccount(acc.id)} className="w-4 h-4 rounded accent-blue-600"/>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${acc.status === 'warming' ? 'bg-amber-400' : 'bg-emerald-400'}`}/>
+                                <p className="text-sm text-gray-800 font-medium truncate">{acc.email}</p>
+                              </div>
+                              <p className="text-xs text-gray-400 pl-3">{acc.type} · {acc.status === 'warming' ? 'Warming up' : 'Active'}</p>
+                            </div>
+                            {acc.remaining_today !== undefined && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${acc.remaining_today === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                                {acc.remaining_today}/{acc.daily_limit ?? 50} left
+                              </span>
+                            )}
+                          </label>
+                        ))}
                       </div>
-                      {acc.remaining_today !== undefined && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${acc.remaining_today === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
-                          {acc.remaining_today}/{acc.daily_limit ?? 50} left
-                        </span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              )}
+                    )}
+                    {errorAccounts.length > 0 && (
+                      <div className="border border-red-100 rounded-xl overflow-hidden bg-red-50/40">
+                        <p className="px-4 py-2 text-[10px] font-bold text-red-500 uppercase tracking-wider border-b border-red-100">Disconnected — fix in Email Accounts</p>
+                        {errorAccounts.map(acc => (
+                          <div key={acc.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-red-50 last:border-0 opacity-60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"/>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-700 font-medium truncate">{acc.email}</p>
+                              <p className="text-xs text-red-400">{acc.type} · Connection error</p>
+                            </div>
+                            <Link href="/dashboard/email-accounts" className="text-[10px] font-bold text-red-500 hover:text-red-700 shrink-0">Fix →</Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {okAccounts.length === 0 && errorAccounts.length > 0 && (
+                      <p className="text-xs text-red-600 text-center py-1">All accounts have errors — fix them to send campaigns.</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Daily limit */}
@@ -857,7 +891,7 @@ export default function NewCampaignPage() {
                 setLaunching(true);
                 setLaunchError('');
                 try {
-                  const accountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
+                  const accountIds = allAccounts ? realAccounts.filter(a => a.status !== 'error').map(a => a.id) : selectedAccounts.filter(id => realAccounts.some(a => a.id === id && a.status !== 'error'));
                   const res = await fetch('/api/campaigns', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
