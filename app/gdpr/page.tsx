@@ -22,10 +22,10 @@ export default function GDPRPage() {
             {[
               { title: 'Our Role Under GDPR', content: 'Leads Genie acts as both a data controller (for data about our users) and a data processor (for prospect data uploaded by customers). As a processor, we sign Data Processing Agreements (DPAs) with customers on request and process data only per their documented instructions.' },
               { title: 'Lawful Basis for Processing', content: 'We process user account data on the basis of contractual necessity. For marketing communications, we rely on legitimate interest or consent. We do not rely on consent for essential platform functions.' },
-              { title: 'Data Subject Rights', content: 'EU residents have the right to access, rectify, erase, restrict, or port their personal data. To exercise these rights, email dpo@leadgenie.io. We respond within 30 days. You may also lodge a complaint with your national supervisory authority.' },
+              { title: 'Data Subject Rights', content: 'EU residents have the right to access, rectify, erase, restrict, or port their personal data. To exercise these rights, email dpo@leadsgenie.io. We respond within 30 days. You may also lodge a complaint with your national supervisory authority.' },
               { title: 'Data Transfers Outside the EU', content: 'Leads Genie is headquartered in the United States. We transfer EU personal data to the US under Standard Contractual Clauses (SCCs) as approved by the European Commission. Our DPA includes all necessary SCCs.' },
-              { title: 'Data Processing Agreement', content: 'If you are a business customer subject to GDPR and need a DPA, email legal@leadgenie.io. We provide DPAs at no charge and typically return a signed copy within 3 business days.' },
-              { title: 'Contact Our DPO', content: 'Data Protection Officer: dpo@leadgenie.io\nLeads Genie, Inc.\nEmail: legal@leadgenie.io' },
+              { title: 'Data Processing Agreement', content: 'If you are a business customer subject to GDPR and need a DPA, email legal@leadsgenie.io. We provide DPAs at no charge and typically return a signed copy within 3 business days.' },
+              { title: 'Contact Our DPO', content: 'Data Protection Officer: dpo@leadsgenie.io\nLeads Genie, Inc.\nEmail: legal@leadsgenie.io' },
             ].map(s => (
               <div key={s.title}>
                 <h2 className="text-xl font-bold text-gray-900 mb-3">{s.title}</h2>
