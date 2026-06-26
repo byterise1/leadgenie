@@ -75,7 +75,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
           <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
             <Link href="/help" className="hover:text-blue-600 transition-colors">Help Center</Link>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-            <span className="text-gray-500">{foundSection.emoji} {foundSection.title}</span>
+            <span className="text-gray-500">{foundSection.title}</span>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
             <span className="text-gray-700 font-medium truncate">{foundArticle.q}</span>
           </nav>
@@ -85,7 +85,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
             <div className="lg:col-span-2">
               <div className="mb-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-3 py-1">
-                  {foundSection.emoji} {foundSection.title}
+                  {foundSection.title}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mt-3 mb-6 leading-snug">
@@ -154,7 +154,6 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
                           : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                       }`}
                     >
-                      <span>{s.emoji}</span>
                       {s.title}
                     </Link>
                   ))}
