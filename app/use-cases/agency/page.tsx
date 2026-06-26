@@ -35,7 +35,7 @@ export default function AgencyPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="hero-gradient py-20 text-center">
+        <section className="hero-gradient pb-24 pt-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case — Agency</span>
             <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
