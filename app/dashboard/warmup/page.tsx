@@ -200,11 +200,12 @@ export default function WarmupPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <div className="overflow-x-auto">
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[700px]">
                 <span>Account</span><span>Status</span><span>Score</span><span>Ramp Progress</span><span>Health</span><span>Warmup</span>
               </div>
               {accounts.map(acc => (
-                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center">
+                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center min-w-[700px]">
                   <div>
                     <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
                     <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
@@ -263,7 +264,8 @@ export default function WarmupPage() {
                   </div>
                 </div>
               ))}
-            </div>
+            </div>{/* /overflow-x-auto */}
+          </div>
           )}
 
           <div className="bg-white rounded-2xl border border-gray-100 p-6">

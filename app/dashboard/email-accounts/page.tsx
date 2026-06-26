@@ -580,7 +580,7 @@ export default function EmailAccountsPage() {
     : 0;
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 p-6 space-y-6">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.includes('success') || toast.includes('connected') ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
           {toast}
@@ -599,14 +599,14 @@ export default function EmailAccountsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total Accounts', value: String(totalAccounts) },
           { label: 'Warming Up', value: String(warming) },
           { label: 'Avg Health Score', value: totalAccounts ? `${avgHealth}%` : '—' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
+            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
         ))}
@@ -632,11 +632,12 @@ export default function EmailAccountsPage() {
 
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+          <div className="overflow-x-auto">
+          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[750px]">
             <span className="pl-11">Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
           </div>
           {accounts.map((acc, i) => (
-            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 items-center">
+            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 items-center min-w-[750px]">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {i + 1}
@@ -761,6 +762,7 @@ export default function EmailAccountsPage() {
               )}
             </div>
           ))}
+          </div>{/* /overflow-x-auto */}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 p-16 flex flex-col items-center text-center">

@@ -391,7 +391,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           { label: 'Leads', value: String(leads.length) },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
+            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
         ))}
