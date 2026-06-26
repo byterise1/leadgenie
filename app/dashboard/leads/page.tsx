@@ -236,6 +236,11 @@ export default function LeadsPage() {
 
   // ── Import (validate → job) ────────────────────────────────────────
   const handleImport = async (file: File, isSingleLead = false) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+      showMsg(`Unsupported file type ".${ext}". Please upload a CSV or Excel file (.csv, .xlsx, .xls).`);
+      return;
+    }
     setValidating(true);
     const fd = new FormData();
     fd.append('file', file);
@@ -534,12 +539,13 @@ export default function LeadsPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export
           </a>
-          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
           <button onClick={handleImportClick} disabled={validating}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Accepts CSV or Excel files (.csv, .xlsx, .xls)">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            {validating ? 'Validating…' : 'Import'}
+            {validating ? 'Validating…' : 'Import CSV / Excel'}
           </button>
           <button onClick={handleAddClick}
             className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl px-3 py-2 hover:bg-blue-700 transition-colors">

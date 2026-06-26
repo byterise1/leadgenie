@@ -40,8 +40,17 @@ export async function POST(req: NextRequest) {
   const list_id = formData.get('list_id') as string | null;
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
 
-  // ── Parse file ───────────────────────────────────────────────────────────────
+  // ── Validate file type ───────────────────────────────────────────────────────
   const fileName = file.name.toLowerCase();
+  const ext = fileName.split('.').pop() ?? '';
+  if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+    return NextResponse.json(
+      { error: `Unsupported file type ".${ext}". Please upload a CSV or Excel file (.csv, .xlsx, .xls).` },
+      { status: 400 }
+    );
+  }
+
+  // ── Parse file ───────────────────────────────────────────────────────────────
   let rawRows: Record<string, string>[] = [];
   if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
     const { read, utils } = await import('xlsx');
