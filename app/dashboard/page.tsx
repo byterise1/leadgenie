@@ -56,8 +56,8 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
             <p className="text-xs text-gray-400 mt-1.5">{s.value === '0' || s.value === '—' ? 'No data yet' : 'All time'}</p>
           </div>

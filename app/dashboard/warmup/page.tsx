@@ -159,8 +159,8 @@ export default function WarmupPage() {
           { label: 'Emails sent today', value: String(totalSentToday) },
           { label: 'Total warmup sent', value: totalWarmupSent.toLocaleString() },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-3">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
         ))}
