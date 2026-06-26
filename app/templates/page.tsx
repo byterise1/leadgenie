@@ -1,5 +1,6 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
 const templates = [
@@ -10,7 +11,7 @@ const templates = [
 
 Most {{job_title}}s at {{company_size}} SaaS companies are still spending 3+ hours a day on manual prospecting.
 
-We built Lead Genie to fix that — automated outreach that books qualified demos without an SDR.
+We built Leads Add to fix that — automated outreach that books qualified demos without an SDR.
 
 Worth a 15-minute call this week?
 
@@ -64,7 +65,7 @@ Would you be open to a quick call this week?
 
 Just wanted to bump this to the top of your inbox in case it got buried.
 
-Still happy to share how {{similar_company}} used Lead Genie to book 30 meetings in 3 weeks.
+Still happy to share how {{similar_company}} used Leads Add to book 30 meetings in 3 weeks.
 
 Worth a quick chat?
 
@@ -105,14 +106,14 @@ export default function TemplatesPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Templates</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Cold Email Templates That Work</h1>
             <p className="mt-4 text-gray-500 text-base leading-relaxed max-w-lg mx-auto">
-              Proven cold email templates used by 30,000+ Lead Genie users.
+              Proven cold email templates used by 30,000+ Leads Add users.
               Copy, customise, and launch in minutes.
             </p>
           </div>
         </section>
 
         <section className="py-16">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {templates.map(t => (
                 <div key={t.title} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
@@ -150,6 +151,7 @@ export default function TemplatesPage() {
             </div>
           </div>
         </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

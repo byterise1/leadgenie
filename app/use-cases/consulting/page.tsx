@@ -1,5 +1,6 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
 export default function ConsultingPage() {
@@ -14,7 +15,7 @@ export default function ConsultingPage() {
               Fill Your Calendar With<br />Qualified Discovery Calls
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              Consultants and advisory firms use Lead Genie to automate outreach to their ideal
+              Consultants and advisory firms use Leads Add to automate outreach to their ideal
               clients — so they spend less time prospecting and more time delivering results.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -68,20 +69,20 @@ export default function ConsultingPage() {
         </section>
 
         <section className="py-20">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">Stop relying only on referrals</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon:'📅', title:'Discovery Call Booking',      desc:'Automate outreach to decision-makers and link directly to your Calendly. Prospects book calls without manual back-and-forth.' },
-                { icon:'🎯', title:'Niche Targeting',              desc:'Reach CEOs, CFOs, and VPs at companies in your specific industry or revenue range with pinpoint precision.' },
-                { icon:'✉️', title:'Authority-building Outreach',  desc:'Share insights, research, or frameworks in your cold emails to position yourself as an expert before the first call.' },
-                { icon:'🔄', title:'Long-cycle Follow-ups',        desc:'Nurture cold prospects with multi-month sequences. Stay top-of-mind until they\'re ready to buy.' },
-                { icon:'📊', title:'Proposal Pipeline Tracking',   desc:'Track which outreach leads to discovery calls, proposals sent, and contracts signed.' },
-                { icon:'🤖', title:'AI-personalised First Lines',  desc:'Lead Genie AI references each prospect\'s recent work, press mentions, or LinkedIn activity in every opening line.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>, title:'Discovery Call Booking', desc:'Automate outreach to decision-makers and link directly to your Calendly. Prospects book calls without manual back-and-forth.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>, title:'Niche Targeting', desc:'Reach CEOs, CFOs, and VPs at companies in your specific industry or revenue range with pinpoint precision.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>, title:'Authority-building Outreach', desc:'Share insights, research, or frameworks in your cold emails to position yourself as an expert before the first call.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>, title:'Long-cycle Follow-ups', desc:"Nurture cold prospects with multi-month sequences. Stay top-of-mind until they're ready to buy." },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>, title:'Proposal Pipeline Tracking', desc:'Track which outreach leads to discovery calls, proposals sent, and contracts signed.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>, title:'AI-personalised First Lines', desc:"Leads Add AI references each prospect's recent work, press mentions, or LinkedIn activity in every opening line." },
               ].map(f=>(
-                <div key={f.title} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
-                  <span className="text-3xl">{f.icon}</span>
-                  <h3 className="mt-3 text-base font-bold text-gray-900">{f.title}</h3>
+                <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
+                  <h3 className="text-base font-bold text-gray-900">{f.title}</h3>
                   <p className="mt-2 text-sm text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
@@ -91,7 +92,7 @@ export default function ConsultingPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now Lead Genie does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;I used to spend 2 hours a day on LinkedIn looking for leads. Now Leads Add does it automatically and I get 8–12 discovery calls booked every month on autopilot. My pipeline has never been healthier.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=12" alt="David Marsh" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
@@ -102,15 +103,7 @@ export default function ConsultingPage() {
           </div>
         </section>
 
-        <section className="py-20 text-center">
-          <div className="container max-w-2xl">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Start booking discovery calls today</h2>
-            <p className="text-gray-500 text-base mb-8">14-day free trial. No credit card required.</p>
-            <Link href="/signup" className="inline-flex items-center bg-gray-900 text-white font-bold text-sm rounded-full px-8 py-4 hover:bg-gray-700 transition-colors">
-              Start Free Trial →
-            </Link>
-          </div>
-        </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

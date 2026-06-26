@@ -47,14 +47,17 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function RampBar({ day, target }: { day: number; target: number }) {
-  const pct = Math.min(100, Math.round((Math.min(day, 30) / 30) * 100));
-  const todayTarget = day <= 0 ? 2 : Math.max(2, Math.floor(target * (Math.min(day, 30) / 30)));
+const WARMUP_DAILY_TARGETS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40];
+
+function RampBar({ day }: { day: number }) {
+  const clampedDay = Math.min(day, 14);
+  const pct = Math.min(100, Math.round((clampedDay / 14) * 100));
+  const todayTarget = day >= 1 && day <= 14 ? WARMUP_DAILY_TARGETS[day] : day > 14 ? 40 : 2;
   return (
     <div className="flex flex-col gap-1 min-w-0 flex-1">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-gray-400">Day {day}</span>
-        <span className="text-[10px] font-semibold text-gray-600">{todayTarget}/{target}/day</span>
+        <span className="text-[10px] text-gray-400">Day {day} of 14</span>
+        <span className="text-[10px] font-semibold text-gray-600">{todayTarget}/day target</span>
       </div>
       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
@@ -91,10 +94,11 @@ export default function WarmupPage() {
 
   const toggleWarmup = async (id: string, currentlyEnabled: boolean) => {
     const enabled = !currentlyEnabled;
-    setAccounts(prev => prev.map(a => a.id === id
-      ? { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active', warmup_day: enabled ? 0 : a.warmup_day }
-      : a
-    ));
+    setAccounts(prev => prev.map(a => {
+      if (a.id !== id) return a;
+      const resetDay = enabled && (a.warmup_day ?? 0) >= 14;
+      return { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active', warmup_day: resetDay ? 0 : a.warmup_day };
+    }));
     setSavingId(id);
     const res = await fetch('/api/warmup', {
       method: 'PATCH',
@@ -225,7 +229,12 @@ export default function WarmupPage() {
                   </div>
                   <ScoreRing score={acc.health_score || 0}/>
                   {acc.warmup_enabled ? (
-                    <RampBar day={acc.warmup_day || 0} target={acc.warmup_target || 40}/>
+                    <RampBar day={acc.warmup_day || 0}/>
+                  ) : (acc.warmup_day ?? 0) >= 14 ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-semibold text-emerald-600">14-day warmup complete ✓</span>
+                      <span className="text-[10px] text-gray-400">Toggle on to continue</span>
+                    </div>
                   ) : (
                     <span className="text-xs text-gray-400">Warmup off</span>
                   )}
@@ -259,7 +268,7 @@ export default function WarmupPage() {
               {[
                 { step: '1', title: 'Enable warmup', desc: 'Toggle warmup on for any connected account', color: 'blue' },
                 { step: '2', title: 'Auto-sends', desc: 'System sends emails between warmed accounts every 6h', color: 'indigo' },
-                { step: '3', title: 'Score grows', desc: 'Health score improves over 2–4 weeks', color: 'emerald' },
+                { step: '3', title: 'Score grows', desc: 'Health score improves +2 pts/day over 14 days', color: 'emerald' },
                 { step: '4', title: 'Safe to send', desc: 'Launch campaigns with better inbox placement', color: 'violet' },
               ].map(s => (
                 <div key={s.step} className="flex flex-col gap-2">

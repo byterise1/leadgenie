@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+﻿import { notFound } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
@@ -168,7 +168,7 @@ export default async function BlogPostPage({
         {/* Related posts */}
         {related.length > 0 && (
           <section className="py-14 bg-gray-50 border-t border-gray-100">
-            <div className="container max-w-5xl">
+            <div className="container max-w-[1100px]">
               <h2 className="text-xl font-bold text-gray-900 mb-8">More Articles</h2>
               <div className="grid sm:grid-cols-3 gap-5">
                 {related.map(p => (

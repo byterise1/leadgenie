@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 import { blogPosts } from '@/lib/blog-data';
@@ -26,7 +26,7 @@ export default function BlogPage() {
         </section>
 
         <section className="py-16">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {blogPosts.map(post => (
                 <Link key={post.slug} href={`/blog/${post.slug}`}

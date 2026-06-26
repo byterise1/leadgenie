@@ -1,4 +1,4 @@
-const TZ_MAP: Record<string, string> = {
+﻿const TZ_MAP: Record<string, string> = {
   'UTC': 'UTC',
   'US/Eastern (EST)': 'America/New_York',
   'US/Pacific (PST)': 'America/Los_Angeles',
@@ -98,7 +98,7 @@ export async function register() {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    const SITE_URL = process.env.SITE_URL || 'https://leadgenie-production.up.railway.app';
+    const SITE_URL = process.env.SITE_URL || 'https://LeadsAdd-production.up.railway.app';
 
     // Helper: create in-app notification only if user has the pref enabled
     async function notifyIfEnabled(
@@ -780,10 +780,12 @@ export async function register() {
     // Reply pool — extracted from pairs so replies sound contextual, not generic
     const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.reply);
 
-    function warmupDailyTarget(day: number, target: number): number {
+    const WARMUP_DAILY_TARGETS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40];
+
+    function warmupDailyTarget(day: number): number {
       if (day <= 0) return 2;
-      const ramp = Math.floor(target * (Math.min(day, 30) / 30));
-      return Math.max(2, Math.min(ramp, target));
+      if (day >= 14) return 40;
+      return WARMUP_DAILY_TARGETS[day] ?? 40;
     }
 
     async function gmailModify(msgId: string, addLabels: string[], removeLabels: string[], token: string) {
@@ -816,7 +818,7 @@ export async function register() {
 
       const { data: allWarmupAccounts } = await supabase
         .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date')
         .eq('warmup_enabled', true)
         .neq('status', 'error');
 
@@ -830,7 +832,7 @@ export async function register() {
       const sentPairs = new Set<string>();
 
       // Batch DB updates — collect all changes, flush at end to reduce DB round-trips
-      const accountUpdates = new Map<string, { warmup_day: number; health_score: number; sent_today: number }>();
+      const accountUpdates = new Map<string, { warmup_day: number; health_score: number; sent_today: number; warmup_last_run_date?: string; warmup_enabled?: boolean }>();
       const warmupEmailRows: { from_account_id: string; to_account_id: string; subject: string; body: string; sent_at: string }[] = [];
       const errorAccountIds = new Set<string>();
 
@@ -840,9 +842,10 @@ export async function register() {
         const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
         await Promise.all(batch.map(async account => {
           try {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (account.warmup_last_run_date === todayStr) return; // already ran today
             const day = (account.warmup_day ?? 0) + 1;
-            const target = account.warmup_target ?? 40;
-            const emailsToday = warmupDailyTarget(day, target);
+            const emailsToday = warmupDailyTarget(day);
 
             // Filter eligible peers based on pool mode
             let pool: typeof allWarmupAccounts;
@@ -894,9 +897,16 @@ export async function register() {
               }
             }
 
-            const newHealth = Math.min(100, Math.round((account.health_score ?? 50) + (sent / Math.max(emailsToday, 1)) * 2));
-            accountUpdates.set(account.id, { warmup_day: day, health_score: newHealth, sent_today: sent });
-            console.log(`[warmup-send] ${account.email} day=${day} sent=${sent}/${emailsToday} score=${newHealth}`);
+            const newHealth = sent > 0 ? Math.min(100, (account.health_score ?? 50) + 2) : (account.health_score ?? 50);
+            const completed = day >= 14;
+            accountUpdates.set(account.id, {
+              warmup_day: day,
+              health_score: newHealth,
+              sent_today: sent,
+              warmup_last_run_date: new Date().toISOString().slice(0, 10),
+              ...(completed ? { warmup_enabled: false, status: 'active' } : {}),
+            });
+            console.log(`[warmup-send] ${account.email} day=${day}${completed ? ' (COMPLETE)' : ''} sent=${sent}/${emailsToday} score=${newHealth}`);
           } catch (e: any) {
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
@@ -909,12 +919,20 @@ export async function register() {
       }
 
       // Flush account updates individually (Supabase upsert can't bulk-update different values)
+      const completedAccounts = allWarmupAccounts.filter(a => (accountUpdates.get(a.id)?.warmup_day ?? 0) >= 14);
       await Promise.all([
         ...Array.from(accountUpdates.entries()).map(([id, upd]) =>
           supabase.from('email_accounts').update(upd).eq('id', id)
         ),
         ...Array.from(errorAccountIds).map(id =>
           supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', id)
+        ),
+        ...completedAccounts.map(a =>
+          supabase.from('notifications').insert({
+            user_id: a.user_id,
+            message: `${a.email} completed 14-day warmup! Toggle warmup back on to continue sending.`,
+            type: 'info',
+          })
         ),
       ]);
 

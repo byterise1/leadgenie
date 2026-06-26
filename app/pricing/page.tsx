@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -114,7 +114,7 @@ export default function PricingPage() {
         <section className="py-16">
           <div className="container">
             {loading ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 max-w-7xl mx-auto">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 max-w-[1400px] mx-auto">
                 {[1,2,3,4,5].map(i => (
                   <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4 animate-pulse">
                     <div className="h-5 w-20 bg-gray-100 rounded"/>
@@ -126,7 +126,7 @@ export default function PricingPage() {
                 ))}
               </div>
             ) : (
-            <div className={`grid gap-5 items-start mx-auto ${plans.length <= 3 ? 'max-w-5xl sm:grid-cols-3' : plans.length === 4 ? 'max-w-6xl sm:grid-cols-2 lg:grid-cols-4' : 'max-w-7xl sm:grid-cols-2 lg:grid-cols-5'}`}>
+            <div className={`grid gap-5 items-start mx-auto ${plans.length <= 3 ? 'max-w-[1100px] sm:grid-cols-3' : plans.length === 4 ? 'max-w-[1280px] sm:grid-cols-2 lg:grid-cols-4' : 'max-w-[1400px] sm:grid-cols-2 lg:grid-cols-5'}`}>
               {plans.map((plan, i) => (
                 <motion.div key={plan.id}
                   initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
@@ -209,21 +209,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="hero-gradient py-20">
-          <div className="container text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to start booking meetings?</h2>
-            <p className="text-blue-100 text-base mb-8 max-w-md mx-auto">Join thousands of teams using LeadGenie to scale cold email outreach.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
-                Start Free Trial
-              </Link>
-              <Link href="/contact" className="border border-white/30 text-white font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-white/10 transition-colors">
-                Talk to Sales
-              </Link>
-            </div>
-          </div>
-        </section>
 
       </main>
       <Footer />

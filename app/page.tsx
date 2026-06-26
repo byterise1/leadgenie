@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -234,15 +234,15 @@ const BRANDS: Brand[] = [
    TESTIMONIALS DATA
 ════════════════════════════════════════════════════════════ */
 const testimonials = [
-  { quote: "Lead Genie completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains — zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
+  { quote: "Leads Add completely transformed our agency. We went from 2,000 emails/week to 200,000+ across 40+ client domains — zero deliverability issues. The warmup alone is worth 10x the price.", name: 'Mike Ellis', role: 'Co-Founder, Kale Acquisition', company: 'Kale', avatarIdx: 0 },
   { quote: "We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — 5-step sequence running in under 20 minutes. Managing replies in the Unibox is effortless.", name: 'Briken Bufi', role: 'CEO, Aella Creative Force', company: 'Aella', avatarIdx: 1 },
-  { quote: "I've tried Instantly, Lemlist, and Mailshake. Lead Genie beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
+  { quote: "I've tried Instantly, Lemlist, and Mailshake. Leads Add beats them all. Our open rates jumped from 28% to 76% after switching. The AI personalisation is genuinely impressive.", name: 'Alex Baldovin', role: 'CEO, Authbound', company: 'Authbound', avatarIdx: 3 },
   { quote: "The AI warmup is a total game changer. We went from landing in spam 40% of the time to virtually zero. Deliverability scores are the best they've ever been across 30 sending accounts.", name: 'David Park', role: 'Head of Growth, Ripple Labs', company: 'Ripple', avatarIdx: 5 },
-  { quote: "I manage 8 client accounts from one dashboard. Lead Genie saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
-  { quote: "Switched from Apollo + Lemlist combo. Lead Genie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
+  { quote: "I manage 8 client accounts from one dashboard. Leads Add saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
+  { quote: "Switched from Apollo + Lemlist combo. Leads Add does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
   { quote: "Finally a platform that handles everything in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+. Unbelievable ROI.", name: 'Tom Brady', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2 },
-  { quote: "Lead Genie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
-  { quote: "We run a 12-person SDR team. Lead Genie scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
+  { quote: "Leads Add's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
+  { quote: "We run a 12-person SDR team. Leads Add scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
 ];
 
 type AIResult =
@@ -304,6 +304,50 @@ const maskFade = {
   WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
   maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
 };
+
+/* ════════════════════════════════════════════════════════════
+   FAQ ACCORDION
+════════════════════════════════════════════════════════════ */
+function FAQAccordion() {
+  const [open, setOpen] = useState<number | null>(0);
+  const faqs = [
+    { q: 'Is there a free plan?', a: 'Yes — our Free plan lets you run 3 campaigns, import up to 500 leads, and send 1,000 emails per month with no credit card required.' },
+    { q: 'How does email warmup work?', a: 'Leads Add automatically exchanges warmup emails between a pool of real inboxes to build your sender reputation. This tells email providers your domain is legitimate before you launch campaigns.' },
+    { q: 'Can I use my Gmail or Outlook account?', a: 'Yes. Connect Gmail via OAuth or App Password, Outlook/Office 365, or any IMAP/SMTP account in seconds.' },
+    { q: 'How is Leads Add different from Instantly or Lemlist?', a: 'Leads Add combines unlimited sending accounts, built-in email verification, AI personalisation, and a unified inbox — all in one platform at a fraction of the cost.' },
+    { q: 'Is cold email legal?', a: 'Yes, when done right. Leads Add enforces CAN-SPAM and GDPR compliance with mandatory unsubscribe links, opt-out tracking, and suppression lists.' },
+    { q: 'What happens after my trial?', a: 'You stay on the Free plan automatically. No charges, no surprises. Upgrade only when you need more sending volume or accounts.' },
+  ];
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="max-w-[1400px] mx-auto px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-2">Frequently Asked Questions</h2>
+          <p className="text-center text-gray-500 mb-10">Everything you need to know about Leads Add.</p>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <button
+                  onClick={() => setOpen(open === i ? null : i)}
+                  className="w-full flex items-center justify-between px-6 py-4 text-left gap-4">
+                  <span className="text-sm font-bold text-gray-900">{faq.q}</span>
+                  <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                {open === i && (
+                  <div className="px-6 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* ════════════════════════════════════════════════════════════
    PAGE
@@ -391,13 +435,13 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[600px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
               {error && <div className="flex items-center gap-3 px-5 py-4"><span className="text-red-500 shrink-0"><IcWarning c="w-5 h-5" /></span><p className="text-sm text-red-600 font-medium">{error}</p></div>}
-              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Lead Genie AI is thinking...</p></div>}
+              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Leads Add AI is thinking...</p></div>}
               {result?.type === 'answer' && <>
-                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Lead Genie AI</p></div>
+                <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Leads Add AI</p></div>
                 <div className="px-5 py-4"><p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p></div>
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-400">Want to see it in action?</p>
-                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Lead Genie Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
+                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Leads Add Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
                 </div>
               </>}
               {result?.type === 'email' && <>
@@ -409,7 +453,12 @@ export default function HomePage() {
                 </div>
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-400">No credit card required</p>
-                  <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use this template — Start Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
+                  <button onClick={() => {
+                    if (result?.type === 'email') {
+                      try { localStorage.setItem('prefill_template', JSON.stringify({ subject: result.subject, body: result.body })); } catch {}
+                    }
+                    window.location.href = '/login?next=/dashboard/campaigns/new';
+                  }} className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Use this template — Start Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></button>
                 </div>
               </>}
             </motion.div>
@@ -440,8 +489,8 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           TRUSTED BY — continuous marquee, no pause
       ══════════════════════════════════════════ */}
-      <section className="bg-white border-b border-gray-100 py-12 overflow-hidden">
-        <div className="container mb-9 text-center">
+      <section className="bg-white border-b border-gray-100 py-16 overflow-hidden">
+        <div className="container mb-10 text-center">
           <p className="text-sm text-gray-400 tracking-wide">Trusted by companies worldwide</p>
         </div>
         <div className="relative" style={maskFade}>
@@ -727,7 +776,7 @@ export default function HomePage() {
                 Every Reply. One Smart Inbox.
               </h2>
               <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
-                Stop switching between 20 different email accounts. Lead Genie&apos;s Unibox pulls every
+                Stop switching between 20 different email accounts. Leads Add&apos;s Unibox pulls every
                 reply into one place — filter by campaign, label by intent, assign to teammates,
                 and close deals faster.
               </p>
@@ -881,7 +930,7 @@ export default function HomePage() {
               Automate Every Follow-Up
             </h2>
             <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-              Set your triggers once — Lead Genie automatically handles follow-ups, tags leads by
+              Set your triggers once — Leads Add automatically handles follow-ups, tags leads by
               intent, and routes hot prospects to your team. No missed opportunities, ever.
             </p>
             <Link href="/signup"
@@ -890,11 +939,11 @@ export default function HomePage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </Link>
           </motion.div>
-          <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
             {[
-              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Lead Genie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
-              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Lead Genie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
-              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Lead Genie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
+              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Leads Add queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
+              { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Leads Add auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
+              { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Leads Add instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
             ].map((wf, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
@@ -952,44 +1001,9 @@ export default function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════
-          8. CTA
+          8. FAQ ACCORDION
       ══════════════════════════════════════════ */}
-      <section className="cta-gradient py-28">
-        <div className="container text-center">
-          <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight">
-              Start Booking Meetings This Week Free
-            </h2>
-            <p className="mt-5 text-blue-200 text-base max-w-sm mx-auto leading-relaxed font-medium">
-              No credit card required. Get set up in minutes and launch your first
-              cold email campaign today.
-            </p>
-            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/signup"
-                className="bg-white text-gray-900 text-sm font-extrabold rounded-full px-9 py-4 hover:bg-blue-50 transition-colors shadow-xl">
-                Get Started Free
-              </Link>
-              <Link href="/pricing"
-                className="border-2 border-white/30 text-white text-sm font-bold rounded-full px-8 py-[14px] hover:bg-white/10 transition-colors">
-                See Pricing
-              </Link>
-            </div>
-            <div className="mt-12 flex items-center justify-center gap-8 flex-wrap">
-              {[
-                { icon: <IcUsers c="w-4 h-4" />, text: '8,500+ active teams' },
-                { icon: <IcStar c="w-4 h-4" />,  text: '4.9/5 on G2'        },
-                { icon: <IcMail c="w-4 h-4" />,  text: '42M+ emails sent'   },
-              ].map(s => (
-                <div key={s.text} className="flex items-center gap-2 text-white/70 text-sm font-semibold">
-                  <span className="text-white/45">{s.icon}</span>
-                  {s.text}
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      <FAQAccordion />
 
       <Footer />
     </div>

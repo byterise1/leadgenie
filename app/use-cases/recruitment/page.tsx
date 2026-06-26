@@ -1,5 +1,6 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
 export default function RecruitmentPage() {
@@ -14,7 +15,7 @@ export default function RecruitmentPage() {
               Reach Passive Candidates<br />Before Anyone Else
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
-              The best candidates aren't applying. Lead Genie helps recruiters run personalised
+              The best candidates aren't applying. Leads Add helps recruiters run personalised
               outreach at scale to fill roles faster without relying on job boards.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -68,20 +69,20 @@ export default function RecruitmentPage() {
         </section>
 
         <section className="py-20">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">Built for modern recruiting teams</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon:'🎯', title:'Passive Candidate Targeting',  desc:'Find candidates by role, seniority, company, tech stack, and location — even if they\'re not actively looking.' },
-                { icon:'✉️', title:'Personalised Outreach at Scale', desc:'AI writes personalised emails for every candidate based on their experience and background.' },
-                { icon:'🔄', title:'Multi-step Follow-ups',         desc:'Automatically follow up 2–3 times with candidates who don\'t reply. Set delays and stop on response.' },
-                { icon:'📥', title:'Unified Inbox',                 desc:'Manage all candidate replies from every sending account in one clean inbox.' },
-                { icon:'📊', title:'Sourcing Analytics',            desc:'Track response rates by role, location, seniority level, and message template.' },
-                { icon:'🔗', title:'ATS Integration',               desc:'Push interested candidates directly into your ATS with one click via Zapier or API.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>, title:'Passive Candidate Targeting', desc:'Find candidates by role, seniority, company, tech stack, and location — even if they\'re not actively looking.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>, title:'Personalised Outreach at Scale', desc:'AI writes personalised emails for every candidate based on their experience and background.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>, title:'Multi-step Follow-ups', desc:'Automatically follow up 2–3 times with candidates who don\'t reply. Set delays and stop on response.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/></svg>, title:'Unified Inbox', desc:'Manage all candidate replies from every sending account in one clean inbox.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>, title:'Sourcing Analytics', desc:'Track response rates by role, location, seniority level, and message template.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>, title:'ATS Integration', desc:'Push interested candidates directly into your ATS with one click via Zapier or API.' },
               ].map(f=>(
-                <div key={f.title} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
-                  <span className="text-3xl">{f.icon}</span>
-                  <h3 className="mt-3 text-base font-bold text-gray-900">{f.title}</h3>
+                <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
+                  <h3 className="text-base font-bold text-gray-900">{f.title}</h3>
                   <p className="mt-2 text-sm text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
@@ -91,7 +92,7 @@ export default function RecruitmentPage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We used to spend hours on LinkedIn finding candidates. Now Lead Genie does it automatically and we spend our time on actual interviews. Our placement rate is up 40%.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We used to spend hours on LinkedIn finding candidates. Now Leads Add does it automatically and we spend our time on actual interviews. Our placement rate is up 40%.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=5" alt="Sarah Reynolds" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
@@ -102,15 +103,7 @@ export default function RecruitmentPage() {
           </div>
         </section>
 
-        <section className="py-20 text-center">
-          <div className="container max-w-2xl">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Start sourcing passive candidates today</h2>
-            <p className="text-gray-500 text-base mb-8">14-day free trial. No credit card required.</p>
-            <Link href="/signup" className="inline-flex items-center bg-gray-900 text-white font-bold text-sm rounded-full px-8 py-4 hover:bg-gray-700 transition-colors">
-              Start Free Trial →
-            </Link>
-          </div>
-        </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

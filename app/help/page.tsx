@@ -1,11 +1,12 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 import { helpSections, toSlug } from '@/lib/help-articles';
 
 export const metadata = {
-  title: 'Help Center — Lead Genie',
-  description: 'Browse guides and tutorials for every part of Lead Genie.',
+  title: 'Help Center — Leads Add',
+  description: 'Browse guides and tutorials for every part of Leads Add.',
 };
 
 export default function HelpPage() {
@@ -18,14 +19,14 @@ export default function HelpPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Help Center</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">How can we help?</h1>
             <p className="mt-4 text-gray-500 text-base max-w-lg mx-auto leading-relaxed">
-              Browse guides and tutorials for every part of Lead Genie. Can&apos;t find what you need?{' '}
+              Browse guides and tutorials for every part of Leads Add. Can&apos;t find what you need?{' '}
               <Link href="/contact" className="text-blue-600 hover:underline">Contact support →</Link>
             </p>
           </div>
         </section>
 
         <section className="py-16">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {helpSections.map(section => (
                 <div key={section.id} id={section.id} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
@@ -67,6 +68,7 @@ export default function HelpPage() {
             </div>
           </div>
         </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

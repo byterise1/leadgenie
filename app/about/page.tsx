@@ -1,5 +1,6 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
 export default function AboutPage() {
@@ -14,7 +15,7 @@ export default function AboutPage() {
               Built for cold email teams<br />who want real results
             </h1>
             <p className="mt-6 text-gray-500 text-lg leading-relaxed max-w-2xl mx-auto">
-              Lead Genie was built by a team of outbound sales practitioners who were frustrated
+              Leads Add was built by a team of outbound sales practitioners who were frustrated
               with tools that promised deliverability but couldn&apos;t deliver. We built the platform
               we always wanted — and opened it up to the world.
             </p>
@@ -57,6 +58,7 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>

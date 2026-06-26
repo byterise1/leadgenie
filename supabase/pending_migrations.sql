@@ -33,7 +33,8 @@ ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_target     INTEGER  D
 ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_enabled    BOOLEAN  DEFAULT FALSE;
 ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_pool_mode  TEXT     DEFAULT 'admin_pool';
 ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS sent_today        INTEGER  DEFAULT 0;
-ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS is_pool_account   BOOLEAN  DEFAULT FALSE;
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS is_pool_account        BOOLEAN  DEFAULT FALSE;
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS warmup_last_run_date  TEXT     DEFAULT NULL;
 
 -- ── 3. sent_emails — all columns needed ─────────────────────────────────────
 ALTER TABLE sent_emails ADD COLUMN IF NOT EXISTS message_id       TEXT;

@@ -1,5 +1,6 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
 export default function EcommercePage() {
@@ -68,20 +69,20 @@ export default function EcommercePage() {
         </section>
 
         <section className="py-20">
-          <div className="container max-w-5xl">
+          <div className="container max-w-[1100px]">
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-14">Built for e-commerce growth teams</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon:'🛒', title:'Wholesale Buyer Outreach',    desc:'Reach retail buyers, procurement managers, and category directors at major chains and independent retailers.' },
-                { icon:'🤝', title:'Brand Partnership Campaigns', desc:'Automate outreach to potential brand collaborators, influencer agencies, and co-marketing partners.' },
-                { icon:'🏪', title:'Distributor Prospecting',     desc:'Identify and contact distributors in your product category across any region or market.' },
-                { icon:'📧', title:'Cart Recovery Sequences',     desc:'Re-engage B2B buyers who visited your wholesale portal but never completed their order.' },
-                { icon:'📊', title:'Revenue Attribution',         desc:'Track which outreach campaigns drive actual purchase orders and wholesale account openings.' },
-                { icon:'🔄', title:'Seasonal Campaign Automation',desc:'Set up automated campaigns timed to buying seasons, trade show periods, and Q4 purchasing cycles.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>, title:'Wholesale Buyer Outreach', desc:'Reach retail buyers, procurement managers, and category directors at major chains and independent retailers.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>, title:'Brand Partnership Campaigns', desc:'Automate outreach to potential brand collaborators, influencer agencies, and co-marketing partners.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>, title:'Distributor Prospecting', desc:'Identify and contact distributors in your product category across any region or market.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>, title:'Cart Recovery Sequences', desc:'Re-engage B2B buyers who visited your wholesale portal but never completed their order.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>, title:'Revenue Attribution', desc:'Track which outreach campaigns drive actual purchase orders and wholesale account openings.' },
+                { icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>, title:'Seasonal Campaign Automation', desc:'Set up automated campaigns timed to buying seasons, trade show periods, and Q4 purchasing cycles.' },
               ].map(f=>(
-                <div key={f.title} className="border border-gray-200 rounded-2xl p-6 hover:shadow-sm transition-shadow">
-                  <span className="text-3xl">{f.icon}</span>
-                  <h3 className="mt-3 text-base font-bold text-gray-900">{f.title}</h3>
+                <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
+                  <h3 className="text-base font-bold text-gray-900">{f.title}</h3>
                   <p className="mt-2 text-sm text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
@@ -91,7 +92,7 @@ export default function EcommercePage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We opened 23 new wholesale accounts in 60 days using Lead Genie. Reaching retail buyers used to take months of trade shows — now we do it from our laptop with a 20% reply rate.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We opened 23 new wholesale accounts in 60 days using Leads Add. Reaching retail buyers used to take months of trade shows — now we do it from our laptop with a 20% reply rate.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=44" alt="Tom Kim" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
@@ -102,15 +103,7 @@ export default function EcommercePage() {
           </div>
         </section>
 
-        <section className="py-20 text-center">
-          <div className="container max-w-2xl">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Start reaching buyers today</h2>
-            <p className="text-gray-500 text-base mb-8">14-day free trial. No credit card required.</p>
-            <Link href="/signup" className="inline-flex items-center bg-gray-900 text-white font-bold text-sm rounded-full px-8 py-4 hover:bg-gray-700 transition-colors">
-              Start Free Trial →
-            </Link>
-          </div>
-        </section>
+        <FAQAccordion />
       </main>
       <Footer />
     </div>
