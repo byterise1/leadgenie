@@ -97,7 +97,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-flex mb-4">
-              <Logo size={42} textSize="text-xl" textColor="text-white" />
+              <Logo size={52} textSize="text-[22px]" textColor="text-white" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs mb-6">
               The cold email outreach platform built for modern sales teams. Send smarter,
