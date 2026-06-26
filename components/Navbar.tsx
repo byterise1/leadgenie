@@ -229,7 +229,7 @@ export function Navbar() {
           </Link>
         </nav>
 
-        {/* CTAs � auth-aware */}
+        {/* CTAs — auth-aware */}
         <div className="hidden md:flex items-center gap-2">
           {user ? (
             <>
@@ -307,7 +307,7 @@ export function Navbar() {
                     </div>
                     <div className="p-4 bg-white">
                       <p className="text-sm font-bold text-gray-900">Start free today</p>
-                      <p className="text-xs text-gray-400 mt-0.5 mb-3">No credit card � 5-min setup</p>
+                      <p className="text-xs text-gray-400 mt-0.5 mb-3">No credit card — 5-min setup</p>
                       <Link href="/signup" onClick={close}
                         className="inline-flex items-center gap-1 text-xs font-bold bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors">
                         Create Account ?

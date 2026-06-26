@@ -9,14 +9,14 @@ export default function EcommercePage() {
       <Navbar />
       <main>
         <section className="hero-gradient py-20 text-center">
-          <div className="container max-w-3xl">
+          <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case — E-commerce</span>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
               Prospect Wholesale Buyers<br />& Retail Partners at Scale
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               Find and reach wholesale buyers, retail chains, and distribution partners with
-              personalised cold email � without cold calling or trade shows.
+              personalised cold email — without cold calling or trade shows.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
@@ -51,7 +51,7 @@ export default function EcommercePage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>10�</p>
+                  <p className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>10×</p>
                   <p className="text-xs font-semibold text-gray-500 mt-1 leading-snug">ROI vs Trade Shows</p>
                 </div>
               </div>
@@ -92,7 +92,7 @@ export default function EcommercePage() {
 
         <section className="bg-gray-50 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We opened 23 new wholesale accounts in 60 days using Leads Genie. Reaching retail buyers used to take months of trade shows � now we do it from our laptop with a 20% reply rate.&rdquo;</p>
+            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We opened 23 new wholesale accounts in 60 days using Leads Genie. Reaching retail buyers used to take months of trade shows — now we do it from our laptop with a 20% reply rate.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=44" alt="Tom Kim" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
