@@ -1,17 +1,19 @@
+'use client';
+
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
-import Link from 'next/link';
 
 const templates = [
   {
     category: 'SaaS',
     title: 'The Problem-First Cold Email',
+    subject: 'Quick question about {{company_name}} prospecting',
     preview: `Hi {{first_name}},
 
 Most {{job_title}}s at {{company_size}} SaaS companies are still spending 3+ hours a day on manual prospecting.
 
-We built Leads Genie to fix that � automated outreach that books qualified demos without an SDR.
+We built Leads Genie to fix that — automated outreach that books qualified demos without an SDR.
 
 Worth a 15-minute call this week?
 
@@ -21,9 +23,10 @@ Worth a 15-minute call this week?
   {
     category: 'Agency',
     title: 'The Social Proof Agency Pitch',
+    subject: '47 leads in 30 days for {{company_name}}?',
     preview: `Hi {{first_name}},
 
-We helped {{similar_company}} generate 47 qualified leads in their first month using cold email � without adding headcount.
+We helped {{similar_company}} generate 47 qualified leads in their first month using cold email — without adding headcount.
 
 I think we can do the same for {{company_name}}.
 
@@ -35,7 +38,8 @@ Mind if I share what we did specifically?
   {
     category: 'B2B Sales',
     title: 'The Short & Direct Opener',
-    preview: `{{first_name}} � quick question.
+    subject: 'Quick question, {{first_name}}',
+    preview: `{{first_name}} — quick question.
 
 Are you currently happy with how many qualified leads your team is generating each month?
 
@@ -47,9 +51,10 @@ Asking because most {{job_title}}s I speak with say they're leaving pipeline on 
   {
     category: 'Recruitment',
     title: 'The Passive Candidate Outreach',
+    subject: '{{role}} opportunity at {{our_company}}',
     preview: `Hi {{first_name}},
 
-I came across your background on LinkedIn � your experience at {{current_company}} is exactly what we're looking for.
+I came across your background on LinkedIn — your experience at {{current_company}} is exactly what we're looking for.
 
 We're hiring a {{role}} at {{our_company}} and I'd love to have a no-pressure chat to see if it might be a fit.
 
@@ -61,6 +66,7 @@ Would you be open to a quick call this week?
   {
     category: 'Follow-up',
     title: 'The Gentle Follow-up',
+    subject: 'Re: {{company_name}} — quick follow up',
     preview: `Hi {{first_name}},
 
 Just wanted to bump this to the top of your inbox in case it got buried.
@@ -75,9 +81,10 @@ Worth a quick chat?
   {
     category: 'Break-up',
     title: 'The Break-up Email',
+    subject: 'Closing the loop, {{first_name}}',
     preview: `{{first_name}},
 
-I've reached out a few times but haven't heard back � I'll assume the timing isn't right and won't follow up again.
+I've reached out a few times but haven't heard back — I'll assume the timing isn't right and won't follow up again.
 
 If that ever changes, I'm here.
 
@@ -96,18 +103,24 @@ const catColors: Record<string, string> = {
   'Break-up':  'bg-red-100 text-red-700',
 };
 
+function useTemplate(t: { title: string; subject: string; preview: string }) {
+  try {
+    localStorage.setItem('prefill_template', JSON.stringify({ subject: t.subject, body: t.preview }));
+  } catch {}
+  window.location.href = '/dashboard/campaigns/new';
+}
+
 export default function TemplatesPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
         <section className="hero-gradient py-20 text-center">
-          <div className="container max-w-3xl">
+          <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Templates</span>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">Cold Email Templates That Work</h1>
-            <p className="mt-4 text-gray-500 text-lg leading-relaxed max-w-lg mx-auto">
+            <p className="mt-4 text-blue-100 text-lg leading-relaxed max-w-xl mx-auto">
               Proven cold email templates used by 30,000+ Leads Genie users.
-              Copy, customise, and launch in minutes.
             </p>
           </div>
         </section>
@@ -116,7 +129,7 @@ export default function TemplatesPage() {
           <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {templates.map(t => (
-                <div key={t.title} className="border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition-shadow flex flex-col h-full">
+                <div key={t.title} className="border border-gray-100 rounded-2xl overflow-hidden flex flex-col bg-white hover:shadow-sm transition-shadow">
                   <div className="p-6 border-b border-gray-50">
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${catColors[t.category]}`}>{t.category}</span>
@@ -133,10 +146,14 @@ export default function TemplatesPage() {
                     </pre>
                   </div>
                   <div className="p-4 bg-white">
-                    <Link href="/signup"
-                      className="w-full flex items-center justify-center text-xs font-semibold bg-blue-600 text-white rounded-xl py-2.5 hover:bg-blue-700 transition-colors">
-                      Use This Template ?
-                    </Link>
+                    <button
+                      onClick={() => useTemplate(t)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold bg-blue-600 text-white rounded-xl py-2.5 hover:bg-blue-700 transition-colors">
+                      Use This Template
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -144,13 +161,18 @@ export default function TemplatesPage() {
 
             <div className="mt-14 text-center">
               <p className="text-gray-500 text-sm mb-4">Sign up to access 100+ templates and import them directly into your campaigns.</p>
-              <Link href="/signup"
+              <button
+                onClick={() => { window.location.href = '/signup'; }}
                 className="inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">
-                Get All Templates Free ?
-              </Link>
+                Get All Templates Free
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+              </button>
             </div>
           </div>
         </section>
+
         <FAQAccordion />
       </main>
       <Footer />
