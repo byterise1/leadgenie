@@ -8,19 +8,19 @@ export default function RecruitmentPage() {
     <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <main>
-        <section className="hero-gradient py-20 text-center">
+        <section className="border-b border-gray-100 py-20 text-center">
           <div className="container max-w-3xl">
-            <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case � Recruitment</span>
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Use Case &mdash; Recruitment</p>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
               Reach Passive Candidates<br />Before Anyone Else
             </h1>
-            <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
+            <p className="mt-5 text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
               The best candidates aren't applying. Leads Genie helps recruiters run personalised
               outreach at scale to fill roles faster without relying on job boards.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/signup" className="bg-white text-blue-700 font-bold text-sm rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">Start Free Trial</Link>
-              <Link href="/contact" className="border border-white/30 text-white font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-white/10 transition-colors">Talk to Sales</Link>
+              <Link href="/signup" className="bg-gray-900 text-white font-bold text-sm rounded-full px-8 py-3.5 hover:bg-gray-700 transition-colors">Start Free Trial</Link>
+              <Link href="/contact" className="border border-gray-200 text-gray-700 font-semibold text-sm rounded-full px-8 py-3.5 hover:bg-gray-50 transition-colors">Talk to Sales</Link>
             </div>
           </div>
         </section>
