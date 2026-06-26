@@ -20,6 +20,12 @@ type Plan = {
 
 const FALLBACK_PLANS: Plan[] = [
   {
+    id: 'free', name: 'Free', tagline: 'Get started at no cost',
+    monthly_price: 0, annual_price: 0,
+    features: ['3 campaigns', '500 leads', '91 emails per mo', '1 email account', 'Built-in templates', 'Basic analytics'],
+    highlighted: false, cta_label: 'Current Plan',
+  },
+  {
     id: 'starter', name: 'Starter', tagline: 'For solo founders and small teams',
     monthly_price: 29, annual_price: 23,
     features: ['10 campaigns', '5000 leads', '5000 emails per mo', '5 email accounts', 'Full analytics', 'Chat support'],
@@ -32,9 +38,15 @@ const FALLBACK_PLANS: Plan[] = [
     highlighted: true, cta_label: 'Start Free Trial',
   },
   {
+    id: 'growth', name: 'Growth', tagline: 'Everything in Pro, built for scale',
+    monthly_price: 99, annual_price: 79,
+    features: ['Everything in Pro', '5 workspaces', 'Advanced analytics', 'Dedicated account manager', 'Custom integrations'],
+    highlighted: false, cta_label: 'Start Free Trial',
+  },
+  {
     id: 'agency', name: 'Agency', tagline: 'For high-volume outreach teams',
     monthly_price: 149, annual_price: 119,
-    features: ['Everything in Pro', 'Multi-workspace', 'White-label reports', 'Dedicated CSM', 'SLA guarantee', 'Onboarding session'],
+    features: ['Everything in Growth', 'Unlimited workspaces', 'White-label reports', 'Dedicated CSM', 'SLA guarantee', 'Onboarding session'],
     highlighted: false, cta_label: 'Contact Sales',
   },
 ];
@@ -58,7 +70,7 @@ export default function PricingPage() {
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setPlans(data);
+          setPlans([...data].sort((a, b) => a.monthly_price - b.monthly_price));
         } else {
           setPlans(FALLBACK_PLANS);
         }
@@ -102,8 +114,8 @@ export default function PricingPage() {
         <section className="py-16">
           <div className="container">
             {loading ? (
-              <div className="grid gap-5 sm:grid-cols-3 max-w-5xl mx-auto">
-                {[1,2,3].map(i => (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 max-w-7xl mx-auto">
+                {[1,2,3,4,5].map(i => (
                   <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4 animate-pulse">
                     <div className="h-5 w-20 bg-gray-100 rounded"/>
                     <div className="h-3 w-32 bg-gray-100 rounded"/>
@@ -114,7 +126,7 @@ export default function PricingPage() {
                 ))}
               </div>
             ) : (
-            <div className={`grid gap-5 items-start mx-auto max-w-5xl ${plans.length <= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
+            <div className={`grid gap-5 items-start mx-auto ${plans.length <= 3 ? 'max-w-5xl sm:grid-cols-3' : plans.length === 4 ? 'max-w-6xl sm:grid-cols-2 lg:grid-cols-4' : 'max-w-7xl sm:grid-cols-2 lg:grid-cols-5'}`}>
               {plans.map((plan, i) => (
                 <motion.div key={plan.id}
                   initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
