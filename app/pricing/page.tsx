@@ -120,7 +120,7 @@ export default function PricingPage() {
         {/* Header */}
         <section className="hero-gradient py-20 text-center">
           <div className="container">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
               Simple, transparent pricing
             </h1>
             <p className="mt-4 text-blue-100 text-lg leading-relaxed max-w-lg mx-auto">

@@ -51,7 +51,7 @@ export default function HelpPage() {
         <section className="hero-gradient py-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Help Center</span>
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">How can we help?</h1>
+            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">How can we help?</h1>
             <p className="mt-4 text-blue-100 text-lg max-w-lg mx-auto leading-relaxed">
               Browse guides and tutorials for every part of Leads Genie.{' '}
               <Link href="/contact" className="text-white underline hover:text-blue-100">Contact support</Link>

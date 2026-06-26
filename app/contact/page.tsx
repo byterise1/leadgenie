@@ -15,7 +15,7 @@ export default function ContactPage() {
         <section className="hero-gradient py-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Contact</span>
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">Get in Touch</h1>
+            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">Get in Touch</h1>
             <p className="mt-4 text-blue-100 text-lg leading-relaxed">
               Have a question, a sales inquiry, or need support? We&apos;re here to help.
             </p>
