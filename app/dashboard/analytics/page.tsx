@@ -202,8 +202,8 @@ export default function AnalyticsPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {kpis.map(k => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-2">{k.label}</p>
+          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-5">
+            <p className="text-xs font-semibold text-gray-400 mb-3">{k.label}</p>
             {loading && !stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>}
             <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data for period' : rangeLabel}</p>
           </div>
