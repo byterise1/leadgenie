@@ -7,11 +7,32 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Use select('*') to avoid errors on older Supabase instances missing columns like daily_limit
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
-    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
+    .select('*')
     .eq('user_id', user.id)
+    .eq('is_pool_account', false)
     .order('created_at', { ascending: false });
+
+  // Retry without is_pool_account filter in case column doesn't exist yet
+  if (error?.message?.includes('is_pool_account') || error?.message?.includes('column')) {
+    const { data: data2, error: err2 } = await supabaseAdmin
+      .from('email_accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (err2) return NextResponse.json({ error: err2.message }, { status: 500 });
+    // Filter pool accounts in JS if column exists in data
+    const safe2 = (data2 || []).filter((a: Record<string, unknown>) => !a.is_pool_account);
+    const todayUTC2 = new Date(); todayUTC2.setUTCHours(0, 0, 0, 0);
+    const { data: sr2 } = await supabaseAdmin.from('sent_emails').select('account_id').eq('user_id', user.id).gte('sent_at', todayUTC2.toISOString());
+    const cm2: Record<string, number> = {}; (sr2 || []).forEach((s: { account_id: string }) => { cm2[s.account_id] = (cm2[s.account_id] || 0) + 1; });
+    return NextResponse.json(safe2.map((acc: Record<string, unknown>) => {
+      const sent = cm2[acc.id as string] || 0; const limit = (acc.daily_limit as number) || 50;
+      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, remaining_today: Math.max(0, limit - sent) };
+    }));
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -29,11 +50,18 @@ export async function GET() {
     countMap[s.account_id] = (countMap[s.account_id] || 0) + 1;
   });
 
-  const enriched = (data || []).map((acc: Record<string, unknown>) => {
-    const sentReal = countMap[acc.id as string] || 0;
-    const limit = (acc.daily_limit as number) || 50;
-    return { ...acc, sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal) };
-  });
+  const enriched = (data || [])
+    .filter((acc: Record<string, unknown>) => !acc.is_pool_account)
+    .map((acc: Record<string, unknown>) => {
+      const sentReal = countMap[acc.id as string] || 0;
+      const limit = (acc.daily_limit as number) || 50;
+      return {
+        id: acc.id, email: acc.email, type: acc.type, status: acc.status,
+        health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false,
+        sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at,
+        sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal),
+      };
+    });
 
   return NextResponse.json(enriched);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { bodyToHtml } from '@/lib/body-to-html';
 
@@ -77,6 +77,9 @@ export default function NewCampaignPage() {
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
   const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [draftBanner, setDraftBanner] = useState<{ name: string } | null>(null);
+  const launchedRef = useRef(false); // true once campaign is launched successfully
+  const formRef = useRef<Record<string, unknown>>({}); // always holds latest form state for draft save
 
   // Step 0
   const [name, setName] = useState('');
@@ -167,6 +170,15 @@ export default function NewCampaignPage() {
   });
 
   useEffect(() => {
+    // Check for a saved draft from a previous navigation-away
+    try {
+      const saved = localStorage.getItem('campaign_draft');
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft?.name?.trim()) setDraftBanner({ name: draft.name });
+      }
+    } catch {}
+
     // Pre-fill from template when coming via "Use →" on templates page
     try {
       const prefill = localStorage.getItem('prefill_template');
@@ -181,7 +193,22 @@ export default function NewCampaignPage() {
     fetch('/api/lead-lists').then(r => r.json()).then(d => { if (Array.isArray(d)) setLeadLists(d); });
     fetch('/api/templates').then(r => r.json()).then(d => { if (Array.isArray(d)) setApiTemplates(d); });
     fetch('/api/profile').then(r => r.json()).then(d => { if (d?.default_from_name) setFromName(d.default_from_name); });
+
+    // Auto-save draft to localStorage on navigate away
+    return () => {
+      if (launchedRef.current) return;
+      try {
+        const state = formRef.current;
+        if (!String(state.name || '').trim()) { localStorage.removeItem('campaign_draft'); return; }
+        localStorage.setItem('campaign_draft', JSON.stringify(state));
+      } catch {}
+    };
   }, []);
+
+  // Keep formRef in sync so the unmount cleanup can read latest state
+  useEffect(() => {
+    formRef.current = { name, goal, fromName, emails, selectedAccounts, allAccounts, selectedListId, dailyLimitStr, activeDays, fromTime, toTime, timezone, startDate, minDelayStr, maxDelayStr, instantStart };
+  });
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
 
@@ -201,6 +228,32 @@ export default function NewCampaignPage() {
 
   const updateEmail = (idx: number, key: keyof EmailStep, val: unknown) =>
     setEmails(em => em.map((x, i) => i === idx ? { ...x, [key]: val } : x));
+
+  const restoreDraft = () => {
+    try {
+      const saved = localStorage.getItem('campaign_draft');
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      if (d.name) setName(d.name);
+      if (d.goal) setGoal(d.goal);
+      if (d.fromName) setFromName(d.fromName);
+      if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
+      if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
+      if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
+      if (d.selectedListId) setSelectedListId(d.selectedListId);
+      if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
+      if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
+      if (d.fromTime) setFromTime(d.fromTime);
+      if (d.toTime) setToTime(d.toTime);
+      if (d.timezone) setTimezone(d.timezone);
+      if (d.startDate) setStartDate(d.startDate);
+      if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
+      if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
+      if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
+    } catch {}
+    localStorage.removeItem('campaign_draft');
+    setDraftBanner(null);
+  };
 
   const activeAccountCount = allAccounts ? realAccounts.length : selectedAccounts.length;
 
@@ -222,6 +275,16 @@ export default function NewCampaignPage() {
             <p className="text-sm text-gray-400">Set up your cold email sequence</p>
           </div>
         </div>
+
+        {/* Draft restore banner */}
+        {draftBanner && (
+          <div className="mb-5 flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p className="text-sm text-amber-800 flex-1">You have an unsaved draft: <strong>{draftBanner.name}</strong></p>
+            <button onClick={restoreDraft} className="text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg px-3 py-1.5 transition-colors">Restore</button>
+            <button onClick={() => { localStorage.removeItem('campaign_draft'); setDraftBanner(null); }} className="text-xs font-semibold text-amber-500 hover:text-amber-700 transition-colors">Dismiss</button>
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="flex items-center gap-0 mb-8">
@@ -822,6 +885,8 @@ export default function NewCampaignPage() {
                   const startData = await startRes.json();
                   if (!startRes.ok) throw new Error(startData.error || 'Failed to start campaign');
 
+                  launchedRef.current = true;
+                  localStorage.removeItem('campaign_draft');
                   router.push('/dashboard/campaigns');
                 } catch (err: any) {
                   setLaunchError(err.message);
