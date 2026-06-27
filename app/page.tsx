@@ -277,7 +277,7 @@ function BrandPill({ brand }: { brand: Brand }) {
 
 function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   return (
-    <div className="flex-shrink-0 w-[85vw] sm:w-[420px] scroll-snap-align-start bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5" style={{ scrollSnapAlign: 'start' }}>
+    <div className="flex-shrink-0 w-[85vw] sm:w-[420px] snap-center bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5" style={{ scrollSnapAlign: 'center' }}>
       <svg className="w-8 h-8 text-blue-100" fill="currentColor" viewBox="0 0 32 32">
         <path d="M10 8C6.13 8 3 11.13 3 15v9h9v-9H6c0-2.21 1.79-4 4-4V8zm14 0c-3.87 0-7 3.13-7 7v9h9v-9h-6c0-2.21 1.79-4 4-4V8z"/>
       </svg>
@@ -618,9 +618,9 @@ export default function HomePage() {
                       { l: 'Spam Rate',    v: '0.4%',   color: 'text-red-500',   bg: 'bg-red-50 border-red-100'     },
                       { l: 'Health Score', v: '98/100', color: 'text-blue-600',  bg: 'bg-blue-50 border-blue-100'   },
                     ].map(s => (
-                      <div key={s.l} className={`rounded-2xl p-4 border text-center ${s.bg}`}>
-                        <p className={`text-xl font-extrabold ${s.color}`}>{s.v}</p>
-                        <p className="text-xs text-gray-500 mt-1 font-semibold">{s.l}</p>
+                      <div key={s.l} className={`rounded-2xl p-2 sm:p-4 border text-center ${s.bg}`}>
+                        <p className={`text-sm sm:text-xl font-extrabold ${s.color}`}>{s.v}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-semibold leading-tight">{s.l}</p>
                       </div>
                     ))}
                   </div>
@@ -952,7 +952,7 @@ export default function HomePage() {
 
         {/* Full-width scroll strip with gradient fade edges */}
         <div className="relative" style={maskFade}>
-          <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab', scrollSnapType: 'x mandatory' }}>
+          <div className="overflow-x-auto scroll-hide snap-x snap-mandatory" style={{ cursor: 'grab' }}>
             <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 7.5vw 2rem' }}>
               {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
             </div>
