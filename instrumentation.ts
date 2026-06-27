@@ -932,6 +932,14 @@ export async function register() {
     }
 
     new SyncWorker('warmup', async () => {
+      // Business-hours gate: only run warmup between 07:00–21:00 UTC.
+      // Competitors (Instantly, Lemwarm) never send warmup outside daytime hours.
+      const utcHour = new Date().getUTCHours();
+      if (utcHour < 7 || utcHour >= 21) {
+        console.log(`[warmup] Outside business hours (UTC ${utcHour}h) — skipping cycle`);
+        return;
+      }
+
       // Reset sent_today only for accounts that haven't run today yet (first cycle of the day).
       // Subsequent 6h cycles skip the reset so the count stays visible all day.
       const todayDate = new Date().toISOString().slice(0, 10);
@@ -969,6 +977,9 @@ export async function register() {
         const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
         await Promise.all(batch.map(async account => {
           try {
+            // Random start offset per account (0–8 min) so all accounts don't fire simultaneously
+            await new Promise(r => setTimeout(r, Math.random() * 8 * 60 * 1000));
+
             const todayStr = new Date().toISOString().slice(0, 10);
             if (account.warmup_last_run_date === todayStr) return; // already ran today
             const day = (account.warmup_day ?? 0) + 1;
