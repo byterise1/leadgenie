@@ -335,46 +335,107 @@ export default function WarmupPage() {
       )}
 
       {tab === 'settings' && (
-        <div className="space-y-4 max-w-xl">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <div>
-              <h2 className="text-base font-bold text-gray-900">Per-Account Settings</h2>
-              <p className="text-xs text-gray-400 mt-1">Set how many warmup emails each account sends per day.</p>
-            </div>
-            {accounts.length === 0 ? (
-              <p className="text-sm text-gray-400">No accounts connected.</p>
-            ) : accounts.map(acc => (
-              <div key={acc.id} className="flex items-center justify-between gap-4 border-b border-gray-50 pb-4 last:border-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">Current target: {acc.warmup_target ?? 40}/day</p>
-                </div>
-                <select
-                  value={acc.warmup_target ?? 40}
-                  onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                  className="border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0">
-                  {[10, 20, 30, 40, 50, 60, 80, 100].map(v => (
-                    <option key={v} value={v}>{v} / day</option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div className="space-y-4 max-w-2xl">
+          {/* What is daily limit — explainer */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z"/>
+                </svg>
               </div>
               <div>
-                <p className="text-sm font-bold text-blue-900 mb-1">Warmup Pool</p>
-                <p className="text-xs text-blue-700 leading-relaxed">
-                  Warmup emails are sent between accounts in the platform pool automatically every 6 hours.
-                  The higher your daily target, the faster your health score builds — but stay under 100 to keep it natural.
+                <h3 className="text-sm font-bold text-gray-900 mb-1">What is the daily warmup limit?</h3>
+                <p className="text-xs text-gray-500 leading-relaxed max-w-lg">
+                  This is the <span className="font-semibold text-gray-700">maximum number of warmup emails</span> your inbox will send per day
+                  during the ramp period. The system starts low (2/day on Day 1) and gradually increases
+                  toward your limit over 14 days. Keeping it between <span className="font-semibold text-gray-700">30–50/day</span> is recommended —
+                  high enough to build reputation fast, low enough to look natural to email providers.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    { label: 'New domain', range: '10–20/day', color: 'blue' },
+                    { label: 'Established domain', range: '30–50/day', color: 'emerald' },
+                    { label: 'High volume', range: '60–100/day', color: 'amber' },
+                  ].map(r => (
+                    <span key={r.label} className={`text-[11px] font-semibold rounded-full px-2.5 py-1 ${
+                      r.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+                      r.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {r.label}: {r.range}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Per-account limit selector */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-bold text-gray-900">Daily Warmup Limit</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Set the peak number of warmup emails each inbox sends per day after the 14-day ramp.</p>
+            </div>
+            {accounts.length === 0 ? (
+              <div className="px-6 py-8 text-sm text-gray-400 text-center">No accounts connected.</div>
+            ) : accounts.map((acc, idx) => {
+              const target = acc.warmup_target ?? 40;
+              const isRecommended = target >= 30 && target <= 50;
+              return (
+                <div key={acc.id} className={`px-6 py-4 flex items-center gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
+                      {!acc.warmup_enabled && (
+                        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">warmup off</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <p className="text-[11px] text-gray-400">{acc.type} · Day {acc.warmup_day ?? 0} of 14</p>
+                      {isRecommended && (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">Recommended</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Limit selector — styled buttons for common values */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                      {[20, 30, 40, 50].map(v => (
+                        <button key={v} onClick={() => updateTarget(acc.id, v)}
+                          className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                            target === v
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-500 hover:bg-gray-50'
+                          }`}>
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    <select
+                      value={target}
+                      onChange={e => updateTarget(acc.id, Number(e.target.value))}
+                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0">
+                      {[10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100].map(v => (
+                        <option key={v} value={v}>{v}/day{v === 40 ? ' (default)' : v >= 30 && v <= 50 ? ' ✓' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Warning for high values */}
+          {accounts.some(a => (a.warmup_target ?? 40) > 60) && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                <span className="font-bold">High limit detected.</span> Limits above 60/day can look unnatural to email providers on new or low-history domains. We recommend staying at 30–50/day unless your domain has been active for 6+ months.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
