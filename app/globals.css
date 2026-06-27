@@ -7,7 +7,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   margin: 0;

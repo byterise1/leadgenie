@@ -682,7 +682,7 @@ export default function TemplatesPage() {
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2 mb-6">
         {allCats.map(c => (
           <button key={c} onClick={() => setFilterCat(c)}
             className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${filterCat === c ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'}`}>
