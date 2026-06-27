@@ -1018,7 +1018,7 @@ export async function register() {
               try {
                 await sendEmail(
                   { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-                  { from: account.email, to: toAccount.email, subject: `[warmup] ${subject}`, text: body, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
+                  { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
                 );
                 sentPairs.add(pairKey);
                 warmupEmailRows.push({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
@@ -1105,7 +1105,7 @@ export async function register() {
             try { token = await getAccessToken({ id: account.id, type: account.type, email: account.email, smtp_pass: account.smtp_pass }); }
             catch { continue; }
 
-            const messages = await gmailSearch('subject:[warmup] newer_than:2d', token);
+            const messages = await gmailSearch('"--warmup-ping--" newer_than:2d', token);
             for (const msg of messages) {
               try {
                 const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
@@ -1159,7 +1159,7 @@ export async function register() {
                 try {
                   const spamLock = await client.getMailboxLock(folder);
                   try {
-                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), subject: '[warmup]' }, { uid: true });
+                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), body: '--warmup-ping--' }, { uid: true });
                     if (uids && (uids as number[]).length > 0) {
                       await client.messageMove(uids as number[], 'INBOX', { uid: true });
                       console.log(`[warmup-receive] rescued ${(uids as number[]).length} from spam: ${account.email}`);
@@ -1172,7 +1172,7 @@ export async function register() {
               // Mark inbox warmup emails as read + grab reply candidate
               const inboxLock = await client.getMailboxLock('INBOX');
               try {
-                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), subject: '[warmup]', seen: false }, { uid: true });
+                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), body: '--warmup-ping--', seen: false }, { uid: true });
                 if (uids && (uids as number[]).length > 0) {
                   await client.messageFlagsAdd(uids as number[], ['\\Seen'], { uid: true });
                   if (Math.random() < 0.25) {
