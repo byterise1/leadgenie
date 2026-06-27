@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest) {
 
   if (typeof warmup_enabled === 'boolean') {
     updates.warmup_enabled = warmup_enabled;
-    if (warmup_enabled) { updates.status = 'warming'; updates.warmup_day = 0; }
+    if (warmup_enabled) { updates.status = 'warming'; }
     else { updates.status = 'active'; }
   }
 
