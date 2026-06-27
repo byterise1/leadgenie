@@ -1001,6 +1001,8 @@ export async function register() {
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
             for (let i = 0; i < emailsToday; i++) {
+              // Stagger emails: 30–90s random gap between each send (natural spacing)
+              if (i > 0) await new Promise(r => setTimeout(r, (30 + Math.random() * 60) * 1000));
               // Pick a recipient that hasn't already received from this account
               // AND hasn't sent to this account this cycle (no connect-back)
               const toAccount = shuffled.find(a => {
