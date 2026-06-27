@@ -278,26 +278,30 @@ export default function WarmupPage() {
                         <ScoreRing score={acc.health_score || 0}/>
                       </td>
                       <td className="px-4 py-4">
-                        {acc.warmup_enabled && (acc.warmup_day ?? 0) < 14 ? (
-                          <RampBar day={acc.warmup_day || 0}/>
-                        ) : acc.warmup_enabled && (acc.warmup_day ?? 0) >= 14 ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
-                            <span className="text-[10px] text-gray-400">14-day ramp complete — maintaining</span>
-                          </div>
-                        ) : (acc.warmup_day ?? 0) >= 14 ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-semibold text-emerald-600">14-day warmup complete ✓</span>
-                            <span className="text-[10px] text-gray-400">Toggle on to continue at 40/day</span>
-                          </div>
-                        ) : showHistoryBadge ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-semibold text-violet-600">Previously warmed {historyDays} days</span>
-                            <span className="text-[10px] text-gray-400">{totalHistorySent} emails sent in prior sessions</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">Warmup off</span>
-                        )}
+                        {(() => {
+                          const tgt = acc.warmup_target ?? 30;
+                          const d = acc.warmup_day ?? 0;
+                          if (acc.warmup_enabled && d < tgt) return <RampBar day={d}/>;
+                          if (acc.warmup_enabled && d >= tgt) return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
+                              <span className="text-[10px] text-gray-400">30-day ramp complete — maintaining</span>
+                            </div>
+                          );
+                          if (!acc.warmup_enabled && d >= tgt) return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-semibold text-emerald-600">Warmup complete ✓</span>
+                              <span className="text-[10px] text-gray-400">Re-enable to keep warming</span>
+                            </div>
+                          );
+                          if (showHistoryBadge) return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-semibold text-violet-600">Previously warmed {historyDays} days</span>
+                              <span className="text-[10px] text-gray-400">{totalHistorySent} emails sent in prior sessions</span>
+                            </div>
+                          );
+                          return <span className="text-xs text-gray-400">Warmup off</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
@@ -337,7 +341,7 @@ export default function WarmupPage() {
               {[
                 { step: '1', title: 'Enable warmup', desc: 'Toggle warmup on for any connected account', color: 'blue' },
                 { step: '2', title: 'Auto-sends', desc: 'System sends emails between warmed accounts every 6h', color: 'indigo' },
-                { step: '3', title: 'Score grows', desc: 'Health score improves +2 pts/day over 14 days', color: 'emerald' },
+                { step: '3', title: 'Score grows', desc: 'Health score grows +2 pts/day, reaching 100% by day 25', color: 'emerald' },
                 { step: '4', title: 'Safe to send', desc: 'Launch campaigns with better inbox placement', color: 'violet' },
               ].map(s => (
                 <div key={s.step} className="flex flex-col gap-2">
@@ -369,7 +373,7 @@ export default function WarmupPage() {
                 <p className="text-xs text-gray-500 leading-relaxed max-w-lg">
                   This is the <span className="font-semibold text-gray-700">maximum number of warmup emails</span> your inbox will send per day
                   during the ramp period. The system starts low (2/day on Day 1) and gradually increases
-                  toward your limit over 14 days. Keeping it between <span className="font-semibold text-gray-700">30–50/day</span> is recommended —
+                  toward your limit over 30 days. Keeping it between <span className="font-semibold text-gray-700">30–50/day</span> is recommended —
                   high enough to build reputation fast, low enough to look natural to email providers.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -394,12 +398,12 @@ export default function WarmupPage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <h2 className="text-sm font-bold text-gray-900">Daily Warmup Limit</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Set the peak number of warmup emails each inbox sends per day after the 14-day ramp.</p>
+              <p className="text-xs text-gray-400 mt-0.5">Set the peak number of warmup emails each inbox sends per day after the 30-day ramp. Warmup auto-stops when done — re-enable to maintain.</p>
             </div>
             {accounts.length === 0 ? (
               <div className="px-6 py-8 text-sm text-gray-400 text-center">No accounts connected.</div>
             ) : accounts.map((acc, idx) => {
-              const target = acc.warmup_target ?? 40;
+              const target = acc.warmup_target ?? 30;
               const isRecommended = target >= 30 && target <= 50;
               return (
                 <div key={acc.id} className={`px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
@@ -446,8 +450,32 @@ export default function WarmupPage() {
             })}
           </div>
 
+          {/* Safe campaign send limits by warmup age */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-gray-900 mb-1">Safe campaign send limits</h3>
+            <p className="text-xs text-gray-400 mb-4">How many cold emails you can safely send per day per account, based on warmup progress.</p>
+            <div className="space-y-2">
+              {[
+                { label: 'Month 1 — Day 30 (warmup complete)', limit: '50/day', color: 'blue' },
+                { label: 'Month 2 — Day 60', limit: '100/day', color: 'emerald' },
+                { label: 'Month 3 — Day 90', limit: '150/day', color: 'amber' },
+                { label: 'Month 4+ — Day 120+', limit: '200/day', color: 'violet' },
+              ].map(r => (
+                <div key={r.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <span className="text-xs text-gray-600">{r.label}</span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    r.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+                    r.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                    r.color === 'amber' ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'
+                  }`}>{r.limit}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-3">Continue warmup at 40/day in background while running campaigns. This maintains your reputation.</p>
+          </div>
+
           {/* Warning for high values */}
-          {accounts.some(a => (a.warmup_target ?? 40) > 60) && (
+          {accounts.some(a => (a.warmup_target ?? 30) > 60) && (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4">
               <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
               <p className="text-xs text-amber-700 leading-relaxed">
@@ -498,8 +526,8 @@ export default function WarmupPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      {maxDayReached >= 14 && (
-                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">14-day complete ✓</span>
+                      {maxDayReached >= (acc.warmup_target ?? 30) && (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">Warmup complete ✓</span>
                       )}
                       <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>

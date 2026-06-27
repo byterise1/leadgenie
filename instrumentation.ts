@@ -895,11 +895,16 @@ export async function register() {
     // Reply pool — extracted from pairs so replies sound contextual, not generic
     const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.reply);
 
-    const WARMUP_DAILY_TARGETS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40];
+    // 30-day ramp: slow start → build → maintain at 40/day
+    const WARMUP_DAILY_TARGETS = [
+      0,  2,  3,  4,  5,  6,  7,  8,  10, 12,  // days 0-9
+      14, 16, 18, 20, 22, 24, 26, 28, 30, 32,  // days 10-19
+      34, 36, 38, 40, 40, 40, 40, 40, 40, 40, 40, // days 20-30
+    ];
 
     function warmupDailyTarget(day: number): number {
       if (day <= 0) return 2;
-      if (day >= 14) return 40;
+      if (day >= 30) return 40;
       return WARMUP_DAILY_TARGETS[day] ?? 40;
     }
 
@@ -1001,8 +1006,12 @@ export async function register() {
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
             for (let i = 0; i < emailsToday; i++) {
-              // Stagger emails: 30–90s random gap between each send (natural spacing)
-              if (i > 0) await new Promise(r => setTimeout(r, (30 + Math.random() * 60) * 1000));
+              // Spread emails naturally across a 3h window, proportional to daily count.
+              // 2 emails → ~90 min apart; 40 emails → ~4.5 min apart. ±50% jitter.
+              if (i > 0) {
+                const baseMs = (3 * 60 * 60 * 1000) / emailsToday;
+                await new Promise(r => setTimeout(r, baseMs * (0.75 + Math.random() * 0.5)));
+              }
               // Pick a recipient that hasn't already received from this account
               // AND hasn't sent to this account this cycle (no connect-back)
               const toAccount = shuffled.find(a => {
@@ -1033,8 +1042,10 @@ export async function register() {
             }
 
             const newHealth = sent > 0 ? Math.min(100, (account.health_score ?? 50) + 2) : (account.health_score ?? 50);
-            // Auto-stop only at exactly day 14 (initial completion). Day > 14 = user re-enabled → keep running at 40/day.
-            const justCompleted = day === 14;
+            // Auto-stop when warmup_day first reaches warmup_target. If user re-enables after
+            // completion (warmup_day already >= target), keep running at maintenance 40/day.
+            const target = account.warmup_target ?? 30;
+            const justCompleted = (account.warmup_day ?? 0) < target && day >= target;
             accountUpdates.set(account.id, {
               warmup_day: day,
               health_score: newHealth,
@@ -1055,8 +1066,10 @@ export async function register() {
       }
 
       // Flush account updates individually (Supabase upsert can't bulk-update different values)
-      // Only notify on the day warmup_day first hits exactly 14 (justCompleted = true in accountUpdates)
-      const completedAccounts = allWarmupAccounts.filter(a => accountUpdates.get(a.id)?.warmup_enabled === false && (accountUpdates.get(a.id)?.warmup_day ?? 0) === 14);
+      const completedAccounts = allWarmupAccounts.filter(a => {
+        const upd = accountUpdates.get(a.id);
+        return upd?.warmup_enabled === false && (upd?.warmup_day ?? 0) >= (a.warmup_target ?? 30);
+      });
 
       // Build warmup_history rows — one per account per day (upsert by email+date)
       const today = new Date().toISOString().slice(0, 10);
@@ -1086,7 +1099,7 @@ export async function register() {
         ...completedAccounts.map(a =>
           supabase.from('notifications').insert({
             user_id: a.user_id,
-            message: `${a.email} completed 14-day warmup! Toggle warmup back on to continue sending.`,
+            message: `${a.email} warmup complete! ${a.warmup_target ?? 30}-day program done — health is ${accountUpdates.get(a.id)?.health_score ?? 100}%. Re-enable warmup to keep the reputation warm.`,
             type: 'info',
           })
         ),
