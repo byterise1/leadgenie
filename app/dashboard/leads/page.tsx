@@ -539,15 +539,15 @@ export default function LeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <a href="/api/leads/template" download
-            className="hidden sm:flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+          <a href="/api/leads/template" download title="Download template"
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Template
+            <span className="hidden sm:inline">Template</span>
           </a>
-          <a href={selectedList ? `/api/leads/export?list_id=${selectedList}` : '/api/leads/export'} download
-            className="hidden sm:flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+          <a href={selectedList ? `/api/leads/export?list_id=${selectedList}` : '/api/leads/export'} download title="Export CSV"
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Export
+            <span className="hidden sm:inline">Export</span>
           </a>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
@@ -707,7 +707,7 @@ export default function LeadsPage() {
 
           <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
             <div className="overflow-auto flex-1">
-              <table className="w-full">
+              <table className="w-full min-w-[640px]">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-gray-100 bg-gray-50">
                     <th className="px-4 py-3 w-10">

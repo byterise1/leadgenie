@@ -487,7 +487,7 @@ function TemplateModal({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
+        <div className="flex gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 shrink-0">
           <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">
             Cancel
           </button>
@@ -664,13 +664,13 @@ export default function TemplatesPage() {
 
   return (
     <main className="flex-1 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Templates</h1>
           <p className="text-sm text-gray-400 mt-0.5">Ready-to-use templates — edit, create, or launch in campaigns.</p>
         </div>
         <button onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
+          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm shrink-0 self-start sm:self-auto">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           Create Template
         </button>

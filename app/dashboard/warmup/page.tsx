@@ -435,7 +435,7 @@ export default function WarmupPage() {
                     <select
                       value={target}
                       onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0">
+                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0 min-w-[130px]">
                       {[10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100].map(v => (
                         <option key={v} value={v}>{v}/day{v === 40 ? ' (default)' : v >= 30 && v <= 50 ? ' ✓' : ''}</option>
                       ))}

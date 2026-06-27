@@ -319,9 +319,9 @@ export default function NewCampaignPage() {
                 }`}>
                   {i < step ? <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg> : i + 1}
                 </span>
-                <span className={`text-sm font-semibold ${i === step ? 'text-gray-900' : 'text-gray-400'}`}>{s}</span>
+                <span className={`hidden sm:inline text-sm font-semibold ${i === step ? 'text-gray-900' : 'text-gray-400'}`}>{s}</span>
               </button>
-              {i < steps.length - 1 && <div className={`w-12 h-0.5 mx-2 ${i < step ? 'bg-blue-600' : 'bg-gray-200'}`}/>}
+              {i < steps.length - 1 && <div className={`w-6 sm:w-12 h-0.5 mx-1 sm:mx-2 ${i < step ? 'bg-blue-600' : 'bg-gray-200'}`}/>}
             </div>
           ))}
         </div>

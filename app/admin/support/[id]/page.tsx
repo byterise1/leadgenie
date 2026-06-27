@@ -214,7 +214,7 @@ export default function TicketDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1.5 justify-end">
                 <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
-                <span className="text-sm font-semibold text-gray-700">Admin · LeadsAdd</span>
+                <span className="text-sm font-semibold text-gray-700">Admin · Leads Genie</span>
               </div>
               <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>

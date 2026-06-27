@@ -28,39 +28,39 @@ export default function RecruitmentPage() {
         <section className="border-b border-gray-100">
           <div className="container px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
-              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+              <div className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#3b82f6' }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#3b82f6' }}>3×</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#3b82f6' }}>3×</p>
                   <p className="text-xs font-bold text-gray-700 mt-0.5">More Candidates Reached</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f0fdf4', color: '#10b981' }}>
+              <div className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f0fdf4', color: '#10b981' }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#10b981' }}>25%</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#10b981' }}>25%</p>
                   <p className="text-xs font-bold text-gray-700 mt-0.5">Avg Response Rate</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
+              <div className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>50%</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#8b5cf6' }}>50%</p>
                   <p className="text-xs font-bold text-gray-700 mt-0.5">Faster Time-to-Hire</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#fffbeb', color: '#f59e0b' }}>
+              <div className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: '#fffbeb', color: '#f59e0b' }}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
                 </div>
-                <div>
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#f59e0b' }}>10×</p>
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: '#f59e0b' }}>10×</p>
                   <p className="text-xs font-bold text-gray-700 mt-0.5">ROI vs Job Boards</p>
                 </div>
               </div>

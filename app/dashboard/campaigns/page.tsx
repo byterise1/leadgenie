@@ -348,6 +348,28 @@ export default function CampaignsPage() {
 
                   {openMenuId === c.id && (
                     <div className="absolute right-0 top-9 z-50 bg-white border border-gray-100 rounded-xl shadow-xl min-w-[168px] py-1">
+                      {/* Mobile-only: Start / Pause / Resume */}
+                      {c.status === 'draft' && (
+                        <button onClick={e => { setOpenMenuId(null); startCampaign(e, c); }} disabled={startingId === c.id}
+                          className="sm:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                          <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                          {startingId === c.id ? 'Starting…' : 'Start Campaign'}
+                        </button>
+                      )}
+                      {c.status === 'active' && (
+                        <button onClick={e => { setOpenMenuId(null); pauseCampaign(e, c); }}
+                          className="sm:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
+                          <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                          Pause Campaign
+                        </button>
+                      )}
+                      {c.status === 'paused' && (
+                        <button onClick={e => { setOpenMenuId(null); resumeCampaign(e, c); }} disabled={startingId === c.id}
+                          className="sm:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                          <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                          {startingId === c.id ? 'Resuming…' : 'Resume Campaign'}
+                        </button>
+                      )}
                       <Link
                         href={`/dashboard/campaigns/${c.id}`}
                         onClick={() => setOpenMenuId(null)}
