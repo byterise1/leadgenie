@@ -42,21 +42,21 @@ export default function DashboardPage() {
 
   return (
     <main className="flex-1 p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Overview</h1>
           <p className="text-sm text-gray-400 mt-0.5">Here's what's happening with your outreach.</p>
         </div>
         <Link href="/dashboard/campaigns/new"
-          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
+          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm w-fit">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           New Campaign
         </Link>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {statCards.map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        {statCards.map((s, i) => (
+          <div key={s.label} className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 ${i === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
             <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
             <p className="text-xs text-gray-400 mt-1.5">{s.value === '0' || s.value === '—' ? 'No data yet' : 'All time'}</p>

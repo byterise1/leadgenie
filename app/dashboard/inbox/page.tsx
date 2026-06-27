@@ -215,8 +215,8 @@ export default function InboxPage() {
 
   return (
     <main className="flex-1 flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
-      {/* LEFT PANEL */}
-      <div className="w-80 shrink-0 border-r border-gray-100 flex flex-col bg-white">
+      {/* LEFT PANEL — hidden on mobile when thread is open */}
+      <div className={`${selected ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 shrink-0 border-r border-gray-100 flex-col bg-white`}>
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100 space-y-3">
           <div className="flex items-center justify-between">
@@ -323,11 +323,19 @@ export default function InboxPage() {
         </div>
       </div>
 
-      {/* RIGHT PANEL */}
+      {/* RIGHT PANEL — hidden on mobile when no thread selected */}
       {selected ? (
-        <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+        <div className="flex flex-1 flex-col bg-gray-50 overflow-hidden">
           {/* Thread header */}
-          <div className="px-6 py-4 border-b border-gray-100 bg-white shrink-0">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100 bg-white shrink-0">
+            {/* Mobile back button */}
+            <button onClick={() => setSelected(null)}
+              className="sm:hidden flex items-center gap-1 text-sm text-blue-600 font-semibold mb-3 hover:text-blue-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+              </svg>
+              Back to inbox
+            </button>
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold text-gray-900 truncate">{selected.subject}</h2>
@@ -496,7 +504,7 @@ export default function InboxPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8 text-center">
+        <div className="hidden sm:flex flex-1 flex-col items-center justify-center bg-gray-50 p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center mb-4 shadow-sm">
             <svg className="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.98l7.5-4.04a2.25 2.25 0 012.134 0l7.5 4.04a2.25 2.25 0 011.183 1.98V19.5z"/>

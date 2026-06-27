@@ -132,19 +132,23 @@ const FALLBACK_PLANS: PlanDef[] = [
 
 function UsageBar({ used, max, label }: { used: number; max: number; label: string }) {
   const pct = max === Infinity ? 0 : max === 0 ? 0 : Math.max(2, (used / max) * 100);
-  const remaining = max === Infinity ? '∞' : String(max - used);
+  const exceeded = max !== Infinity && used > max;
+  const remaining = max === Infinity ? '∞' : String(Math.max(0, max - used));
   const maxLabel = max === Infinity ? '∞' : String(max);
-  const warn = max !== Infinity && pct > 80;
+  const warn = max !== Infinity && pct > 80 && !exceeded;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500 font-medium">{label}</span>
-        <span className="text-xs font-bold text-gray-700">{used}<span className="text-gray-400 font-normal">/{maxLabel}</span></span>
+        <span className={`text-xs font-bold ${exceeded ? 'text-red-600' : 'text-gray-700'}`}>{used}<span className="text-gray-400 font-normal">/{maxLabel}</span></span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${warn ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(100, pct)}%` }}/>
+        <div className={`h-full rounded-full transition-all ${exceeded ? 'bg-red-500' : warn ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(100, pct)}%` }}/>
       </div>
-      <p className="text-[10px] text-gray-400">{remaining} remaining</p>
+      {exceeded
+        ? <p className="text-[10px] text-red-500 font-semibold">Limit exceeded — upgrade to continue</p>
+        : <p className="text-[10px] text-gray-400">{remaining} remaining</p>
+      }
     </div>
   );
 }

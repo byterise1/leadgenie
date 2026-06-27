@@ -152,10 +152,15 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
       {open && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={onClose} />}
       <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
-        <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0">
+        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 shrink-0">
           <Link href="/">
             <Logo size={48} textSize="text-[15px]" />
           </Link>
+          <button onClick={onClose} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors" aria-label="Close menu">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">

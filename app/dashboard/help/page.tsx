@@ -36,20 +36,32 @@ export default function HelpPage() {
   };
 
   return (
-    <main className="flex-1 p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <main className="flex-1 p-4 sm:p-6">
+      <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Help & Guide</h1>
           <p className="text-sm text-gray-400 mt-0.5">Everything you need to run great campaigns.</p>
         </div>
         <Link href="/dashboard" className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-          ← Back to dashboard
+          ← Back
         </Link>
       </div>
 
+      {/* Mobile section selector */}
+      <div className="flex sm:hidden gap-1 bg-gray-100 rounded-xl p-1 mb-5 overflow-x-auto">
+        {sections.map(s => (
+          <button key={s.id} onClick={() => selectSection(s.id)}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              activeSection === s.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+            }`}>
+            {s.title}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-6">
-        {/* Section nav */}
-        <nav className="w-52 shrink-0 space-y-0.5">
+        {/* Section nav — desktop only */}
+        <nav className="hidden sm:block w-52 shrink-0 space-y-0.5">
           {sections.map(s => (
             <button key={s.id} onClick={() => selectSection(s.id)}
               className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -61,7 +73,7 @@ export default function HelpPage() {
         </nav>
 
         {/* Right panel */}
-        <div className="flex-1 max-w-2xl">
+        <div className="flex-1 min-w-0 sm:max-w-2xl">
           {selectedArticle ? (
             /* Full article view */
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">

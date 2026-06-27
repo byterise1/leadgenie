@@ -172,10 +172,10 @@ export default function AnalyticsPage() {
           <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
           <p className="text-sm text-gray-400 mt-0.5">Track your campaign performance.</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto max-w-full">
           {RANGE_OPTIONS.map(o => (
             <button key={o.value} onClick={() => setRange(o.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${range === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               {o.label}
             </button>
           ))}
@@ -201,8 +201,8 @@ export default function AnalyticsPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {kpis.map(k => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        {kpis.map((k, i) => (
+          <div key={k.label} className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 ${i === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
             <p className="text-xs font-semibold text-gray-400 mb-2">{k.label}</p>
             {loading && !stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>}
             <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data for period' : rangeLabel}</p>

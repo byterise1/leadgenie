@@ -101,6 +101,8 @@ export default function LeadsPage() {
   const [deleting, setDeleting] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; confirmLabel?: string; onConfirm: () => void; secondLabel?: string; onSecond?: () => void } | null>(null);
 
+  const [showListsSidebar, setShowListsSidebar] = useState(false);
+
   const [showPicker, setShowPicker] = useState(false);
   const [pickerListId, setPickerListId] = useState('');
   const [pickerNewName, setPickerNewName] = useState('');
@@ -205,6 +207,7 @@ export default function LeadsPage() {
     setSelected(new Set());
     setSearch('');
     fetchLeads('', id);
+    setShowListsSidebar(false);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -524,7 +527,13 @@ export default function LeadsPage() {
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Leads</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900">Leads</h1>
+            <button className="sm:hidden text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg px-2 py-1 bg-blue-50 hover:bg-blue-100 transition-colors"
+              onClick={() => setShowListsSidebar(v => !v)}>
+              Lists {showListsSidebar ? '▲' : '▼'}
+            </button>
+          </div>
           <p className="text-sm text-gray-400 mt-0.5">
             {currentList ? `${currentList.name} · ${leads.length} leads` : `All leads · ${totalCount} total`}
           </p>
@@ -628,7 +637,7 @@ export default function LeadsPage() {
       <div className="flex flex-1 gap-5 px-6 pb-6 overflow-hidden min-h-0">
 
         {/* Lists sidebar */}
-        <div className="w-52 shrink-0 flex flex-col gap-0.5 overflow-y-auto">
+        <div className={`${showListsSidebar ? 'flex' : 'hidden'} sm:flex w-52 shrink-0 flex-col gap-0.5 overflow-y-auto`}>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Lists</p>
 
           <button onClick={() => selectList(null)}

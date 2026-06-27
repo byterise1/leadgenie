@@ -187,9 +187,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <div className="px-5 h-14 flex items-center border-b border-gray-100 shrink-0 gap-3">
-          <Logo size={28} textSize="text-[14px]" />
-          <span className="text-[10px] font-bold bg-red-500 text-white rounded px-1.5 py-0.5 leading-tight">ADMIN</span>
+        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 shrink-0 gap-3">
+          <div className="flex items-center gap-3">
+            <Logo size={28} textSize="text-[14px]" />
+            <span className="text-[10px] font-bold bg-red-500 text-white rounded px-1.5 py-0.5 leading-tight">ADMIN</span>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors" aria-label="Close menu">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
@@ -197,7 +204,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div key={section.label}>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1.5">{section.label}</p>
               {section.items.map(item => (
-                <Link key={item.href} href={item.href}
+                <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive(item.href)
                       ? 'bg-blue-50 text-blue-700'
@@ -318,7 +325,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </header>
 
-        {children}
+        <div className="flex-1 pb-24">
+          {children}
+        </div>
       </div>
     </div>
   );

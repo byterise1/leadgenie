@@ -160,14 +160,27 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="flex-1 p-6">
-      <div className="mb-6">
+    <main className="flex-1 p-4 sm:p-6 pb-24">
+      <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Settings</h1>
         <p className="text-sm text-gray-400 mt-0.5">Manage your account and preferences.</p>
       </div>
 
+      {/* Mobile tab bar */}
+      <div className="flex sm:hidden gap-1 bg-gray-100 rounded-xl p-1 mb-5 overflow-x-auto">
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => { setTab(t.id); setSaveMsg(''); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+            }`}>
+            <span className={tab === t.id ? 'text-blue-600' : 'text-gray-400'}>{t.icon}</span>
+            {t.id === 'sending' ? 'Sending' : t.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-8">
-        <nav className="w-52 shrink-0 space-y-0.5">
+        <nav className="hidden sm:block w-52 shrink-0 space-y-0.5">
           {tabs.map(t => (
             <button key={t.id} onClick={() => { setTab(t.id); setSaveMsg(''); }}
               className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -179,7 +192,7 @@ export default function SettingsPage() {
           ))}
         </nav>
 
-        <div className="flex-1 max-w-xl">
+        <div className="flex-1 min-w-0 sm:max-w-xl">
 
           {/* ── Profile ── */}
           {tab === 'profile' && (
