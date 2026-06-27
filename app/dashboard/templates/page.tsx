@@ -664,13 +664,13 @@ export default function TemplatesPage() {
 
   return (
     <main className="flex-1 p-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Templates</h1>
           <p className="text-sm text-gray-400 mt-0.5">Ready-to-use templates — edit, create, or launch in campaigns.</p>
         </div>
         <button onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm shrink-0 self-start sm:self-auto">
+          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm shrink-0 self-start md:self-auto">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           Create Template
         </button>

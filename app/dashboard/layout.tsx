@@ -214,7 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden" style={{ colorScheme: 'light' }}>
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">
                     Notifications {notifications.length > 0 && <span className="text-blue-600">({notifications.length})</span>}
