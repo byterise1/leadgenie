@@ -409,5 +409,5 @@ export function replaceVars(text: string, lead: Record<string, string | null>): 
     .replace(/\{\{title\}\}/g, lead.title || '')
     .replace(/\{\{email\}\}/g, lead.email || '')
     .replace(/\{\{website\}\}/g, lead.website || '')
-    .replace(/\{\{[^}]+\}\}/g, ''); // strip unknown variables — avoid literal {{placeholders}} in sent emails
+    .replace(/\{\{(?!unsubscribe_link)[^}]+\}\}/g, ''); // strip unknown variables (preserve {{unsubscribe_link}} for worker)
 }

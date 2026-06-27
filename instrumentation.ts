@@ -98,7 +98,9 @@ export async function register() {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    const SITE_URL = process.env.SITE_URL || 'https://LeadsAdd-production.up.railway.app';
+    const SITE_URL = process.env.SITE_URL
+      || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null)
+      || 'https://LeadsAdd-production.up.railway.app';
 
     // Helper: create in-app notification only if user has the pref enabled
     async function notifyIfEnabled(
@@ -234,6 +236,24 @@ export async function register() {
         .eq('step_number', stepNumber);
       if ((alreadySentCount ?? 0) > 0) {
         console.log(`[idempotency] step ${stepNumber} already sent to ${lead.email} — skipping retry duplicate`);
+        // Re-queue the next step in case it was lost (e.g. Redis blip between send and queue call)
+        const _nextStep = stepNumber + 1;
+        const _hasNext = campaign.email_steps.some((s: any) => s.step_number === _nextStep);
+        if (_hasNext && cl.status === 'active') {
+          const { count: _nextSent } = await supabase
+            .from('sent_emails')
+            .select('id', { count: 'exact', head: true })
+            .eq('campaign_id', campaign.id)
+            .eq('lead_id', lead.id)
+            .eq('step_number', _nextStep);
+          if ((_nextSent ?? 0) === 0) {
+            const { emailQueue: _eq } = await import('./lib/queue');
+            const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
+            const _delayMs = Math.max(0, adjustToWindow(Date.now() + (_nextStepData.delay_days || 1) * 60_000, campaign) - Date.now());
+            await _eq.add('send', { campaignLeadId, stepNumber: _nextStep, accountId: account.id }, { delay: _delayMs });
+            console.log(`[idempotency-requeue] queued step ${_nextStep} for ${lead.email}`);
+          }
+        }
         return;
       }
 
