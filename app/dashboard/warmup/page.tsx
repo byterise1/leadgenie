@@ -16,6 +16,14 @@ type WarmupAccount = {
   status: 'active' | 'warming' | 'error' | 'paused' | 'login' | string;
 };
 
+type HistoryRow = {
+  email: string;
+  date: string;
+  day_number: number;
+  emails_sent: number;
+  health_score: number;
+};
+
 const tabs = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'settings', label: 'Settings' },
@@ -66,13 +74,21 @@ function RampBar({ day }: { day: number }) {
   );
 }
 
+function ScoreBadge({ score }: { score: number }) {
+  const color = score >= 80 ? 'text-emerald-700 bg-emerald-50' : score >= 50 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50';
+  return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${color}`}>{score}</span>;
+}
+
 export default function WarmupPage() {
   const [tab, setTab] = useState('accounts');
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
+  const [history, setHistory] = useState<Record<string, HistoryRow[]>>({});
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -83,21 +99,24 @@ export default function WarmupPage() {
     fetch('/api/warmup')
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setAccounts(data);
-        } else if (data?.error) {
-          setApiError(data.error);
-        }
+        if (Array.isArray(data)) setAccounts(data);
+        else if (data?.error) setApiError(data.error);
       })
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (tab !== 'stats') return;
+    setHistoryLoading(true);
+    fetch('/api/warmup/history')
+      .then(r => r.json())
+      .then(data => { if (!data.error) setHistory(data); })
+      .finally(() => setHistoryLoading(false));
+  }, [tab]);
+
   const toggleWarmup = async (id: string, currentlyEnabled: boolean) => {
     const enabled = !currentlyEnabled;
-    setAccounts(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      return { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' };
-    }));
+    setAccounts(prev => prev.map(a => a.id !== id ? a : { ...a, warmup_enabled: enabled, status: enabled ? 'warming' : 'active' }));
     setSavingId(id);
     const res = await fetch('/api/warmup', {
       method: 'PATCH',
@@ -125,6 +144,12 @@ export default function WarmupPage() {
   const totalSentToday = warmingAccounts.reduce((s, a) => s + (a.sent_today || 0), 0);
   const totalWarmupSent = warmingAccounts.reduce((s, a) => s + (a.warmup_emails_sent || 0), 0);
 
+  // Check if an account has prior history from before it was connected to this user
+  const hasPriorHistory = (email: string) => {
+    const rows = history[email] ?? [];
+    return rows.length > 0;
+  };
+
   return (
     <main className="flex-1 p-6 space-y-6">
       {toast && (
@@ -147,7 +172,6 @@ export default function WarmupPage() {
           <div>
             <p className="text-sm font-bold text-red-800">Could not load warmup accounts</p>
             <p className="text-xs text-red-600 mt-0.5 font-mono">{apiError}</p>
-            <p className="text-xs text-red-500 mt-1">Run the missing column SQL in Supabase → SQL Editor to fix this.</p>
           </div>
         </div>
       )}
@@ -199,76 +223,96 @@ export default function WarmupPage() {
               </a>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[700px]">
-                <span>Account</span><span>Status</span><span>Score</span><span>Ramp Progress</span><span>Health</span><span>Warmup</span>
-              </div>
-              {accounts.map(acc => (
-                <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center min-w-[700px]">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                    <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      acc.status === 'active' ? 'bg-emerald-400' :
-                      acc.status === 'warming' ? 'bg-amber-400 animate-pulse' :
-                      (acc.status === 'error' || acc.status === 'login') ? 'bg-red-400' : 'bg-gray-300'
-                    }`}/>
-                    {(acc.status === 'error' || acc.status === 'login') ? (
-                      <span className="text-xs text-red-600 font-semibold flex items-center gap-1.5">
-                        Auth Error
-                        {acc.type === 'gmail-oauth' && (
-                          <a href="/api/email-accounts/oauth/google" className="text-blue-600 hover:underline text-[10px]">Re-connect →</a>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
-                    )}
-                  </div>
-                  <ScoreRing score={acc.health_score || 0}/>
-                  {acc.warmup_enabled && (acc.warmup_day ?? 0) < 14 ? (
-                    <RampBar day={acc.warmup_day || 0}/>
-                  ) : acc.warmup_enabled && (acc.warmup_day ?? 0) >= 14 ? (
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
-                      <span className="text-[10px] text-gray-400">14-day ramp complete — maintaining</span>
-                    </div>
-                  ) : (acc.warmup_day ?? 0) >= 14 ? (
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-semibold text-emerald-600">14-day warmup complete ✓</span>
-                      <span className="text-[10px] text-gray-400">Toggle on to continue at 40/day</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-400">Warmup off</span>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
-                        style={{ width: `${acc.health_score || 0}%` }}/>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
-                  </div>
-                  <div className="relative">
-                    {savingId === acc.id && (
-                      <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                    )}
-                    <Toggle
-                      on={acc.warmup_enabled || acc.status === 'warming'}
-                      onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
-                    />
-                  </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[700px]">
+                  <span>Account</span><span>Status</span><span>Score</span><span>Ramp Progress</span><span>Health</span><span>Warmup</span>
                 </div>
-              ))}
-            </div>{/* /overflow-x-auto */}
-          </div>
+                {accounts.map(acc => {
+                  const rows = history[acc.email] ?? [];
+                  const totalHistorySent = rows.reduce((s, r) => s + r.emails_sent, 0);
+                  const historyDays = rows.length;
+                  const showHistoryBadge = historyDays > 0 && (acc.warmup_day ?? 0) === 0;
+                  return (
+                    <div key={acc.id} className="border-b border-gray-100 last:border-0">
+                      <div className="px-6 py-4 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center min-w-[700px]">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
+                            {showHistoryBadge && (
+                              <span className="text-[10px] font-bold bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">
+                                {historyDays}d prior history
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            acc.status === 'active' ? 'bg-emerald-400' :
+                            acc.status === 'warming' ? 'bg-amber-400 animate-pulse' :
+                            (acc.status === 'error' || acc.status === 'login') ? 'bg-red-400' : 'bg-gray-300'
+                          }`}/>
+                          {(acc.status === 'error' || acc.status === 'login') ? (
+                            <span className="text-xs text-red-600 font-semibold flex items-center gap-1.5">
+                              Auth Error
+                              {acc.type === 'gmail-oauth' && (
+                                <a href="/api/email-accounts/oauth/google" className="text-blue-600 hover:underline text-[10px]">Re-connect →</a>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
+                          )}
+                        </div>
+                        <ScoreRing score={acc.health_score || 0}/>
+                        {acc.warmup_enabled && (acc.warmup_day ?? 0) < 14 ? (
+                          <RampBar day={acc.warmup_day || 0}/>
+                        ) : acc.warmup_enabled && (acc.warmup_day ?? 0) >= 14 ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
+                            <span className="text-[10px] text-gray-400">14-day ramp complete — maintaining</span>
+                          </div>
+                        ) : (acc.warmup_day ?? 0) >= 14 ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-semibold text-emerald-600">14-day warmup complete ✓</span>
+                            <span className="text-[10px] text-gray-400">Toggle on to continue at 40/day</span>
+                          </div>
+                        ) : showHistoryBadge ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-semibold text-violet-600">Previously warmed {historyDays} days</span>
+                            <span className="text-[10px] text-gray-400">{totalHistorySent} emails sent in prior sessions</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Warmup off</span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                              style={{ width: `${acc.health_score || 0}%` }}/>
+                          </div>
+                          <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
+                        </div>
+                        <div className="relative">
+                          {savingId === acc.id && (
+                            <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                          )}
+                          <Toggle
+                            on={acc.warmup_enabled || acc.status === 'warming'}
+                            onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-4">How warmup works</h3>
             <div className="grid sm:grid-cols-4 gap-4">
               {[
@@ -292,32 +336,27 @@ export default function WarmupPage() {
 
       {tab === 'settings' && (
         <div className="space-y-4 max-w-xl">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
             <div>
               <h2 className="text-base font-bold text-gray-900">Per-Account Settings</h2>
-              <p className="text-sm text-gray-400 mt-0.5">Set warmup target for each account individually.</p>
+              <p className="text-xs text-gray-400 mt-1">Set how many warmup emails each account sends per day.</p>
             </div>
             {accounts.length === 0 ? (
-              <p className="text-sm text-gray-400">No accounts connected yet.</p>
+              <p className="text-sm text-gray-400">No accounts connected.</p>
             ) : accounts.map(acc => (
-              <div key={acc.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${acc.warmup_enabled ? 'bg-amber-400' : 'bg-gray-300'}`}/>
+              <div key={acc.id} className="flex items-center justify-between gap-4 border-b border-gray-50 pb-4 last:border-0 last:pb-0">
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Current target: {acc.warmup_target ?? 40}/day</p>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-700">Daily email target</label>
-                    <span className="text-xs font-bold text-blue-600">{acc.warmup_target || 40} / day</span>
-                  </div>
-                  <input type="range" min={5} max={100} step={5}
-                    value={acc.warmup_target || 40}
-                    onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                    className="w-full accent-blue-600"/>
-                  <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                    <span>5 (slow)</span><span>100 (aggressive)</span>
-                  </div>
-                </div>
+                <select
+                  value={acc.warmup_target ?? 40}
+                  onChange={e => updateTarget(acc.id, Number(e.target.value))}
+                  className="border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0">
+                  {[10, 20, 30, 40, 50, 60, 80, 100].map(v => (
+                    <option key={v} value={v}>{v} / day</option>
+                  ))}
+                </select>
               </div>
             ))}
           </div>
@@ -341,48 +380,110 @@ export default function WarmupPage() {
 
       {tab === 'stats' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
-            <h3 className="text-sm font-bold text-gray-900 mb-5">Warmup Performance</h3>
-            {accounts.filter(a => a.warmup_enabled).length === 0 ? (
-              <div className="flex flex-col items-center py-12 text-center">
-                <p className="text-sm font-semibold text-gray-400">No warmup data yet</p>
-                <p className="text-xs text-gray-400 mt-0.5">Enable warmup on an account to see stats here.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {accounts.filter(a => a.warmup_enabled).map(acc => {
-                  const pct = Math.min(100, Math.round((Math.min(acc.warmup_day || 0, 14) / 14) * 100));
-                  return (
-                    <div key={acc.id} className="border border-gray-100 rounded-xl p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{acc.email}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{acc.warmup_emails_sent} total warmup emails sent</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <ScoreRing score={acc.health_score || 0}/>
-                        </div>
-                      </div>
+          {/* Per-account history */}
+          {historyLoading ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i}/>)}
+            </div>
+          ) : accounts.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 flex flex-col items-center text-center">
+              <p className="text-sm font-semibold text-gray-400">No accounts connected</p>
+              <p className="text-xs text-gray-400 mt-0.5">Connect an account and enable warmup to see history here.</p>
+            </div>
+          ) : (
+            accounts.map(acc => {
+              const rows = (history[acc.email] ?? []).slice().sort((a, b) => b.date.localeCompare(a.date));
+              const totalSent = rows.reduce((s, r) => s + r.emails_sent, 0);
+              const maxDayReached = rows.length > 0 ? Math.max(...rows.map(r => r.day_number)) : acc.warmup_day || 0;
+              const latestScore = rows[0]?.health_score ?? acc.health_score ?? 0;
+              const isExpanded = expandedEmail === acc.email;
+
+              return (
+                <div key={acc.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  {/* Account summary header */}
+                  <button
+                    onClick={() => setExpandedEmail(isExpanded ? null : acc.email)}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/60 transition-colors text-left">
+                    <div className="flex items-center gap-4">
+                      <ScoreRing score={latestScore}/>
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-semibold text-gray-700">Warmup progress</span>
-                          <span className="text-xs text-gray-500">Day {acc.warmup_day || 0} / 14</span>
+                        <p className="text-sm font-semibold text-gray-900">{acc.email}</p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-[11px] text-gray-400">Day {maxDayReached} reached</span>
+                          <span className="text-[11px] text-gray-400">·</span>
+                          <span className="text-[11px] text-gray-400">{totalSent.toLocaleString()} total warmup emails</span>
+                          <span className="text-[11px] text-gray-400">·</span>
+                          <span className="text-[11px] text-gray-400">{rows.length} days recorded</span>
                         </div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          {pct >= 100 ? '14-day warmup complete — maintaining at target volume' : `${pct}% complete — ramping to ${WARMUP_DAILY_TARGETS[Math.min(acc.warmup_day || 0, 14)]}/day`}
-                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {maxDayReached >= 14 && (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">14-day complete ✓</span>
+                      )}
+                      <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+                  </button>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                  {/* Daily history table — expanded */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100">
+                      {rows.length === 0 ? (
+                        <div className="px-6 py-8 text-center">
+                          <p className="text-sm text-gray-400">No history recorded yet.</p>
+                          <p className="text-xs text-gray-400 mt-1">History is saved each time the warmup worker runs (every 6 hours).</p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs min-w-[500px]">
+                            <thead>
+                              <tr className="bg-gray-50 border-b border-gray-100">
+                                <th className="text-left px-6 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Day</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Emails Sent</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Health Score</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Progress</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                              {rows.map(row => {
+                                const pct = Math.min(100, Math.round((Math.min(row.day_number, 14) / 14) * 100));
+                                return (
+                                  <tr key={row.date} className="hover:bg-gray-50/60 transition-colors">
+                                    <td className="px-6 py-3 font-medium text-gray-700">{row.date}</td>
+                                    <td className="px-4 py-3 text-gray-600">
+                                      {row.day_number <= 14 ? `Day ${row.day_number}` : `Day 14+ (${row.day_number})`}
+                                    </td>
+                                    <td className="px-4 py-3 font-semibold text-gray-900">{row.emails_sent}</td>
+                                    <td className="px-4 py-3">
+                                      <ScoreBadge score={row.health_score}/>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }}/>
+                                        </div>
+                                        <span className="text-gray-400">{pct}%</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          {/* Health score guide */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-4">Health Score Guide</h3>
             <div className="grid sm:grid-cols-3 gap-4">
               {[

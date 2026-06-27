@@ -922,6 +922,25 @@ export async function register() {
       // Flush account updates individually (Supabase upsert can't bulk-update different values)
       // Only notify on the day warmup_day first hits exactly 14 (justCompleted = true in accountUpdates)
       const completedAccounts = allWarmupAccounts.filter(a => accountUpdates.get(a.id)?.warmup_enabled === false && (accountUpdates.get(a.id)?.warmup_day ?? 0) === 14);
+
+      // Build warmup_history rows — one per account per day (upsert by email+date)
+      const today = new Date().toISOString().slice(0, 10);
+      const historyRows = Array.from(accountUpdates.entries())
+        .map(([id, upd]) => {
+          const acc = allWarmupAccounts.find(a => a.id === id);
+          if (!acc) return null;
+          return {
+            account_id: id,
+            email: acc.email,
+            user_id: acc.user_id,
+            date: today,
+            day_number: upd.warmup_day,
+            emails_sent: upd.sent_today,
+            health_score: upd.health_score,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
       await Promise.all([
         ...Array.from(accountUpdates.entries()).map(([id, upd]) =>
           supabase.from('email_accounts').update(upd).eq('id', id)
@@ -936,6 +955,10 @@ export async function register() {
             type: 'info',
           })
         ),
+        // Persist daily warmup history (upsert so re-runs don't duplicate)
+        historyRows.length > 0
+          ? supabase.from('warmup_history').upsert(historyRows, { onConflict: 'email,date' })
+          : Promise.resolve(),
       ]);
 
       // ── PHASE 2: RECEIVE — rescue from spam, mark-read, auto-reply ───────
