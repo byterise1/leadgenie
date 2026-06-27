@@ -66,16 +66,19 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-const WARMUP_DAILY_TARGETS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40];
+const WARMUP_DAILY_TARGETS = [
+  0,  2,  3,  4,  5,  6,  7,  8,  10, 12,
+  14, 16, 18, 20, 22, 24, 26, 28, 30, 32,
+  34, 36, 38, 40, 40, 40, 40, 40, 40, 40, 40,
+];
 
-function RampBar({ day }: { day: number }) {
-  const clampedDay = Math.min(day, 14);
-  const pct = Math.min(100, Math.round((clampedDay / 14) * 100));
-  const todayTarget = day >= 1 && day <= 14 ? WARMUP_DAILY_TARGETS[day] : day > 14 ? 40 : 2;
+function RampBar({ day, target = 30 }: { day: number; target?: number }) {
+  const pct = Math.min(100, Math.round((day / target) * 100));
+  const todayTarget = WARMUP_DAILY_TARGETS[Math.min(day, WARMUP_DAILY_TARGETS.length - 1)] ?? 40;
   return (
     <div className="flex flex-col gap-1 min-w-0 flex-1">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-gray-400">Day {day} of 14</span>
+        <span className="text-[10px] text-gray-400">Day {day} of {target}</span>
         <span className="text-[10px] font-semibold text-gray-600">{todayTarget}/day target</span>
       </div>
       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -293,7 +296,7 @@ export default function WarmupPage() {
                         {(() => {
                           const tgt = acc.warmup_target ?? 30;
                           const d = acc.warmup_day ?? 0;
-                          if (acc.warmup_enabled && d < tgt) return <RampBar day={d}/>;
+                          if (acc.warmup_enabled && d < tgt) return <RampBar day={d} target={tgt}/>;
                           if (acc.warmup_enabled && d >= tgt) return (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
@@ -365,7 +368,7 @@ export default function WarmupPage() {
               {[
                 { step: '1', title: 'Enable warmup', desc: 'Toggle warmup on for any connected account', color: 'blue' },
                 { step: '2', title: 'Auto-sends', desc: 'System sends emails between warmed accounts every 6h', color: 'indigo' },
-                { step: '3', title: 'Score grows', desc: 'Health score grows +2 pts/day, reaching 100% by day 25', color: 'emerald' },
+                { step: '3', title: 'Score grows', desc: 'Health reaches 98% by day 14, 100% by day 30 — auto-stops then notifies you', color: 'emerald' },
                 { step: '4', title: 'Safe to send', desc: 'Launch campaigns with better inbox placement', color: 'violet' },
               ].map(s => (
                 <div key={s.step} className="flex flex-col gap-2">
