@@ -565,8 +565,49 @@ export async function register() {
           if (account.type === 'gmail-oauth') {
             // ── Gmail OAuth path ─────────────────────────────────────────────
             let token: string;
-            try { token = await getAccessToken(account); } catch { continue; }
+            try { token = await getAccessToken(account); } catch (e: any) {
+              console.error(`[inbox-sync] token refresh failed for ${account.email}:`, e.message);
+              continue;
+            }
 
+            // Helper: process a detected reply for a sent email row
+            async function processReply(sent: any, replyMsg: any, replySnippet: string) {
+              const fromHeader = hdr(replyMsg.payload?.headers, 'From');
+              const dateHeader = hdr(replyMsg.payload?.headers, 'Date');
+              const subjectHeader = hdr(replyMsg.payload?.headers, 'Subject') || sent.subject;
+              const match = fromHeader.match(/^(.+?)\s*<(.+?)>$/);
+              const fromName = (match ? match[1].replace(/"/g, '').trim() : fromHeader) || '';
+              const fromEmail = (match ? match[2].trim() : fromHeader) || '';
+              const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
+
+              const { data: existing } = await supabase
+                .from('inbox_threads').select('id')
+                .eq('user_id', account.user_id)
+                .eq('lead_id', sent.lead_id)
+                .eq('campaign_id', sent.campaign_id)
+                .maybeSingle();
+
+              if (!existing) {
+                await supabase.from('inbox_threads').insert({
+                  user_id: account.user_id, campaign_id: sent.campaign_id,
+                  lead_id: sent.lead_id, account_id: account.id,
+                  subject: subjectHeader, last_message: cleanSnip(replySnippet || ''),
+                  from_email: fromEmail, from_name: fromName,
+                  status: 'new', read: false, received_at: receivedAt,
+                });
+                await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
+                  `New reply from ${fromName || fromEmail} — "${subjectHeader}"`,
+                  'info', '/dashboard/inbox');
+              }
+              await supabase.from('sent_emails').update({ replied_at: receivedAt }).eq('id', sent.id);
+              if (sent.lead_id && sent.campaign_id) {
+                await supabase.from('campaign_leads').update({ status: 'replied' })
+                  .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
+              }
+              console.log(`[inbox-sync] ✓ Reply recorded from ${fromEmail} → campaign ${sent.campaign_id}`);
+            }
+
+            // ── Path 1: stored threadId lookup ───────────────────────────────
             const { data: sentEmails } = await supabase
               .from('sent_emails')
               .select('id, message_id, lead_id, campaign_id, subject')
@@ -575,6 +616,8 @@ export async function register() {
               .is('replied_at', null)
               .limit(30);
 
+            const handledThreadIds = new Set<string>();
+
             for (const sent of (sentEmails || [])) {
               try {
                 const thread = await gmailGet(
@@ -582,10 +625,9 @@ export async function register() {
                   token,
                 );
                 if (!thread?.messages || thread.messages.length <= 1) continue;
+                handledThreadIds.add(sent.message_id);
 
                 const reply = thread.messages.slice(1).find((m: any) => {
-                  // Skip any message we sent (SENT label is the definitive check;
-                  // From-header match is a fallback for edge cases where headers are missing)
                   if (m.labelIds?.includes('SENT')) return false;
                   const from = (hdr(m.payload?.headers, 'From') || '').toLowerCase();
                   if (!from || from.includes(account.email.toLowerCase())) return false;
@@ -593,47 +635,70 @@ export async function register() {
                 });
                 if (!reply) continue;
 
-                const fromHeader = hdr(reply.payload?.headers, 'From');
-                const dateHeader = hdr(reply.payload?.headers, 'Date');
-                const subjectHeader = hdr(reply.payload?.headers, 'Subject') || sent.subject;
-
-                if (dateHeader) {
+                if (hdr(reply.payload?.headers, 'Date')) {
                   const sentTime = new Date(hdr(thread.messages[0].payload?.headers, 'Date')).getTime();
-                  if (new Date(dateHeader).getTime() <= sentTime) continue;
+                  if (new Date(hdr(reply.payload?.headers, 'Date')).getTime() <= sentTime) continue;
                 }
 
-                const match = fromHeader.match(/^(.+?)\s*<(.+?)>$/);
-                const fromName = (match ? match[1].replace(/"/g, '').trim() : fromHeader) || '';
-                const fromEmail = (match ? match[2].trim() : fromHeader) || '';
-                const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
-
-                const { data: existing } = await supabase
-                  .from('inbox_threads').select('id')
-                  .eq('user_id', account.user_id)
-                  .eq('lead_id', sent.lead_id)
-                  .eq('campaign_id', sent.campaign_id)
-                  .maybeSingle();
-
-                if (!existing) {
-                  await supabase.from('inbox_threads').insert({
-                    user_id: account.user_id, campaign_id: sent.campaign_id,
-                    lead_id: sent.lead_id, account_id: account.id,
-                    subject: subjectHeader, last_message: cleanSnip(reply.snippet || ''),
-                    from_email: fromEmail, from_name: fromName,
-                    status: 'new', read: false, received_at: receivedAt,
-                  });
-                  await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
-                    `New reply from ${fromName || fromEmail} — "${subjectHeader}"`,
-                    'info', '/dashboard/inbox');
-                }
-
-                await supabase.from('sent_emails').update({ replied_at: receivedAt }).eq('id', sent.id);
-                if (sent.lead_id && sent.campaign_id) {
-                  await supabase.from('campaign_leads').update({ status: 'replied' })
-                    .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
-                }
-              } catch { /* skip single thread error */ }
+                await processReply(sent, reply, reply.snippet || '');
+              } catch (e: any) {
+                console.error(`[inbox-sync] thread check error for ${account.email}:`, e.message);
+              }
             }
+
+            // ── Path 2: scan Gmail INBOX for unread replies (catches cases where ──
+            // ── threadId wasn't stored or message_id column update was missed)  ──
+            try {
+              const inboxRes = await gmailGet(
+                `/gmail/v1/users/me/messages?labelIds=INBOX,UNREAD&maxResults=25`,
+                token,
+              );
+              for (const msgRef of (inboxRes?.messages || [])) {
+                try {
+                  const msg = await gmailGet(
+                    `/gmail/v1/users/me/messages/${msgRef.id}?format=metadata&metadataHeaders=From,Subject,Date`,
+                    token,
+                  );
+                  if (!msg) continue;
+                  if (handledThreadIds.has(msg.threadId)) continue; // already handled above
+
+                  const fromRaw = hdr(msg.payload?.headers, 'From');
+                  const fromEmailMatch = fromRaw.match(/<(.+?)>/);
+                  const fromEmail = (fromEmailMatch ? fromEmailMatch[1] : fromRaw).toLowerCase().trim();
+                  if (!fromEmail || fromEmail === account.email.toLowerCase()) continue;
+                  if (SYSTEM_PATTERNS.some(p => fromEmail.includes(p))) continue;
+
+                  // Find the lead with this email address
+                  const { data: leadRow } = await supabase
+                    .from('leads')
+                    .select('id')
+                    .eq('user_id', account.user_id)
+                    .ilike('email', fromEmail)
+                    .maybeSingle();
+                  if (!leadRow) continue;
+
+                  // Find the most recent sent email to this lead that hasn't been replied to
+                  const { data: sentRow } = await supabase
+                    .from('sent_emails')
+                    .select('id, lead_id, campaign_id, subject')
+                    .eq('account_id', account.id)
+                    .eq('lead_id', leadRow.id)
+                    .is('replied_at', null)
+                    .order('sent_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  if (!sentRow) continue;
+
+                  // Backfill threadId so future syncs use the faster path
+                  if (msg.threadId) {
+                    await supabase.from('sent_emails').update({ message_id: msg.threadId }).eq('id', sentRow.id);
+                    handledThreadIds.add(msg.threadId);
+                  }
+
+                  await processReply(sentRow, msg, msg.snippet || '');
+                } catch { /* skip individual message */ }
+              }
+            } catch { /* skip inbox scan errors */ }
 
           } else if (account.imap_host || account.type === 'gmail-app') {
             // ── IMAP path (Gmail App Password, Titan, Zoho, Custom SMTP) ────
