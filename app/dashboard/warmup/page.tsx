@@ -224,31 +224,40 @@ export default function WarmupPage() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[700px]">
-                  <span>Account</span><span>Status</span><span>Score</span><span>Ramp Progress</span><span>Health</span><span>Warmup</span>
-                </div>
+              <div className="overflow-x-auto w-full">
+                <table className="w-full min-w-[700px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left">Account</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Score</th>
+                      <th className="px-4 py-3 text-left">Ramp Progress</th>
+                      <th className="px-4 py-3 text-left">Health</th>
+                      <th className="px-4 py-3 text-left">Warmup</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                 {accounts.map(acc => {
                   const rows = history[acc.email] ?? [];
                   const totalHistorySent = rows.reduce((s, r) => s + r.emails_sent, 0);
                   const historyDays = rows.length;
                   const showHistoryBadge = historyDays > 0 && (acc.warmup_day ?? 0) === 0;
                   return (
-                    <div key={acc.id} className="border-b border-gray-100 last:border-0">
-                      <div className="px-6 py-4 grid grid-cols-[2fr_1fr_auto_2fr_1fr_auto] gap-4 items-center min-w-[700px]">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
-                            {showHistoryBadge && (
-                              <span className="text-[10px] font-bold bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">
-                                {historyDays}d prior history
-                              </span>
-                            )}
-                          </div>
+                    <tr key={acc.id} className="border-b border-gray-100 last:border-0">
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
+                          {showHistoryBadge && (
+                            <span className="text-[10px] font-bold bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">
+                              {historyDays}d prior history
+                            </span>
+                          )}
                         </div>
+                      </td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                             acc.status === 'active' ? 'bg-emerald-400' :
                             acc.status === 'warming' ? 'bg-amber-400 animate-pulse' :
                             (acc.status === 'error' || acc.status === 'login') ? 'bg-red-400' : 'bg-gray-300'
@@ -264,7 +273,11 @@ export default function WarmupPage() {
                             <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
                           )}
                         </div>
+                      </td>
+                      <td className="px-4 py-4">
                         <ScoreRing score={acc.health_score || 0}/>
+                      </td>
+                      <td className="px-4 py-4">
                         {acc.warmup_enabled && (acc.warmup_day ?? 0) < 14 ? (
                           <RampBar day={acc.warmup_day || 0}/>
                         ) : acc.warmup_enabled && (acc.warmup_day ?? 0) >= 14 ? (
@@ -285,6 +298,8 @@ export default function WarmupPage() {
                         ) : (
                           <span className="text-xs text-gray-400">Warmup off</span>
                         )}
+                      </td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
@@ -292,6 +307,8 @@ export default function WarmupPage() {
                           </div>
                           <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
                         </div>
+                      </td>
+                      <td className="px-4 py-4">
                         <div className="relative">
                           {savingId === acc.id && (
                             <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
@@ -304,10 +321,12 @@ export default function WarmupPage() {
                             onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
                           />
                         </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   );
                 })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

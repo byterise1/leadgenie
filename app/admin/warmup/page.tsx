@@ -534,16 +534,16 @@ function AdminWarmupPageInner() {
             <button onClick={() => setShowAddPool(true)} className="text-sm font-bold text-blue-600 hover:text-blue-700">+ Add pool account</button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Email</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Health</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Progress</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Sent Today</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase">Daily Target</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase"></th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap">Email</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap">Health</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap">Progress</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap">Sent Today</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap">Daily Target</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-gray-400 uppercase whitespace-nowrap"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -606,18 +606,18 @@ function AdminWarmupPageInner() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Account</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">User</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Health</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Today</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Pool Mode</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Warmup</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Account</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">User</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Health</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Progress</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Today</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Pool Mode</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Warmup</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">

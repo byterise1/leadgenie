@@ -587,13 +587,13 @@ export default function EmailAccountsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Accounts</h1>
           <p className="text-sm text-gray-400 mt-0.5">Connect sending accounts — rotate across multiple for better deliverability.</p>
         </div>
         <button onClick={() => setStep('choose')}
-          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm">
+          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm w-fit">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           Connect Account
         </button>
@@ -632,36 +632,54 @@ export default function EmailAccountsPage() {
 
       {accounts.length > 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[750px]">
-            <span className="pl-11">Account</span><span>Type</span><span>Status</span><span>Health</span><span>Today / Limit</span><span></span>
-          </div>
+          <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[760px] border-collapse">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left w-[260px]"><span className="pl-11">Account</span></th>
+                <th className="px-4 py-3 text-left w-[130px]">Type</th>
+                <th className="px-4 py-3 text-left w-[100px]">Status</th>
+                <th className="px-4 py-3 text-left w-[110px]">Health</th>
+                <th className="px-4 py-3 text-left w-[160px]">Today / Limit</th>
+                <th className="px-4 py-3 w-[1px]"></th>
+              </tr>
+            </thead>
+            <tbody>
           {accounts.map((acc, i) => (
-            <div key={acc.id} className="px-6 py-4 border-b border-gray-100 last:border-0 grid grid-cols-[2fr_1fr_1fr_1fr_150px_auto] gap-4 items-center min-w-[750px]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                  {i + 1}
+            <tr key={acc.id} className="border-b border-gray-100 last:border-0">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {i + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{acc.email}</p>
+                    <p className="text-[10px] text-gray-400 capitalize">{acc.status}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{acc.status}</p>
+              </td>
+              <td className="px-4 py-4">
+                <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border whitespace-nowrap ${TYPE_COLORS[acc.type]}`}>
+                  {TYPE_LABELS[acc.type]}
+                </span>
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-red-400'}`}/>
+                  <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
                 </div>
-              </div>
-              <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border w-fit ${TYPE_COLORS[acc.type]}`}>
-                {TYPE_LABELS[acc.type]}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-red-400'}`}/>
-                <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 max-w-[60px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
-                    style={{ width: `${acc.health_score || 0}%` }}/>
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                      style={{ width: `${acc.health_score || 0}%` }}/>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
                 </div>
-                <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
-              </div>
+              </td>
               {/* Today / Limit — inline-editable limit, real-time sent display */}
+              <td className="px-4 py-4">
               <div className="flex flex-col gap-1 min-w-0">
                 {(() => {
                   const limit = acc.daily_limit || 50;
@@ -722,46 +740,53 @@ export default function EmailAccountsPage() {
                   );
                 })()}
               </div>
-              <div className="flex items-center gap-1">
-                {acc.type === 'gmail-oauth' && acc.status === 'error' && (
-                  <a href="/api/email-accounts/oauth/google"
-                    title="OAuth token revoked — click to re-authorise"
-                    className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 hover:bg-red-100 transition-colors whitespace-nowrap">
-                    Re-auth
-                  </a>
-                )}
-                <button
-                  disabled={testingId === acc.id}
-                  onClick={async () => {
-                    setTestingId(acc.id);
-                    setTestResult(r => ({ ...r, [acc.id]: { ok: false, msg: '' } }));
-                    const res = await fetch(`/api/email-accounts/${acc.id}/test`, { method: 'POST' });
-                    const d = await res.json();
-                    setTestResult(r => ({ ...r, [acc.id]: { ok: res.ok, msg: res.ok ? (d.sentTo ? `Sent to ${d.sentTo}` : 'Credentials verified — account active') : d.error } }));
-                    setTestingId(null);
-                    if (res.ok) fetchAccounts();
-                  }}
-                  title="Send a test email to verify this account works"
-                  className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50">
-                  {testingId === acc.id ? '…' : 'Test'}
-                </button>
-                <button onClick={() => setEditCredId(acc.id)}
-                  title="Edit credentials (SMTP/IMAP host, password)"
-                  className="text-gray-300 hover:text-blue-500 transition-colors p-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
-                <button onClick={() => setConfirmDeleteId(acc.id)}
-                  className="text-gray-300 hover:text-red-400 transition-colors p-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </div>
-              {testResult[acc.id]?.msg && (
-                <div className={`col-span-full mt-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg ${testResult[acc.id].ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
-                  {testResult[acc.id].ok ? '✓ ' : '✗ '}{testResult[acc.id].msg}
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-1">
+                  {acc.type === 'gmail-oauth' && acc.status === 'error' && (
+                    <a href="/api/email-accounts/oauth/google"
+                      title="OAuth token revoked — click to re-authorise"
+                      className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 hover:bg-red-100 transition-colors whitespace-nowrap">
+                      Re-auth
+                    </a>
+                  )}
+                  <button
+                    disabled={testingId === acc.id}
+                    onClick={async () => {
+                      setTestingId(acc.id);
+                      setTestResult(r => ({ ...r, [acc.id]: { ok: false, msg: '' } }));
+                      const res = await fetch(`/api/email-accounts/${acc.id}/test`, { method: 'POST' });
+                      const d = await res.json();
+                      setTestResult(r => ({ ...r, [acc.id]: { ok: res.ok, msg: res.ok ? (d.sentTo ? `Sent to ${d.sentTo}` : 'Credentials verified — account active') : d.error } }));
+                      setTestingId(null);
+                      if (res.ok) fetchAccounts();
+                    }}
+                    title="Send a test email to verify this account works"
+                    className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50">
+                    {testingId === acc.id ? '…' : 'Test'}
+                  </button>
+                  <button onClick={() => setEditCredId(acc.id)}
+                    title="Edit credentials (SMTP/IMAP host, password)"
+                    className="text-gray-300 hover:text-blue-500 transition-colors p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                  <button onClick={() => setConfirmDeleteId(acc.id)}
+                    className="text-gray-300 hover:text-red-400 transition-colors p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
                 </div>
-              )}
-            </div>
+              </td>
+            </tr>
+            {testResult[acc.id]?.msg && (
+              <tr className="border-b border-gray-100">
+                <td colSpan={6} className={`px-6 py-2 text-[11px] font-semibold ${testResult[acc.id].ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+                  {testResult[acc.id].ok ? '✓ ' : '✗ '}{testResult[acc.id].msg}
+                </td>
+              </tr>
+            )}
           ))}
+            </tbody>
+          </table>
           </div>{/* /overflow-x-auto */}
         </div>
       ) : (

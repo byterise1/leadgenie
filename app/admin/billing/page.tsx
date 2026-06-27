@@ -138,8 +138,8 @@ export default function AdminBillingPage() {
 
           {tab === 'transactions' && (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-sm min-w-[640px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
                       {['User', 'Description', 'Amount', 'Status', 'Date', 'Action'].map(h => (
@@ -182,12 +182,12 @@ export default function AdminBillingPage() {
 
           {tab === 'users' && (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
                       {['User', 'Email', 'Plan', 'Since'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>

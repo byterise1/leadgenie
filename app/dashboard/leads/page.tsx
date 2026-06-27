@@ -525,7 +525,7 @@ export default function LeadsPage() {
     <main className="flex-1 flex flex-col overflow-hidden h-full">
 
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
+      <div className="px-6 pt-6 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-gray-900">Leads</h1>
@@ -538,14 +538,14 @@ export default function LeadsPage() {
             {currentList ? `${currentList.name} · ${leads.length} leads` : `All leads · ${totalCount} total`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <a href="/api/leads/template" download
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+            className="hidden sm:flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             Template
           </a>
           <a href={selectedList ? `/api/leads/export?list_id=${selectedList}` : '/api/leads/export'} download
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+            className="hidden sm:flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export
           </a>
@@ -555,7 +555,8 @@ export default function LeadsPage() {
             className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
             title="Accepts CSV or Excel files (.csv, .xlsx, .xls)">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            {validating ? 'Validating…' : 'Import CSV / Excel'}
+            <span className="sm:hidden">{validating ? 'Checking…' : 'Import'}</span>
+            <span className="hidden sm:inline">{validating ? 'Validating…' : 'Import CSV / Excel'}</span>
           </button>
           <button onClick={handleAddClick}
             className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl px-3 py-2 hover:bg-blue-700 transition-colors">
