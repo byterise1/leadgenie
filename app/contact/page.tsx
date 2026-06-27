@@ -5,6 +5,14 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 
+const contactFaqs = [
+  { q: 'How quickly do you respond?', a: 'Support tickets are answered within 24 hours on business days. Sales inquiries typically receive a same-day response.' },
+  { q: 'What is the best way to reach the team?', a: 'For technical issues, use the Help Center inside your dashboard. For sales and billing, use the form on this page or email the appropriate address above.' },
+  { q: 'Do you offer live chat or phone support?', a: 'We offer live chat within the dashboard for Pro and Agency plan users. All plans include email support with a 24-hour response time.' },
+  { q: 'Can I request a product demo?', a: 'Yes — select "Sales inquiry" in the form and mention you\'d like a live demo. Our team will schedule a personalised walkthrough.' },
+  { q: 'I am having a deliverability issue — who do I contact?', a: 'Email help@leadsgenie.io with your account email and a description of the issue. Our deliverability team responds within 24 hours.' },
+];
+
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
 
@@ -55,7 +63,7 @@ export default function ContactPage() {
                 ) : (
                   <form onSubmit={e => { e.preventDefault(); setSent(true); }} className="space-y-4">
                     <h2 className="text-lg font-bold text-gray-900 mb-5">Send a Message</h2>
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1.5">First name</label>
                         <input required className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -92,7 +100,7 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
-        <FAQAccordion />
+        <FAQAccordion faqs={contactFaqs} />
       </main>
       <Footer />
     </div>

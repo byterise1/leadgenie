@@ -3,6 +3,19 @@ import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'About Us — Leads Genie',
+  description: 'Learn about the team behind Leads Genie — built by outbound sales practitioners to help businesses book more meetings through smarter cold email outreach.',
+};
+
+const aboutFaqs = [
+  { q: 'Who built Leads Genie?', a: 'Leads Genie was built by a team of outbound sales practitioners who were frustrated with tools that promised deliverability but underdelivered. We built the platform we always wanted and opened it to the world.' },
+  { q: 'When was Leads Genie founded?', a: 'Founded in 2022, Leads Genie has grown to serve thousands of sales teams, agencies, and founders across the globe.' },
+  { q: 'Is Leads Genie compliant with email regulations?', a: 'Yes. We enforce CAN-SPAM and GDPR compliance on every account with mandatory unsubscribe links, opt-out tracking, and suppression lists.' },
+  { q: 'Do you have a partner or affiliate program?', a: 'Yes — reach out to partners@leadsgenie.io to learn about our referral and reseller programs.' },
+  { q: 'How do I get support?', a: 'Use the Help Center inside your dashboard for the fastest response. You can also email help@leadsgenie.io for account-specific queries.' },
+];
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -32,11 +45,11 @@ export default function AboutPage() {
 
         <section className="py-20">
           <div className="container max-w-4xl">
-            <div className="grid sm:grid-cols-3 gap-8 text-center mb-16">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center mb-16">
               {[
-                { v: '2022',    l: 'Founded'         },
-                { v: '30,000+', l: 'Active users'    },
-                { v: '500M+',   l: 'Emails delivered' },
+                { v: '2022',   l: 'Founded'          },
+                { v: '8,500+', l: 'Active users'     },
+                { v: '42M+',   l: 'Emails delivered' },
               ].map(s => (
                 <div key={s.l}>
                   <p className="text-4xl font-extrabold text-gray-900">{s.v}</p>
@@ -58,7 +71,7 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
-        <FAQAccordion />
+        <FAQAccordion faqs={aboutFaqs} />
       </main>
       <Footer />
     </div>

@@ -241,7 +241,7 @@ const testimonials = [
   { quote: "The AI warmup is a total game changer. We went from landing in spam 40% of the time to virtually zero. Deliverability scores are the best they've ever been across 30 sending accounts.", name: 'David Park', role: 'Head of Growth, Ripple Labs', company: 'Ripple', avatarIdx: 5 },
   { quote: "I manage 8 client accounts from one dashboard. Leads Genie saves me 20+ hours a week. The Unibox alone is worth the subscription — seamless across 50+ email accounts.", name: 'Sophie Laurent', role: 'Founder, Prolific Agency', company: 'Prolific', avatarIdx: 6 },
   { quote: "Switched from Apollo + Lemlist combo. Leads Genie does everything in one place for half the cost. We're booking 3-4x more meetings with the exact same prospect list.", name: 'Ryan Chen', role: 'VP Sales, Momentum Capital', company: 'Momentum', avatarIdx: 7 },
-  { quote: "Finally a platform that handles everything in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+. Unbelievable ROI.", name: 'Tom Brady', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2 },
+  { quote: "Finally a platform that handles everything in one place. We cut our tech stack from 5 tools to 1. Our team went from 20 meetings a month to 80+. Unbelievable ROI.", name: 'Marcus Webb', role: 'VP Sales, NextGenSoft', company: 'NextGenSoft', avatarIdx: 2 },
   { quote: "Leads Genie's AI personalisation is next-level. Our prospects actually think we researched them individually. Reply rates went from 3% to 19% overnight. Nothing else comes close.", name: 'Priya Nair', role: 'Growth Lead, Launchify', company: 'Launchify', avatarIdx: 4 },
   { quote: "We run a 12-person SDR team. Leads Genie scaled our outreach 10x without adding headcount. The analytics helped us cut underperforming sequences and double down on what works.", name: 'James Walker', role: 'Sales Director, GrowStack', company: 'GrowStack', avatarIdx: 8 },
 ];
@@ -462,27 +462,35 @@ export default function HomePage() {
       ------------------------------------------ */}
       <section className="bg-white border-b border-gray-100">
         <div className="container px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
-            {[
-              { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',   icon: <IcUsers c="w-5 h-5" />,    color: '#3b82f6', bg: 'bg-blue-50'    },
-              { v: '42M+',   l: 'Emails Delivered', sub: '97%+ inbox placement',     icon: <IcMail c="w-5 h-5" />,     color: '#6366f1', bg: 'bg-indigo-50'  },
-              { v: '76%',    l: 'Avg Open Rate',    sub: 'vs 21% industry average',  icon: <IcTrend c="w-5 h-5" />,    color: '#10b981', bg: 'bg-emerald-50' },
-              { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',      icon: <IcStar c="w-5 h-5" />,     color: '#f59e0b', bg: 'bg-amber-50'   },
-            ].map((s, i) => (
-              <motion.div key={s.l}
-                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex items-center gap-4 py-8 px-6 hover:bg-gray-50/60 transition-colors group">
-                <div className={`w-12 h-12 flex items-center justify-center rounded-2xl ${s.bg} shrink-0 group-hover:scale-110 transition-transform duration-200`} style={{ color: s.color }}>
-                  {s.icon}
-                </div>
-                <div className="text-left">
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                  <p className="text-xs font-bold text-gray-700 mt-0.5">{s.l}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">{s.sub}</p>
-                </div>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-4">
+            {([
+              { v: '8,500+', l: 'Active Users',     sub: 'Sales teams & agencies',  icon: <IcUsers c="w-5 h-5" />,  color: '#3b82f6', bg: 'bg-blue-50'    },
+              { v: '42M+',   l: 'Emails Delivered', sub: '97%+ inbox placement',    icon: <IcMail c="w-5 h-5" />,   color: '#6366f1', bg: 'bg-indigo-50'  },
+              { v: '76%',    l: 'Avg Open Rate',    sub: 'vs 21% industry average', icon: <IcTrend c="w-5 h-5" />, color: '#10b981', bg: 'bg-emerald-50' },
+              { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',     icon: <IcStar c="w-5 h-5" />,  color: '#f59e0b', bg: 'bg-amber-50'   },
+            ] as const).map((s, i) => {
+              const borderCls = [
+                'border-r border-b border-gray-100 sm:border-b-0',
+                'border-b border-gray-100 sm:border-b-0 sm:border-r',
+                'border-r border-gray-100',
+                '',
+              ][i];
+              return (
+                <motion.div key={s.l}
+                  initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className={`flex items-center gap-3 py-6 px-4 sm:py-8 sm:px-6 hover:bg-gray-50/60 transition-colors group ${borderCls}`}>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl ${s.bg} shrink-0 group-hover:scale-110 transition-transform duration-200`} style={{ color: s.color }}>
+                    {s.icon}
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
+                    <p className="text-[11px] sm:text-xs font-bold text-gray-700 mt-0.5 leading-tight">{s.l}</p>
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium leading-tight hidden sm:block">{s.sub}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -84,7 +84,7 @@ export default function SignupPage() {
               No credit card required
             </span>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Start finding leads today</h1>
-            <p className="text-sm text-gray-500">Join 30,000+ companies using Leads Genie to grow.</p>
+            <p className="text-sm text-gray-500">Join 8,500+ sales teams using Leads Genie to grow.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -102,7 +102,7 @@ export default function SignupPage() {
                   <br/>Click it to activate your account, then sign in.
                 </p>
                 <Link href="/login" className="inline-block mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                  Go to Sign In ?
+                  Go to Sign In →
                 </Link>
               </div>
             ) : (
@@ -130,7 +130,7 @@ export default function SignupPage() {
                     {error}
                     {error.includes('already exists') && (
                       <Link href="/login" className="block mt-1 font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                        Sign in instead ?
+                        Sign in instead →
                       </Link>
                     )}
                   </div>
@@ -221,8 +221,14 @@ export default function SignupPage() {
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-6">
-            {['30k+ users', '500M+ emails sent', '4.9? rating'].map((item) => (
-              <p key={item} className="text-xs font-semibold text-gray-500">{item}</p>
+            {[
+              { icon: '👥', text: '8,500+ users' },
+              { icon: '📨', text: '42M+ emails sent' },
+              { icon: '⭐', text: '4.9/5 on G2' },
+            ].map((item) => (
+              <p key={item.text} className="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                <span>{item.icon}</span>{item.text}
+              </p>
             ))}
           </div>
 

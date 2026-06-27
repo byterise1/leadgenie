@@ -51,18 +51,6 @@ const legal = [
   { label: 'Anti-Spam',        href: '/anti-spam' },
 ];
 
-const socials = [
-  {
-    label: 'X / Twitter', href: '#',
-    path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
-    hoverColor: 'hover:text-gray-900 hover:border-gray-300',
-  },
-  {
-    label: 'LinkedIn', href: '#',
-    path: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z',
-    hoverColor: 'hover:text-blue-600 hover:border-blue-200',
-  },
-];
 
 function FooterCol({ heading, links }: { heading: string; links: { label: string; href: string }[] }) {
   return (
@@ -92,10 +80,10 @@ export function Footer() {
       <div className="container pt-16 pb-10">
 
         {/* Main grid */}
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr] mb-14">
+        <div className="grid gap-10 grid-cols-2 sm:grid-cols-2 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr] mb-14">
 
           {/* Brand */}
-          <div className="lg:col-span-1">
+          <div className="col-span-2 lg:col-span-1">
             <Link href="/" className="inline-flex mb-4">
               <Logo size={58} textSize="text-[16px]" textColor="text-white" />
             </Link>
@@ -118,16 +106,10 @@ export function Footer() {
               ))}
             </div>
 
-            {/* Social links */}
-            <div className="flex items-center gap-2.5">
-              {socials.map(s => (
-                <Link key={s.label} href={s.href}
-                  className={`w-9 h-9 rounded-lg border border-gray-800 flex items-center justify-center text-gray-500 transition-all duration-200 hover:scale-110 ${s.hoverColor}`}>
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d={s.path}/>
-                  </svg>
-                </Link>
-              ))}
+            {/* Social links placeholder — add real URLs when profiles exist */}
+            <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Follow us on X &amp; LinkedIn — coming soon
             </div>
           </div>
 
