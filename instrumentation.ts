@@ -499,7 +499,7 @@ export async function register() {
       if (hasNextStep) {
         const { emailQueue } = await import('./lib/queue');
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
-        // TEST MODE: 1 unit = 1 minute. Change to 24*60*60*1000 before launch.
+        // TESTING: 1 unit = 1 minute. Change to 24*60*60*1000 before production launch.
         const DELAY_UNIT_MS = 60 * 1000;
         const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
         const targetFireMs = Date.now() + rawDelayMs;
@@ -937,9 +937,12 @@ export async function register() {
         .eq('warmup_enabled', true)
         .neq('status', 'error');
 
-      if (!allWarmupAccounts || allWarmupAccounts.length < 2) return;
+      if (!allWarmupAccounts || allWarmupAccounts.length < 2) {
+        console.log(`[warmup] Skipping: only ${allWarmupAccounts?.length ?? 0} warmup-enabled account(s) in system — need ≥2 to cross-send. Add pool accounts at /dashboard/admin/warmup.`);
+        return;
+      }
 
-      console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts`);
+      console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts (pool: ${allWarmupAccounts.filter(a => a.is_pool_account).length}, users: ${allWarmupAccounts.filter(a => !a.is_pool_account).length})`);
 
       const { sendEmail, getAccessToken } = await import('./lib/mailer');
 
@@ -973,10 +976,21 @@ export async function register() {
               } else if (mode === 'both') {
                 pool = allWarmupAccounts.filter(a => a.id !== account.id);
               } else {
-                pool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
+                // admin_pool (default): use admin pool accounts
+                const adminPool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
+                if (adminPool.length > 0) {
+                  pool = adminPool;
+                } else {
+                  // Fallback: use other warmup-enabled user accounts if admin pool is empty
+                  pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
+                  if (pool.length > 0) console.log(`[warmup] ${account.email}: admin pool empty, falling back to user_to_user (${pool.length} peers)`);
+                }
               }
             }
-            if (pool.length === 0) return;
+            if (pool.length === 0) {
+              console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
+              return;
+            }
 
             let sent = 0;
             // Shuffle pool so send order is random
