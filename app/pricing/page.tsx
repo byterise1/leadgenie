@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { FAQAccordion } from '@/components/FAQAccordion';
 
 type Plan = {
   id: string;
@@ -51,7 +52,7 @@ const FALLBACK_PLANS: Plan[] = [
   },
 ];
 
-const faqs = [
+const pricingFaqs = [
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel at any time from your account dashboard. You keep access until the end of your billing period.' },
   { q: 'How does the free trial work?', a: 'Start with full access — no credit card required. Upgrade when you\'re ready to send at scale.' },
   { q: 'What counts as an "email account"?', a: 'Any Gmail, Outlook, or custom SMTP inbox you connect as a sending account. All plans include unlimited accounts.' },
@@ -59,39 +60,6 @@ const faqs = [
   { q: 'Can I upgrade or downgrade?', a: 'Yes, at any time. Upgrades take effect immediately. Downgrades take effect at your next billing cycle.' },
   { q: 'Is there a limit on team members?', a: 'Pro and Agency plans include unlimited team seats.' },
 ];
-
-function FAQAccordion() {
-  const [open, setOpen] = useState<number | null>(0);
-  return (
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-[1400px] mx-auto px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-2">Frequently Asked Questions</h2>
-          <p className="text-center text-gray-500 mb-10">Everything you need to know about pricing and plans.</p>
-          <div className="space-y-3">
-            {faqs.map((faq, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                <button
-                  onClick={() => setOpen(open === i ? null : i)}
-                  className="w-full flex items-center justify-between px-6 py-4 text-left gap-4">
-                  <span className="text-sm font-bold text-gray-900">{faq.q}</span>
-                  <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
-                {open === i && (
-                  <div className="px-6 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
@@ -227,7 +195,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <FAQAccordion />
+        <FAQAccordion faqs={pricingFaqs} />
 
 
       </main>
