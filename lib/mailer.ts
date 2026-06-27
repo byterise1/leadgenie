@@ -408,5 +408,6 @@ export function replaceVars(text: string, lead: Record<string, string | null>): 
     .replace(/\{\{company\}\}/g, lead.company || '')
     .replace(/\{\{title\}\}/g, lead.title || '')
     .replace(/\{\{email\}\}/g, lead.email || '')
-    .replace(/\{\{website\}\}/g, lead.website || '');
+    .replace(/\{\{website\}\}/g, lead.website || '')
+    .replace(/\{\{[^}]+\}\}/g, ''); // strip unknown variables — avoid literal {{placeholders}} in sent emails
 }

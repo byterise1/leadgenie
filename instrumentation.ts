@@ -230,6 +230,23 @@ export async function register() {
         return;
       }
 
+      // For follow-up steps: do a fresh reply check right before sending.
+      // The initial status check above uses cached DB state; a reply may have arrived
+      // between when the job was queued and when it fires (especially with short delays).
+      if (stepNumber > 0) {
+        const { count: replyCount } = await supabase
+          .from('sent_emails')
+          .select('id', { count: 'exact', head: true })
+          .eq('campaign_id', campaign.id)
+          .eq('lead_id', lead.id)
+          .not('replied_at', 'is', null);
+        if ((replyCount ?? 0) > 0) {
+          await supabase.from('campaign_leads').update({ status: 'replied' }).eq('id', campaignLeadId);
+          console.log(`[skip-followup] ${lead.email} already replied — cancelling step ${stepNumber}`);
+          return;
+        }
+      }
+
       const isReplyThread = stepNumber > 0 && step.thread_mode === 'reply';
 
       // For reply-in-thread follow-ups: look up step 0's message_id + subject
@@ -305,7 +322,7 @@ export async function register() {
       }
 
       const trackPixel = sentEmail?.id
-        ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" style="display:none" alt="">`
+        ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" alt="" border="0">`
         : '';
 
       const clickBase = sentEmail?.id ? `${SITE_URL}/api/track/click/${sentEmail.id}` : null;

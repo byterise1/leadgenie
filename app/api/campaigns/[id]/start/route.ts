@@ -187,7 +187,18 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   let cursor = dayWindowStartUtc;
   let dayStart = dayWindowStartUtc;
   let dayEnd = dayStart + windowMs;
-  let emailsThisDay = 0;
+
+  // Seed emailsThisDay with step-0 sends already recorded today so repeated
+  // Resume clicks don't re-fill today's slot and bypass the daily limit.
+  const todayMidnightUtc = new Date();
+  todayMidnightUtc.setUTCHours(0, 0, 0, 0);
+  const { count: alreadySentToday } = await supabaseAdmin
+    .from('sent_emails')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_id', id)
+    .eq('step_number', 0)
+    .gte('sent_at', todayMidnightUtc.toISOString());
+  let emailsThisDay = alreadySentToday ?? 0;
 
   const jobs = campaignLeads.map((cl, i) => {
     // Roll to next active day if we've hit the limit or passed the window
