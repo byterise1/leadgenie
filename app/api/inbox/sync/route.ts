@@ -83,10 +83,12 @@ export async function POST(_req: NextRequest) {
         // Skip message[0] (our sent email) — only look at subsequent messages for replies
         const replyMessages = thread.messages.slice(1);
 
-        // Find a reply: must be from someone other than us and not a system/bounce sender
+        // Find a reply: must be from someone other than us and not a system/bounce sender.
+        // SENT label is the definitive check — a missing/empty From header must not pass.
         const reply = replyMessages.find((m: any) => {
-          const from = getHeader(m.payload?.headers, 'From').toLowerCase();
-          if (from.includes(account.email.toLowerCase())) return false;
+          if (m.labelIds?.includes('SENT')) return false;
+          const from = (getHeader(m.payload?.headers, 'From') || '').toLowerCase();
+          if (!from || from.includes(account.email.toLowerCase())) return false;
           if (SYSTEM_SENDER_PATTERNS.some(p => from.includes(p))) return false;
           return true;
         });

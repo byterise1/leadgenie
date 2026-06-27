@@ -186,6 +186,17 @@ export default function InboxPage() {
     });
   };
 
+  const deleteThread = async (id: string) => {
+    if (!confirm('Delete this thread? This also resets the lead\'s replied status so the campaign can continue.')) return;
+    await fetch('/api/inbox', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    setThreads(prev => prev.filter(t => t.id !== id));
+    setSelected(null);
+  };
+
   const sendReply = async () => {
     if (!selected || !replyBody.trim()) return;
     setSending(true);
@@ -356,7 +367,7 @@ export default function InboxPage() {
                 </div>
               </div>
               {/* Status buttons */}
-              <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+              <div className="flex gap-1.5 shrink-0 flex-wrap justify-end items-center">
                 {[
                   { key: 'interested',     label: '✓ Interested' },
                   { key: 'not_interested', label: '✕ Not Interested' },
@@ -372,6 +383,12 @@ export default function InboxPage() {
                     </button>
                   );
                 })}
+                <button onClick={() => deleteThread(selected.id)} title="Delete thread"
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition-all">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
