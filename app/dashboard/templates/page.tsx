@@ -663,7 +663,7 @@ export default function TemplatesPage() {
   };
 
   return (
-    <main className="flex-1 p-6 overflow-x-hidden">
+    <main className="flex-1 p-4 sm:p-6 overflow-x-hidden w-full max-w-full">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email Templates</h1>
@@ -691,14 +691,14 @@ export default function TemplatesPage() {
         ))}
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-w-0">
         {filtered.map(t => (
-          <div key={t.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-blue-100 transition-all flex flex-col">
+          <div key={t.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-blue-100 transition-all flex flex-col min-w-0 overflow-hidden">
             <div className="flex items-start justify-between mb-3">
-              <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1">{t.category}</span>
-              {t.builtIn && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">Built-in</span>}
+              <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1 truncate max-w-[70%]">{t.category}</span>
+              {t.builtIn && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">Built-in</span>}
             </div>
-            <h3 className="text-sm font-bold text-gray-900 mb-1">{t.name}</h3>
+            <h3 className="text-sm font-bold text-gray-900 mb-1 truncate">{t.name}</h3>
             <p className="text-xs text-gray-500 font-medium mb-1 truncate">Subject: {t.subject}</p>
             <p className="text-xs text-gray-400 leading-relaxed flex-1 line-clamp-2 mb-4">
               {t.body.split('\n').filter(l => l.trim())[0]}
