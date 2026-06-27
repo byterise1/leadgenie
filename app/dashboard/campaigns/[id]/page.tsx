@@ -20,6 +20,9 @@ type CampaignLead = {
   status: string;
   current_step: number;
   last_sent_at: string | null;
+  opened_at: string | null;
+  clicked_at: string | null;
+  replied_at: string | null;
   lead: {
     id: string;
     email: string;
@@ -653,7 +656,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Lead', 'Email', 'Company', 'Step', 'Status', 'Last Sent', ''].map(col => (
+                  {['Lead', 'Email', 'Company', 'Step', 'Status', 'Activity', 'Last Sent', ''].map(col => (
                     <th key={col} className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{col}</th>
                   ))}
                 </tr>
@@ -675,6 +678,32 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                     </td>
                     <td className="px-4 py-3 text-xs capitalize font-medium ${LEAD_STATUS_COLORS[cl.status] || 'text-gray-400'}">
                       <span className={LEAD_STATUS_COLORS[cl.status] || 'text-gray-400'}>{cl.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {cl.opened_at ? (
+                          <span title={`Opened ${new Date(cl.opened_at).toLocaleString()}`}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Opened
+                          </span>
+                        ) : null}
+                        {cl.clicked_at ? (
+                          <span title={`Clicked ${new Date(cl.clicked_at).toLocaleString()}`}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                            </svg>
+                            Clicked
+                          </span>
+                        ) : null}
+                        {!cl.opened_at && !cl.clicked_at && (
+                          <span className="text-[10px] text-gray-300">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {cl.last_sent_at ? new Date(cl.last_sent_at).toLocaleString() : '—'}
