@@ -431,11 +431,11 @@ export default function HomePage() {
               { n: 3, label: 'Launch Campaign',     icon: <IcRocket c="w-3.5 h-3.5" /> },
               { n: 4, label: 'Book Meetings',       icon: <IcCalendar c="w-3.5 h-3.5" /> },
             ].map((step, i) => (
-              <div key={step.n} className="flex items-center">
-                <div className="flex items-center gap-2.5 rounded-full px-5 py-2.5 bg-white/12 border border-white/20 backdrop-blur-sm">
+              <div key={step.n} className="flex items-center justify-center w-[calc(50%-4px)] sm:w-auto">
+                <div className="flex items-center gap-1.5 sm:gap-2.5 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 bg-white/12 border border-white/20 backdrop-blur-sm w-full sm:w-auto justify-center sm:justify-start">
                   <span className="w-5 h-5 rounded-full border-2 border-white/50 text-white text-[10px] font-black flex items-center justify-center shrink-0">{step.n}</span>
                   <span className="text-white/70 shrink-0">{step.icon}</span>
-                  <span className="text-xs sm:text-sm font-semibold text-white/90 whitespace-nowrap">{step.label}</span>
+                  <span className="text-[11px] sm:text-sm font-semibold text-white/90 sm:whitespace-nowrap">{step.label}</span>
                 </div>
                 {i < 3 && <svg className="w-4 h-4 text-white/20 mx-1 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
               </div>
@@ -758,14 +758,14 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
-                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
+                  <div className="flex flex-col gap-2 px-4 sm:px-5 pt-3 pb-2.5 sm:pt-3.5 sm:pb-3.5 border-b border-gray-100 bg-gray-50/70 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
                     <div className="flex items-center gap-2.5">
                       <p className="text-sm font-bold text-gray-900">Unibox</p>
                       <span className="text-xs font-black bg-blue-600 text-white rounded-full px-2.5 py-0.5">8 new</span>
                     </div>
                     <div className="flex items-center gap-1">
                       {['All','Interested','Not Now','DNC'].map((f, i) => (
-                        <button key={f} className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${i === 0 ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{f}</button>
+                        <button key={f} className={`text-[10px] sm:text-[11px] font-bold rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 ${i === 0 ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{f}</button>
                       ))}
                     </div>
                   </div>
@@ -953,7 +953,7 @@ export default function HomePage() {
         {/* Full-width scroll strip with gradient fade edges */}
         <div className="relative" style={maskFade}>
           <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab', scrollSnapType: 'x mandatory' }}>
-            <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 4vw 2rem' }}>
+            <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 10vw 2rem' }}>
               {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
             </div>
           </div>

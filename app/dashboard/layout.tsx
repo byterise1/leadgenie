@@ -176,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <NavigationProgress />
       <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 md:ml-[220px] min-w-0 flex flex-col">
+      <div className="flex-1 md:ml-[220px] min-w-0 flex flex-col overflow-x-hidden">
         <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3 shrink-0 sticky top-0 z-20">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
