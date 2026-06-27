@@ -302,8 +302,8 @@ function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
 }
 
 const maskFade = {
-  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
-  maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
+  WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)',
+  maskImage: 'linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%)',
 };
 
 /* ------------------------------------------------------------
@@ -424,14 +424,14 @@ export default function HomePage() {
 
           {/* Steps */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-9 flex flex-wrap items-center justify-center gap-2 sm:gap-1">
+            className="mt-9 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-1">
             {[
               { n: 1, label: 'Add Sending Account', icon: <IcAtSign c="w-3.5 h-3.5" /> },
               { n: 2, label: 'Import Prospects',    icon: <IcUsers c="w-3.5 h-3.5" /> },
               { n: 3, label: 'Launch Campaign',     icon: <IcRocket c="w-3.5 h-3.5" /> },
               { n: 4, label: 'Book Meetings',       icon: <IcCalendar c="w-3.5 h-3.5" /> },
             ].map((step, i) => (
-              <div key={step.n} className="flex items-center justify-center w-[calc(50%-4px)] sm:w-auto">
+              <div key={step.n} className="flex items-center justify-center sm:justify-start">
                 <div className="flex items-center gap-1.5 sm:gap-2.5 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 bg-white/12 border border-white/20 backdrop-blur-sm w-full sm:w-auto justify-center sm:justify-start">
                   <span className="w-5 h-5 rounded-full border-2 border-white/50 text-white text-[10px] font-black flex items-center justify-center shrink-0">{step.n}</span>
                   <span className="text-white/70 shrink-0">{step.icon}</span>
@@ -953,7 +953,7 @@ export default function HomePage() {
         {/* Full-width scroll strip with gradient fade edges */}
         <div className="relative" style={maskFade}>
           <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab', scrollSnapType: 'x mandatory' }}>
-            <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 10vw 2rem' }}>
+            <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 7.5vw 2rem' }}>
               {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
             </div>
           </div>

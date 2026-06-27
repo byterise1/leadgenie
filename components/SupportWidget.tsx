@@ -132,12 +132,12 @@ export default function SupportWidget() {
   const hasNewReply = (t: Ticket) => t.admin_reply !== null && !t.user_seen_at && t.status !== 'closed';
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col items-end gap-3">
       {open && (
         <div
           ref={panelRef}
-          className="w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
-          style={{ height: '520px' }}
+          className="w-[calc(100vw-2rem)] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+          style={{ maxHeight: 'calc(100vh - 5rem)', height: '520px' }}
         >
           {/* Header */}
           <div className="bg-blue-600 px-5 py-4 text-white shrink-0">

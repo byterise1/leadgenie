@@ -402,7 +402,7 @@ export default function WarmupPage() {
               const target = acc.warmup_target ?? 40;
               const isRecommended = target >= 30 && target <= 50;
               return (
-                <div key={acc.id} className={`px-6 py-4 flex items-center gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                <div key={acc.id} className={`px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
@@ -419,8 +419,8 @@ export default function WarmupPage() {
                   </div>
 
                   {/* Limit selector — styled buttons for common values */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    <div className="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
                       {[20, 30, 40, 50].map(v => (
                         <button key={v} onClick={() => updateTarget(acc.id, v)}
                           className={`px-3 py-1.5 text-xs font-bold transition-colors ${
@@ -435,7 +435,7 @@ export default function WarmupPage() {
                     <select
                       value={target}
                       onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0 min-w-[130px]">
+                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none sm:min-w-[130px]">
                       {[10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100].map(v => (
                         <option key={v} value={v}>{v}/day{v === 40 ? ' (default)' : v >= 30 && v <= 50 ? ' ✓' : ''}</option>
                       ))}
