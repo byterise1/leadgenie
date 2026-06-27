@@ -432,10 +432,10 @@ export default function HomePage() {
               { n: 4, label: 'Book Meetings',       icon: <IcCalendar c="w-3.5 h-3.5" /> },
             ].map((step, i) => (
               <div key={step.n} className="flex items-center justify-center sm:justify-start">
-                <div className="flex items-center gap-1.5 sm:gap-2.5 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 bg-white/12 border border-white/20 backdrop-blur-sm w-full sm:w-auto justify-center sm:justify-start">
-                  <span className="w-5 h-5 rounded-full border-2 border-white/50 text-white text-[10px] font-black flex items-center justify-center shrink-0">{step.n}</span>
+                <div className="flex items-center gap-1 sm:gap-2.5 rounded-full px-2 sm:px-5 py-1.5 sm:py-2.5 bg-white/12 border border-white/20 backdrop-blur-sm w-full sm:w-auto justify-center sm:justify-start">
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white/50 text-white text-[9px] sm:text-[10px] font-black flex items-center justify-center shrink-0">{step.n}</span>
                   <span className="text-white/70 shrink-0">{step.icon}</span>
-                  <span className="text-[11px] sm:text-sm font-semibold text-white/90 sm:whitespace-nowrap">{step.label}</span>
+                  <span className="text-[10px] sm:text-sm font-semibold text-white/90 whitespace-nowrap">{step.label}</span>
                 </div>
                 {i < 3 && <svg className="w-4 h-4 text-white/20 mx-1 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
               </div>
