@@ -144,15 +144,15 @@ export default function PricingPage() {
                   )}
 
                   <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>{plan.tagline}</p>
+                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-gray-500'}`}>{plan.tagline}</p>
 
                   <div className="mb-5">
                     <span className={`text-4xl font-extrabold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
                       ${yearly ? plan.annual_price : plan.monthly_price}
                     </span>
-                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>/mo</span>
+                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>/mo</span>
                     {yearly && plan.annual_price !== plan.monthly_price && (
-                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-blue-200'}`}>
+                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>
                         Billed ${(plan.annual_price * 12).toLocaleString()} yearly
                       </p>
                     )}
