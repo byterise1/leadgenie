@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -646,7 +646,8 @@ export default function EmailAccountsPage() {
             </thead>
             <tbody>
           {accounts.map((acc, i) => (
-            <tr key={acc.id} className="border-b border-gray-100 last:border-0">
+            <React.Fragment key={acc.id}>
+            <tr className="border-b border-gray-100 last:border-0">
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
@@ -784,6 +785,7 @@ export default function EmailAccountsPage() {
                 </td>
               </tr>
             )}
+            </React.Fragment>
           ))}
             </tbody>
           </table>

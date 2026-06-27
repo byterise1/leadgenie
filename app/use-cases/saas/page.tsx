@@ -38,8 +38,8 @@ export default function SaaSPage() {
         <section className="hero-gradient pb-24 pt-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case — SaaS</span>
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
-              Drive SaaS Signups &amp;<br />Demos With Cold Email
+            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
+              Drive SaaS Signups &amp; Demos With Cold Email
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               Reach your ideal users before they find your competitors. Leads Genie helps SaaS

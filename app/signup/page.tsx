@@ -220,7 +220,7 @@ export default function SignupPage() {
             )}
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-6">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
               { icon: '👥', text: '8,500+ users' },
               { icon: '📨', text: '42M+ emails sent' },

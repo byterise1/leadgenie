@@ -11,8 +11,8 @@ export default function RecruitmentPage() {
         <section className="hero-gradient pb-24 pt-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Use Case — Recruitment</span>
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
-              Reach Passive Candidates<br />Before Anyone Else
+            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
+              Reach Passive Candidates Before Anyone Else
             </h1>
             <p className="mt-5 text-blue-100 text-lg max-w-xl mx-auto leading-relaxed">
               The best candidates aren't applying. Leads Genie helps recruiters run personalised

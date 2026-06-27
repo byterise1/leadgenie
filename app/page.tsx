@@ -277,7 +277,7 @@ function BrandPill({ brand }: { brand: Brand }) {
 
 function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   return (
-    <div className="flex-shrink-0 w-[420px] bg-white rounded-3xl p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5">
+    <div className="flex-shrink-0 w-[85vw] sm:w-[420px] scroll-snap-align-start bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5" style={{ scrollSnapAlign: 'start' }}>
       <svg className="w-8 h-8 text-blue-100" fill="currentColor" viewBox="0 0 32 32">
         <path d="M10 8C6.13 8 3 11.13 3 15v9h9v-9H6c0-2.21 1.79-4 4-4V8zm14 0c-3.87 0-7 3.13-7 7v9h9v-9h-6c0-2.21 1.79-4 4-4V8z"/>
       </svg>
@@ -342,17 +342,18 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
             className="mb-7 flex justify-center">
             <Link href="/signup"
-              className="inline-flex items-center gap-2 border border-white/25 bg-white/12 rounded-full px-4 py-1.5 text-xs font-semibold text-white/90 hover:bg-white/20 transition-colors backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-              New: AI-powered email warmup is live — try it free
-              <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              className="inline-flex items-center gap-2 border border-white/25 bg-white/12 rounded-full px-4 py-1.5 text-xs font-semibold text-white/90 hover:bg-white/20 transition-colors backdrop-blur-sm max-w-[90vw]">
+              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">New: AI-powered email warmup is live — try it free</span>
+              <span className="sm:hidden">AI warmup is live — try free</span>
+              <svg className="w-3.5 h-3.5 text-white/50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
+            className="text-[28px] sm:text-4xl md:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
             Cold Email Outreach That Books Meetings
           </motion.h1>
 
@@ -951,8 +952,8 @@ export default function HomePage() {
 
         {/* Full-width scroll strip with gradient fade edges */}
         <div className="relative" style={maskFade}>
-          <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab' }}>
-            <div className="flex gap-6" style={{ width: 'max-content', padding: '1rem 8vw 2rem' }}>
+          <div className="overflow-x-auto scroll-hide" style={{ cursor: 'grab', scrollSnapType: 'x mandatory' }}>
+            <div className="flex gap-4 sm:gap-6" style={{ width: 'max-content', padding: '1rem 4vw 2rem' }}>
               {testimonials.map((t, i) => <TestimonialCard key={i} t={t} />)}
             </div>
           </div>

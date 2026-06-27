@@ -24,19 +24,19 @@ export default function AboutPage() {
         <section className="hero-gradient pb-24 pt-20 text-center">
           <div className="container">
             <span className="inline-block text-xs font-bold bg-white/20 text-white rounded-full px-3 py-1 mb-5 uppercase tracking-widest">Company</span>
-            <h1 className="text-4xl sm:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
-              Built for cold email teams<br />who want real results
+            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[60px] font-extrabold text-white leading-[1.08] tracking-tight">
+              Built for cold email teams who want real results
             </h1>
             <p className="mt-6 text-blue-100 text-lg leading-relaxed max-w-2xl mx-auto">
               Leads Genie was built by a team of outbound sales practitioners who were frustrated
               with tools that promised deliverability but couldn&apos;t deliver. We built the platform
               we always wanted — and opened it up to the world.
             </p>
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Link href="/signup" className="bg-white text-blue-700 text-sm font-bold rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/signup" className="bg-white text-blue-700 text-sm font-bold rounded-full px-8 py-3.5 hover:bg-blue-50 transition-colors shadow-lg w-full sm:w-auto text-center">
                 Start For Free
               </Link>
-              <Link href="/contact" className="border border-white/30 text-white text-sm font-semibold rounded-full px-8 py-3.5 hover:bg-white/10 transition-colors">
+              <Link href="/contact" className="border border-white/30 text-white text-sm font-semibold rounded-full px-8 py-3.5 hover:bg-white/10 transition-colors w-full sm:w-auto text-center">
                 Contact Us
               </Link>
             </div>

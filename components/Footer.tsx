@@ -180,14 +180,14 @@ export function Footer() {
           <p className="text-xs text-gray-600 order-2 sm:order-1">
             © 2026 Leads Genie, Inc. All rights reserved. Built for cold email professionals.
           </p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 order-1 sm:order-2">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-1 gap-y-2 order-1 sm:order-2">
             {legal.map((item, i) => (
-              <span key={item.label} className="flex items-center gap-4">
+              <span key={item.label} className="flex items-center gap-1">
                 <Link href={item.href}
-                  className="text-xs text-gray-600 hover:text-gray-300 transition-colors duration-150">
+                  className="text-xs text-gray-600 hover:text-gray-300 transition-colors duration-150 px-1.5">
                   {item.label}
                 </Link>
-                {i < legal.length - 1 && <span className="text-gray-800 text-xs">·</span>}
+                {i < legal.length - 1 && <span className="text-gray-800 text-xs hidden sm:inline">·</span>}
               </span>
             ))}
           </div>
