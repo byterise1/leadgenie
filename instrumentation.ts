@@ -130,6 +130,13 @@ export async function register() {
       if (cl.lead?.status === 'unsubscribed') return;
 
       const campaign = cl.campaign;
+
+      // Honour pause: if campaign was paused after this job was queued, skip silently.
+      // Resume route will re-queue pending/active leads correctly.
+      if (campaign.status === 'paused') {
+        console.log(`[paused] ${campaign.name} is paused — skipping ${cl.lead?.email}`);
+        return;
+      }
       const step = campaign.email_steps.find((s: any) => s.step_number === stepNumber);
       if (!step) return;
 
@@ -557,8 +564,11 @@ export async function register() {
                 if (!thread?.messages || thread.messages.length <= 1) continue;
 
                 const reply = thread.messages.slice(1).find((m: any) => {
-                  const from = hdr(m.payload?.headers, 'From').toLowerCase();
-                  if (from.includes(account.email.toLowerCase())) return false;
+                  // Skip any message we sent (SENT label is the definitive check;
+                  // From-header match is a fallback for edge cases where headers are missing)
+                  if (m.labelIds?.includes('SENT')) return false;
+                  const from = (hdr(m.payload?.headers, 'From') || '').toLowerCase();
+                  if (!from || from.includes(account.email.toLowerCase())) return false;
                   return !SYSTEM_PATTERNS.some(p => from.includes(p));
                 });
                 if (!reply) continue;

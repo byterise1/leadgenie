@@ -119,7 +119,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: campaignLeads } = await supabaseAdmin
     .from('campaign_leads')
-    .select('id')
+    .select('id, status, current_step')
     .eq('campaign_id', id)
     .in('status', ['pending', 'active']);
 
@@ -200,27 +200,36 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     .gte('sent_at', todayMidnightUtc.toISOString());
   let emailsThisDay = alreadySentToday ?? 0;
 
-  const jobs = campaignLeads.map((cl, i) => {
-    // Roll to next active day if we've hit the limit or passed the window
-    if (emailsThisDay >= dailyLimit || cursor >= dayEnd) {
-      const nextDay = nextActiveDay(dayStart + 24 * 60 * 60 * 1000, activeDays, ianaZone);
-      dayStart = nextDay;
-      dayEnd = dayStart + windowMs;
-      cursor = dayStart;
-      emailsThisDay = 0;
-    }
+  const jobs = campaignLeads.map((cl: any, i: number) => {
+    // Active leads (step 0 already sent, paused mid-sequence) resume from their next
+    // step immediately — they don't count against the daily limit.
+    const targetStep: number = cl.status === 'active' ? (cl.current_step ?? 1) : 0;
+    let sendAt: number;
 
-    const sendAt = cursor;
-    const randomGap = minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
-    cursor += randomGap;
-    emailsThisDay++;
+    if (targetStep === 0) {
+      // Roll to next active day if we've hit the limit or passed the window
+      if (emailsThisDay >= dailyLimit || cursor >= dayEnd) {
+        const nextDay = nextActiveDay(dayStart + 24 * 60 * 60 * 1000, activeDays, ianaZone);
+        dayStart = nextDay;
+        dayEnd = dayStart + windowMs;
+        cursor = dayStart;
+        emailsThisDay = 0;
+      }
+      sendAt = cursor;
+      const randomGap = minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+      cursor += randomGap;
+      emailsThisDay++;
+    } else {
+      // Follow-up step: fire 30 seconds after resume so the worker is ready
+      sendAt = Date.now() + 30_000 + i * 5_000;
+    }
 
     return {
       name: 'send',
       data: {
         campaignLeadId: cl.id,
-        stepNumber: 0,
-        accountIndex: i % numAccounts, // Round-robin across accounts
+        stepNumber: targetStep,
+        accountIndex: i % numAccounts,
       },
       opts: {
         delay: Math.max(0, sendAt - Date.now()),
