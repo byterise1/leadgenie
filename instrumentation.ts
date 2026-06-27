@@ -700,9 +700,12 @@ export async function register() {
               }
             } catch { /* skip inbox scan errors */ }
 
-          } else if (account.imap_host || account.type === 'gmail-app') {
+          } else if (account.imap_host || account.smtp_host || account.type === 'gmail-app') {
             // ── IMAP path (Gmail App Password, Titan, Zoho, Custom SMTP) ────
-            const imapHost = account.imap_host || 'imap.gmail.com';
+            // Auto-derive IMAP host from SMTP host if not explicitly set
+            // e.g. smtp.titan.email → imap.titan.email, smtp.zoho.com → imap.zoho.com
+            const imapHost = account.imap_host
+              || (account.smtp_host ? account.smtp_host.replace(/^smtp\./i, 'imap.') : 'imap.gmail.com');
             const imapPort = account.imap_port || 993;
 
             const { data: sentEmails } = await supabase
