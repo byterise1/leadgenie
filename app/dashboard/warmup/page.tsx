@@ -24,6 +24,17 @@ type HistoryRow = {
   health_score: number;
 };
 
+// Safe campaign emails/day based on total warmup days accumulated
+function safeDailyLimit(day: number): { limit: number; label: string; color: string } {
+  if (day < 30)  return { limit: 0,   label: 'Not ready',  color: 'gray' };
+  if (day < 60)  return { limit: 50,  label: '50/day',     color: 'blue' };
+  if (day < 90)  return { limit: 100, label: '100/day',    color: 'emerald' };
+  if (day < 120) return { limit: 150, label: '150/day',    color: 'amber' };
+  if (day < 180) return { limit: 200, label: '200/day',    color: 'orange' };
+  if (day < 365) return { limit: 300, label: '300/day',    color: 'violet' };
+  return                { limit: 500, label: '500/day',    color: 'rose' };
+}
+
 const tabs = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'settings', label: 'Settings' },
@@ -233,6 +244,7 @@ export default function WarmupPage() {
                       <th className="px-4 py-3 text-left">Score</th>
                       <th className="px-4 py-3 text-left">Ramp Progress</th>
                       <th className="px-4 py-3 text-left">Health</th>
+                      <th className="px-4 py-3 text-left">Safe/day</th>
                       <th className="px-4 py-3 text-left">Warmup</th>
                     </tr>
                   </thead>
@@ -311,6 +323,18 @@ export default function WarmupPage() {
                           </div>
                           <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
                         </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        {(() => {
+                          const safe = safeDailyLimit(acc.warmup_day ?? 0);
+                          if (safe.limit === 0) return <span className="text-[11px] text-gray-400">Not ready</span>;
+                          const cls = safe.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+                            safe.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                            safe.color === 'amber' ? 'bg-amber-50 text-amber-700' :
+                            safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
+                            safe.color === 'violet' ? 'bg-violet-50 text-violet-700' : 'bg-rose-50 text-rose-700';
+                          return <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${cls}`}>{safe.label}</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-4">
                         <div className="relative">
@@ -450,28 +474,73 @@ export default function WarmupPage() {
             })}
           </div>
 
-          {/* Safe campaign send limits by warmup age */}
+          {/* Safe campaign send limits — dynamic per account */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 className="text-sm font-bold text-gray-900 mb-1">Safe campaign send limits</h3>
-            <p className="text-xs text-gray-400 mb-4">How many cold emails you can safely send per day per account, based on warmup progress.</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-4">Auto-calculated per account based on warmup age. Keep warmup running in background while sending campaigns.</p>
+
+            {/* Per-account dynamic limits */}
+            {accounts.length > 0 && (
+              <div className="space-y-2 mb-5">
+                {accounts.map(acc => {
+                  const safe = safeDailyLimit(acc.warmup_day ?? 0);
+                  const pct = Math.min(100, ((acc.warmup_day ?? 0) / 365) * 100);
+                  const barColor = safe.color === 'blue' ? 'bg-blue-400' : safe.color === 'emerald' ? 'bg-emerald-400' :
+                    safe.color === 'amber' ? 'bg-amber-400' : safe.color === 'orange' ? 'bg-orange-400' :
+                    safe.color === 'violet' ? 'bg-violet-400' : safe.color === 'rose' ? 'bg-rose-400' : 'bg-gray-300';
+                  return (
+                    <div key={acc.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{acc.email}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }}/>
+                          </div>
+                          <span className="text-[10px] text-gray-400 whitespace-nowrap">Day {acc.warmup_day ?? 0}</span>
+                        </div>
+                      </div>
+                      {safe.limit === 0 ? (
+                        <span className="text-[11px] text-gray-400 shrink-0">Not ready</span>
+                      ) : (
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                          safe.color === 'blue' ? 'bg-blue-50 text-blue-700' :
+                          safe.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
+                          safe.color === 'amber' ? 'bg-amber-50 text-amber-700' :
+                          safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
+                          safe.color === 'violet' ? 'bg-violet-50 text-violet-700' : 'bg-rose-50 text-rose-700'
+                        }`}>{safe.label}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Progression reference table */}
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Full year progression</p>
+            <div className="grid grid-cols-2 gap-1.5">
               {[
-                { label: 'Month 1 — Day 30 (warmup complete)', limit: '50/day', color: 'blue' },
-                { label: 'Month 2 — Day 60', limit: '100/day', color: 'emerald' },
-                { label: 'Month 3 — Day 90', limit: '150/day', color: 'amber' },
-                { label: 'Month 4+ — Day 120+', limit: '200/day', color: 'violet' },
+                { range: 'Day 1–29',    limit: 'Not ready',  color: 'gray' },
+                { range: 'Day 30–59',   limit: '50/day',     color: 'blue' },
+                { range: 'Day 60–89',   limit: '100/day',    color: 'emerald' },
+                { range: 'Day 90–119',  limit: '150/day',    color: 'amber' },
+                { range: 'Day 120–179', limit: '200/day',    color: 'orange' },
+                { range: 'Day 180–364', limit: '300/day',    color: 'violet' },
+                { range: 'Day 365+',    limit: '500/day',    color: 'rose' },
               ].map(r => (
-                <div key={r.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span className="text-xs text-gray-600">{r.label}</span>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    r.color === 'blue' ? 'bg-blue-50 text-blue-700' :
-                    r.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
-                    r.color === 'amber' ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'
+                <div key={r.range} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                  <span className="text-[10px] text-gray-500">{r.range}</span>
+                  <span className={`text-[10px] font-bold ${
+                    r.color === 'gray' ? 'text-gray-400' :
+                    r.color === 'blue' ? 'text-blue-600' :
+                    r.color === 'emerald' ? 'text-emerald-600' :
+                    r.color === 'amber' ? 'text-amber-600' :
+                    r.color === 'orange' ? 'text-orange-600' :
+                    r.color === 'violet' ? 'text-violet-600' : 'text-rose-600'
                   }`}>{r.limit}</span>
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-3">Continue warmup at 40/day in background while running campaigns. This maintains your reputation.</p>
           </div>
 
           {/* Warning for high values */}

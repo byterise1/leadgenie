@@ -1041,7 +1041,14 @@ export async function register() {
               }
             }
 
-            const newHealth = sent > 0 ? Math.min(100, (account.health_score ?? 50) + 2) : (account.health_score ?? 50);
+            // Health target curve: 50→98 over days 1-14, 98→100 over days 15-30, 100 after.
+            // Use Math.max so score never decreases if already ahead.
+            const healthTarget = day <= 14
+              ? Math.round(50 + (day / 14) * 48)        // day 14 = 98%
+              : day <= 30
+                ? Math.round(98 + ((day - 14) / 16) * 2) // day 30 = 100%
+                : 100;
+            const newHealth = sent > 0 ? Math.max(account.health_score ?? 50, healthTarget) : (account.health_score ?? 50);
             // Auto-stop when warmup_day first reaches warmup_target. If user re-enables after
             // completion (warmup_day already >= target), keep running at maintenance 40/day.
             const target = account.warmup_target ?? 30;

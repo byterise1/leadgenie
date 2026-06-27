@@ -6,6 +6,16 @@ import { Suspense } from 'react';
 
 type PoolMode = 'admin_pool' | 'user_to_user' | 'both';
 
+function safeDailyLimit(day: number): string {
+  if (day < 30)  return '—';
+  if (day < 60)  return '50/day';
+  if (day < 90)  return '100/day';
+  if (day < 120) return '150/day';
+  if (day < 180) return '200/day';
+  if (day < 365) return '300/day';
+  return '500/day';
+}
+
 type WarmupAccount = {
   id: string;
   user_id: string;
@@ -616,6 +626,7 @@ function AdminWarmupPageInner() {
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Progress</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Today</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Safe/day</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Pool Mode</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Warmup</th>
                 </tr>
@@ -658,6 +669,15 @@ function AdminWarmupPageInner() {
                         </div>
                       </td>
                       <td className="px-4 py-3"><span className="text-sm font-semibold text-gray-700">{a.sent_today}</span></td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${
+                          (a.warmup_day ?? 0) < 30 ? 'text-gray-400' :
+                          (a.warmup_day ?? 0) < 60 ? 'bg-blue-50 text-blue-700' :
+                          (a.warmup_day ?? 0) < 90 ? 'bg-emerald-50 text-emerald-700' :
+                          (a.warmup_day ?? 0) < 120 ? 'bg-amber-50 text-amber-700' :
+                          (a.warmup_day ?? 0) < 365 ? 'bg-violet-50 text-violet-700' : 'bg-rose-50 text-rose-700'
+                        }`}>{safeDailyLimit(a.warmup_day ?? 0)}</span>
+                      </td>
                       <td className="px-4 py-3">
                         <select
                           value={a.warmup_pool_mode || 'admin_pool'}
