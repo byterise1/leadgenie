@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { ThemeToggle } from '@/components/ThemeProvider';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -150,13 +151,13 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={onClose} />}
-      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col z-40 transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
 
-        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 shrink-0">
+        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 shrink-0">
           <Link href="/">
             <Logo size={48} textSize="text-[15px]" />
           </Link>
-          <button onClick={onClose} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors" aria-label="Close menu">
+          <button onClick={onClose} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close menu">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -164,48 +165,48 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Main</p>
+          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 mb-2">Main</p>
           {navItems.slice(0, 5).map(item => (
             <Link key={item.href} href={item.href} onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive(item.href)
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
               }`}>
-              <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
+              <span className={isActive(item.href) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}>{item.icon}</span>
               <span className="flex-1">{item.label}</span>
               {item.label === 'Unibox' && unreadCount > 0 && (
-                <span className="text-[10px] font-bold text-blue-600 tabular-nums">{unreadCount}</span>
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 tabular-nums">{unreadCount}</span>
               )}
             </Link>
           ))}
 
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2 mt-5">Reports</p>
+          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 mb-2 mt-5">Reports</p>
           {navItems.slice(5).map(item => (
             <Link key={item.href} href={item.href} onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive(item.href)
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
               }`}>
-              <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
+              <span className={isActive(item.href) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}>{item.icon}</span>
               <span className="flex-1">{item.label}</span>
               {item.label === 'Support' && supportBadge > 0 && (
-                <span className="text-[10px] font-bold text-blue-600 tabular-nums">{supportBadge}</span>
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 tabular-nums">{supportBadge}</span>
               )}
             </Link>
           ))}
 
           {isAdmin && (
             <>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2 mt-5">Admin</p>
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 mb-2 mt-5">Admin</p>
               <Link href="/admin" onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   pathname.startsWith('/admin')
-                    ? 'bg-red-50 text-red-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                 }`}>
-                <span className={pathname.startsWith('/admin') ? 'text-red-600' : 'text-gray-400'}>
+                <span className={pathname.startsWith('/admin') ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 </span>
                 <span className="flex-1">Admin Panel</span>
@@ -230,22 +231,26 @@ export function DashboardSidebar({ open, onClose }: { open: boolean; onClose: ()
           </div>
         </nav>
 
-        <div className="px-3 py-3 border-t border-gray-100 shrink-0">
+        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
+          <div className="flex items-center justify-between px-2 py-1 mb-1">
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Theme</span>
+            <ThemeToggle />
+          </div>
           <Link href="/dashboard/settings" onClick={onClose}
-            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover"/>
                 : initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-900 truncate">{displayName}</p>
-              <p className="text-[10px] text-gray-400 truncate">{email}</p>
+              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{email}</p>
             </div>
-            <svg className="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+            <svg className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </Link>
           <button onClick={signOut}
-            className="mt-1 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            className="mt-1 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>

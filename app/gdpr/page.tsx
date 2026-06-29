@@ -1,17 +1,17 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
 export default function GDPRPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 dark:border-gray-800 py-16 text-center">
           <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Legal</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">GDPR Compliance</h1>
-            <p className="mt-4 text-gray-500 text-base">Last updated: June 1, 2026</p>
-            <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight">GDPR Compliance</h1>
+            <p className="mt-4 text-gray-500 dark:text-gray-500 text-base">Last updated: June 1, 2026</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-300 text-base leading-relaxed max-w-2xl mx-auto">
               Leads Genie is committed to full compliance with the General Data Protection Regulation (GDPR).
               This page explains our obligations, your rights, and how we handle EU personal data.
             </p>
@@ -28,8 +28,8 @@ export default function GDPRPage() {
               { title: 'Contact Our DPO', content: 'Data Protection Officer: dpo@leadsgenie.io\nLeads Genie, Inc.\nEmail: legal@leadsgenie.io' },
             ].map(s => (
               <div key={s.title}>
-                <h2 className="text-xl font-bold text-gray-900 mb-3">{s.title}</h2>
-                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{s.content}</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{s.title}</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{s.content}</p>
               </div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -528,31 +528,31 @@ export default function LeadsPage() {
       <div className="px-6 pt-6 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900">Leads</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Leads</h1>
             <button className="sm:hidden text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg px-2 py-1 bg-blue-50 hover:bg-blue-100 transition-colors"
               onClick={() => setShowListsSidebar(v => !v)}>
               Lists {showListsSidebar ? '▲' : '▼'}
             </button>
           </div>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">
             {currentList ? `${currentList.name} · ${leads.length} leads` : `All leads · ${totalCount} total`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <a href="/api/leads/template" download title="Download template"
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 dark:text-gray-300 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             <span className="hidden sm:inline">Template</span>
           </a>
           <a href={selectedList ? `/api/leads/export?list_id=${selectedList}` : '/api/leads/export'} download title="Export CSV"
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 dark:text-gray-300 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span className="hidden sm:inline">Export</span>
           </a>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden"
             onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ''; }}/>
           <button onClick={handleImportClick} disabled={validating}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-xl px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
             title="Accepts CSV or Excel files (.csv, .xlsx, .xls)">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             <span className="sm:hidden">{validating ? 'Checking…' : 'Import'}</span>
@@ -567,7 +567,7 @@ export default function LeadsPage() {
       </div>
 
       {msg && (
-        <div className={`mx-6 mb-3 rounded-xl px-4 py-2.5 text-sm font-medium ${msg.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+        <div className={`mx-6 mb-3 rounded-xl px-4 py-2.5 text-sm font-medium ${msg.startsWith('✓') ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-100' : 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100'}`}>
           {msg}
         </div>
       )}
@@ -627,7 +627,7 @@ export default function LeadsPage() {
             )}
             <button
               onClick={() => activeJob?.status === 'done' ? setShowDiscardConfirm(true) : dismissJob()}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-white/60">
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors p-1 rounded-lg hover:bg-white/60">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -639,10 +639,10 @@ export default function LeadsPage() {
 
         {/* Lists sidebar */}
         <div className={`${showListsSidebar ? 'flex' : 'hidden'} sm:flex w-52 shrink-0 flex-col gap-0.5 overflow-y-auto`}>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Lists</p>
+          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-1.5">Lists</p>
 
           <button onClick={() => selectList(null)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${!selectedList ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${!selectedList ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             All Leads
           </button>
@@ -658,13 +658,13 @@ export default function LeadsPage() {
                 </div>
               ) : (
                 <button onClick={() => selectList(list.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${selectedList === list.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${selectedList === list.id ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}>
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                   <span className="truncate">{list.name}</span>
                 </button>
               )}
               <button onClick={e => { e.stopPropagation(); setCtxMenu({ list, x: e.clientX, y: e.clientY }); }}
-                className="absolute right-7 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-700 transition-all rounded-md hover:bg-gray-200">
+                className="absolute right-7 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-all rounded-md hover:bg-gray-200">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
               </button>
             </div>
@@ -681,7 +681,7 @@ export default function LeadsPage() {
               </div>
             ) : (
               <button onClick={() => setShowNewList(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
                 New List
               </button>
@@ -693,9 +693,9 @@ export default function LeadsPage() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative flex-1 max-w-sm">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               <input value={search} onChange={handleSearch} placeholder="Search leads…"
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
             </div>
             {currentList && (
               <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
@@ -705,25 +705,25 @@ export default function LeadsPage() {
             )}
           </div>
 
-          <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+          <div className="flex-1 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden flex flex-col">
             <div className="overflow-auto flex-1">
               <table className="w-full min-w-[640px]">
                 <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-gray-100 bg-gray-50">
+                  <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
                     <th className="px-4 py-3 w-10">
                       <input type="checkbox" className="rounded border-gray-300 accent-blue-600"
                         checked={leads.length > 0 && selected.size === leads.length}
                         onChange={toggleAll}/>
                     </th>
                     {['Name', 'Email', 'Company', 'Title', 'Status', 'Added', ''].map(col => (
-                      <th key={col} className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                      <th key={col} className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">{col}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i} className="border-b border-gray-100">
+                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                         {Array.from({ length: 8 }).map((_, j) => (
                           <td key={j} className="px-4 py-3.5"><Skeleton className={`h-3 ${j === 0 ? 'w-5' : j === 1 ? 'w-24' : j === 2 ? 'w-32' : 'w-16'}`}/></td>
                         ))}
@@ -733,17 +733,17 @@ export default function LeadsPage() {
                     <tr>
                       <td colSpan={8} className="px-5 py-20 text-center">
                         <div className="flex flex-col items-center">
-                          <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
-                            <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                          <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-100 flex items-center justify-center mb-4">
+                            <svg className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
                           </div>
-                          <p className="text-sm font-semibold text-gray-700 mb-1">{currentList ? `No leads in "${currentList.name}"` : 'No leads yet'}</p>
-                          <p className="text-xs text-gray-400 mb-5">
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{currentList ? `No leads in "${currentList.name}"` : 'No leads yet'}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
                             {currentList ? 'Add or import leads to this list.' : 'Select a list from the sidebar, then add or import leads.'}
                           </p>
                           {currentList && (
                             <div className="flex gap-2">
                               <button onClick={handleImportClick} className="text-xs font-bold bg-blue-600 text-white rounded-xl px-5 py-2.5 hover:bg-blue-700 transition-colors">Import File →</button>
-                              <button onClick={handleAddClick} className="text-xs font-bold border border-gray-200 text-gray-700 rounded-xl px-5 py-2.5 hover:bg-gray-50 transition-colors">+ Add Manually</button>
+                              <button onClick={handleAddClick} className="text-xs font-bold border border-gray-200 text-gray-700 dark:text-gray-200 rounded-xl px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">+ Add Manually</button>
                             </div>
                           )}
                           {!currentList && lists.length === 0 && (
@@ -753,41 +753,41 @@ export default function LeadsPage() {
                       </td>
                     </tr>
                   ) : leads.map(l => (
-                    <tr key={l.id} className={`border-b border-gray-100 last:border-0 transition-colors ${selected.has(l.id) ? 'bg-blue-50/60' : 'hover:bg-gray-50'}`}>
+                    <tr key={l.id} className={`border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors ${selected.has(l.id) ? 'bg-blue-50/60' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3">
                         <input type="checkbox" className="rounded border-gray-300 accent-blue-600"
                           checked={selected.has(l.id)} onChange={() => toggleOne(l.id)}/>
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                         {[l.first_name, l.last_name].filter(Boolean).join(' ') || '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{l.email}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{l.company || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{l.title || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 dark:text-gray-300">{l.email}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">{l.company || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">{l.title || '—'}</td>
                       <td className="px-4 py-3">
                         {(!l.status || l.status === 'active') ? (
-                          <span className="text-xs text-gray-400">Active</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">Active</span>
                         ) : l.status === 'bounced' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 rounded-full px-2 py-0.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100 rounded-full px-2 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 inline-block"/>Bounced
                           </span>
                         ) : l.status === 'unsubscribed' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 rounded-full px-2 py-0.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-100 rounded-full px-2 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 inline-block"/>Opted out
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">{l.status}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{l.status}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{new Date(l.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{new Date(l.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openEdit(l)} title="Edit"
-                            className="p-1.5 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                           </button>
                           <button onClick={() => handleDeleteLead(l.id)} title="Delete"
-                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                           </button>
                         </div>
@@ -798,8 +798,8 @@ export default function LeadsPage() {
               </table>
             </div>
             {leads.length > 0 && (
-              <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
-                <p className="text-xs text-gray-400">{leads.length} lead{leads.length !== 1 ? 's' : ''}{selected.size > 0 ? ` · ${selected.size} selected` : ''}</p>
+              <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 shrink-0">
+                <p className="text-xs text-gray-400 dark:text-gray-500">{leads.length} lead{leads.length !== 1 ? 's' : ''}{selected.size > 0 ? ` · ${selected.size} selected` : ''}</p>
               </div>
             )}
           </div>
@@ -809,7 +809,7 @@ export default function LeadsPage() {
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gray-900 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 text-sm font-semibold whitespace-nowrap">
-          <span className="text-gray-400 font-normal">{selected.size} selected</span>
+          <span className="text-gray-400 dark:text-gray-500 font-normal">{selected.size} selected</span>
           <div className="w-px h-4 bg-gray-700"/>
           <div className="relative">
             <button onClick={() => setShowAddToList(v => !v)} className="flex items-center gap-2 hover:text-blue-300 transition-colors">
@@ -819,10 +819,10 @@ export default function LeadsPage() {
             {showAddToList && (
               <div className="absolute bottom-full mb-2 left-0 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-48 z-50">
                 {lists.length === 0 ? (
-                  <p className="px-4 py-2 text-xs text-gray-400">Create a list first.</p>
+                  <p className="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">Create a list first.</p>
                 ) : lists.map(list => (
                   <button key={list.id} onClick={() => handleAddToList(list.id)}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 hover:text-blue-700 transition-colors">
                     {list.name}
                   </button>
                 ))}
@@ -837,7 +837,7 @@ export default function LeadsPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             {deleting ? 'Deleting…' : 'Delete'}
           </button>
-          <button onClick={() => setSelected(new Set())} className="ml-1 text-gray-500 hover:text-white transition-colors">
+          <button onClick={() => setSelected(new Set())} className="ml-1 text-gray-500 dark:text-gray-500 hover:text-white transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -850,7 +850,7 @@ export default function LeadsPage() {
           <div className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-44"
             style={{ top: ctxMenu.y, left: ctxMenu.x }}>
             <button onClick={() => { setRenamingList(ctxMenu.list); setRenameVal(ctxMenu.list.name); setCtxMenu(null); }}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">Rename</button>
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Rename</button>
             <button onClick={() => deleteList(ctxMenu.list.id)}
               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">Delete List</button>
           </div>
@@ -861,25 +861,25 @@ export default function LeadsPage() {
       {showPicker && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">Add Leads to…</h2>
-              <button onClick={closePicker} className="text-gray-400 hover:text-gray-700 transition-colors">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Add Leads to…</h2>
+              <button onClick={closePicker} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
             <div className="p-4 space-y-2 max-h-60 overflow-y-auto">
               {lists.length === 0 && !pickerShowNew && (
-                <p className="text-sm text-gray-400 text-center py-2">No lists yet — create one below.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No lists yet — create one below.</p>
               )}
               {!pickerShowNew && lists.map(list => (
                 <label key={list.id}
                   className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer transition-all ${pickerListId === list.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}>
                   <input type="radio" name="picker_list" value={list.id}
                     checked={pickerListId === list.id} onChange={() => setPickerListId(list.id)} className="accent-blue-600"/>
-                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                  <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{list.name}</p>
-                    <p className="text-xs text-gray-400">{list.count} lead{list.count !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{list.count} lead{list.count !== 1 ? 's' : ''}</p>
                   </div>
                   {pickerListId === list.id && (
                     <svg className="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
@@ -893,7 +893,7 @@ export default function LeadsPage() {
                     onKeyDown={e => { if (e.key === 'Enter' && pickerNewName.trim()) handlePickerConfirm(); if (e.key === 'Escape') { setPickerShowNew(false); setPickerNewName(''); } }}
                     className="flex-1 border border-blue-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/>
                   {lists.length > 0 && (
-                    <button onClick={() => { setPickerShowNew(false); setPickerNewName(''); }} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button onClick={() => { setPickerShowNew(false); setPickerNewName(''); }} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 p-1.5 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                   )}
@@ -907,7 +907,7 @@ export default function LeadsPage() {
               )}
             </div>
             <div className="px-4 pb-4 flex gap-2">
-              <button onClick={closePicker} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={closePicker} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
               <button disabled={pickerSaving || (!pickerListId && !pickerNewName.trim())} onClick={handlePickerConfirm}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {pickerSaving ? 'Creating…' : 'Go to List →'}
@@ -921,31 +921,31 @@ export default function LeadsPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
               <div>
-                <h2 className="text-base font-bold text-gray-900">{editingLead ? 'Edit Lead' : 'Add Lead'}</h2>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">{editingLead ? 'Edit Lead' : 'Add Lead'}</h2>
                 {!editingLead && currentList && (
-                  <p className="text-xs text-gray-400 mt-0.5">Adding to: <span className="font-semibold text-blue-600">{currentList.name}</span></p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Adding to: <span className="font-semibold text-blue-600">{currentList.name}</span></p>
                 )}
               </div>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">
+              <button onClick={() => setShowForm(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
             <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
               {FORM_FIELDS.map(f => (
                 <div key={f.key}>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
                   <input type={f.type} placeholder={f.ph}
                     value={form[f.key as keyof typeof form]}
                     onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                     disabled={f.key === 'email' && !!editingLead}
-                    className={`w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition ${f.key === 'email' && editingLead ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}/>
+                    className={`w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition ${f.key === 'email' && editingLead ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed' : ''}`}/>
                 </div>
               ))}
             </div>
             <div className="px-6 pb-6 flex gap-2">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50">Cancel</button>
+              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:bg-gray-800">Cancel</button>
               <button disabled={!form.email || saving || validating} onClick={handleSave}
                 className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
                 {saving ? 'Saving…' : validating && !editingLead ? 'Checking email…' : editingLead ? 'Save Changes' : 'Add Lead'}
@@ -973,19 +973,19 @@ export default function LeadsPage() {
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
 
             {/* Modal header */}
-            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">
                     {pendingLead ? 'Add Lead — Validation Result' : 'Import Results'}
                   </h2>
                   <button onClick={() => setShowHelp(true)} title="What do these statuses mean?"
-                    className="w-5 h-5 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-400 hover:text-blue-600 text-[11px] font-bold flex items-center justify-center transition-colors shrink-0">
+                    className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 text-gray-400 dark:text-gray-500 hover:text-blue-600 text-[11px] font-bold flex items-center justify-center transition-colors shrink-0">
                     ?
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">
-                  {activeJob.filename && <span className="font-medium text-gray-500">{activeJob.filename}</span>}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                  {activeJob.filename && <span className="font-medium text-gray-500 dark:text-gray-500 dark:text-gray-500">{activeJob.filename}</span>}
                   {activeJob.list_name && <span> → {activeJob.list_name}</span>}
                   {activeJob.summary && (
                     <span className="ml-2">{activeJob.summary.total} emails scanned</span>
@@ -993,7 +993,7 @@ export default function LeadsPage() {
                 </p>
               </div>
               <button onClick={() => { setShowJobModal(false); if (!pendingLead) setPendingLead(null); }}
-                className="text-gray-400 hover:text-gray-700 transition-colors ml-4 shrink-0">
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors ml-4 shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
@@ -1011,7 +1011,7 @@ export default function LeadsPage() {
                     onClick={() => setJobFilter(f => f === card.key as any ? 'all' : card.key as any)}
                     className={`rounded-xl border p-3 text-left transition-all ${jobFilter === card.key ? card.active : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                     <p className={`text-2xl font-bold ${card.cls}`}>{card.count}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5">{card.label}</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-500 mt-0.5">{card.label}</p>
                   </button>
                 ))}
               </div>
@@ -1024,7 +1024,7 @@ export default function LeadsPage() {
                 <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${includeRisky ? 'bg-amber-400' : 'bg-gray-200'}`}>
                   <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeRisky ? 'left-4' : 'left-0.5'}`}/>
                 </div>
-                <span className="text-xs font-semibold text-gray-600 group-hover:text-gray-800">Include Risky</span>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-800">Include Risky</span>
               </button>
               <div className="ml-auto flex items-center gap-1">
                 {([
@@ -1033,14 +1033,14 @@ export default function LeadsPage() {
                   { key: 'blocked',    label: 'Blocked',    count: activeJob.results?.filter(r => ['unsafe','invalid','suppressed'].includes(r.decision)).length ?? 0 },
                 ] as const).map(f => (
                   <button key={f.key} onClick={() => setJobFilter(f.key)}
-                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f.key ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
+                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === f.key ? 'bg-gray-900 text-white' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`}>
                     {f.label}
                     {f.count !== null && <span className="ml-1 opacity-60">{f.count}</span>}
                   </button>
                 ))}
                 {activeJob.results && activeJob.results.some(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list) && (
                   <button onClick={() => setJobFilter(f => f === 'dupes' ? 'all' : 'dupes')}
-                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === 'dupes' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>
+                    className={`text-[11px] font-bold rounded-lg px-2.5 py-1 transition-all ${jobFilter === 'dupes' ? 'bg-purple-600 text-white' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 hover:bg-gray-100'}`}>
                     Dupes
                     <span className="ml-1 opacity-60">
                       {activeJob.results.filter(r => r.reasons.includes('Duplicate in uploaded file') || r.is_dupe_this_list).length}
@@ -1051,29 +1051,29 @@ export default function LeadsPage() {
             </div>
 
             {/* Results table */}
-            <div className="flex-1 overflow-auto border-t border-gray-100 min-h-0">
+            <div className="flex-1 overflow-auto border-t border-gray-100 dark:border-gray-800 min-h-0">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-gray-50">
-                  <tr className="border-b border-gray-100">
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-24">Score</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-20">Decision</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider w-20">Provider</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reason</th>
+                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-24">Score</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-20">Decision</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-20">Provider</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reason</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredResults.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">No emails in this category</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">No emails in this category</td></tr>
                   ) : filteredResults.map((r, i) => {
                     const style = decisionStyle(r.decision);
                     return (
-                      <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                      <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         <td className="px-4 py-2.5 font-medium text-gray-800 text-xs truncate max-w-[200px]">{r.email}</td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <span className={`text-xs font-bold w-7 text-right ${style.score}`}>{r.score}</span>
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden w-14">
+                            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden w-14">
                               <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${r.score}%` }}/>
                             </div>
                           </div>
@@ -1084,9 +1084,9 @@ export default function LeadsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-2.5">
-                          <span className="text-[10px] text-gray-500 font-medium">{r.provider}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-500 font-medium">{r.provider}</span>
                         </td>
-                        <td className="px-4 py-2.5 text-[11px] text-gray-500 truncate max-w-[220px]" title={r.reasons[0]}>
+                        <td className="px-4 py-2.5 text-[11px] text-gray-500 dark:text-gray-500 truncate max-w-[220px]" title={r.reasons[0]}>
                           {r.reasons[0] ?? '—'}
                           {r.dupe_lists.length > 0 && (
                             <span className="ml-1 text-amber-500 font-semibold">· in {r.dupe_lists.join(', ')}</span>
@@ -1098,16 +1098,16 @@ export default function LeadsPage() {
                 </tbody>
               </table>
               {activeJob.results && filteredResults.length < (jobFilter === 'all' ? activeJob.results.length : activeJob.results.filter(r => r.decision === jobFilter).length) && (
-                <p className="text-center text-xs text-gray-400 py-3 border-t border-gray-100">
+                <p className="text-center text-xs text-gray-400 dark:text-gray-500 py-3 border-t border-gray-100 dark:border-gray-800">
                   Showing first 200 of {jobFilter === 'all' ? activeJob.results.length : activeJob.results.filter(r => r.decision === jobFilter).length} — use filters to narrow down
                 </p>
               )}
             </div>
 
             {/* Modal footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                <button onClick={dismissJob} className="text-sm font-semibold text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                   Dismiss
                 </button>
                 {activeJob?.results?.some(r => r.decision === 'invalid' && r.smtp === 'invalid' && !r.pre_fail && !r.is_bounce && !r.is_unsub && !r.is_dupe_this_list) && (
@@ -1121,7 +1121,7 @@ export default function LeadsPage() {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <p className="text-xs text-gray-400 font-medium">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
                   {importCount} email{importCount !== 1 ? 's' : ''} will be imported
                 </p>
                 <button
@@ -1145,8 +1145,8 @@ export default function LeadsPage() {
           <div className="bg-white rounded-2xl shadow-2xl px-8 py-7 flex flex-col items-center gap-4 max-w-xs w-full">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"/>
             <div className="text-center">
-              <p className="text-sm font-bold text-gray-900">Validating emails…</p>
-              <p className="text-xs text-gray-400 mt-1">Checking syntax, bounces, SMTP & duplicates</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Validating emails…</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Checking syntax, bounces, SMTP & duplicates</p>
               <p className="text-xs text-blue-500 mt-2 font-medium">Please wait, this may take a moment</p>
             </div>
           </div>
@@ -1157,9 +1157,9 @@ export default function LeadsPage() {
       {showHelp && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setShowHelp(false)}>
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-              <h3 className="text-base font-bold text-gray-900">Email Status Guide</h3>
-              <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-gray-700 transition-colors">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Email Status Guide</h3>
+              <button onClick={() => setShowHelp(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
@@ -1214,28 +1214,28 @@ export default function LeadsPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <p className="text-sm font-semibold text-gray-900">{s.what}</p>
-                      <span className="text-[10px] font-bold text-gray-400 shrink-0">Score: {s.score}</span>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{s.what}</p>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 shrink-0">Score: {s.score}</span>
                     </div>
                     {s.factors.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {s.factors.map(f => (
-                          <span key={f} className="text-[10px] bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">{f}</span>
+                          <span key={f} className="text-[10px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 text-gray-600 dark:text-gray-300 dark:text-gray-300">{f}</span>
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">{s.missing}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{s.missing}</p>
                   </div>
                 </div>
               ))}
 
               {/* Duplicates */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-bold text-gray-900 mb-2">Duplicates</p>
-                <div className="space-y-2 text-xs text-gray-600">
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Duplicates</p>
+                <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300 dark:text-gray-300">
                   <p><span className="font-semibold text-purple-700">In-List Dupe</span> — this email already exists in the list you&apos;re importing to. It will be skipped to avoid duplicates.</p>
                   <p><span className="font-semibold text-blue-600">Cross-List Dupe</span> — this email is in one of your other lists. Toggle &ldquo;Include cross-list dupes&rdquo; to import it here too.</p>
-                  <p><span className="font-semibold text-gray-700">File Dupe</span> — the same email appeared more than once in your uploaded CSV/XLSX. Only the first occurrence is kept.</p>
+                  <p><span className="font-semibold text-gray-700 dark:text-gray-200">File Dupe</span> — the same email appeared more than once in your uploaded CSV/XLSX. Only the first occurrence is kept.</p>
                 </div>
               </div>
 
@@ -1254,14 +1254,14 @@ export default function LeadsPage() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4">
             <div>
-              <p className="text-sm font-bold text-gray-900">Validation Complete</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Validation Complete</p>
               {activeJob.summary && (
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                   {activeJob.summary.importable ?? activeJob.summary.safe} leads ready to import,{' '}
                   {(activeJob.summary.invalid ?? 0) + (activeJob.summary.suppressed ?? 0) + (activeJob.summary.unsafe ?? 0)} blocked.
                 </p>
               )}
-              <p className="text-sm text-gray-500 mt-2">Do you want to import the leads or discard this report?</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Do you want to import the leads or discard this report?</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -1271,7 +1271,7 @@ export default function LeadsPage() {
               </button>
               <button
                 onClick={() => { setShowDiscardConfirm(false); dismissJob(); }}
-                className="flex-1 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl px-4 py-2 hover:bg-gray-50 transition-colors">
+                className="flex-1 border border-gray-200 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-xl px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 Discard
               </button>
             </div>

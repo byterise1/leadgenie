@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -17,7 +17,7 @@ export default function ContactPage() {
   const [sent, setSent] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -41,11 +41,11 @@ export default function ContactPage() {
                   { icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>, title: 'Partners', desc: 'Explore affiliate and reseller opportunities.', email: 'partners@leadsgenie.io' },
                   { icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"/></svg>, title: 'Press', desc: 'Media inquiries and press kit requests.', email: 'press@leadsgenie.io' },
                 ].map(c => (
-                  <div key={c.title} className="flex items-start gap-4 border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow">
-                    <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">{c.icon}</span>
+                  <div key={c.title} className="flex items-start gap-4 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-sm transition-shadow">
+                    <span className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">{c.icon}</span>
                     <div>
-                      <p className="font-bold text-gray-900 text-sm">{c.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 mb-2">{c.desc}</p>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">{c.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5 mb-2">{c.desc}</p>
                       <a href={`mailto:${c.email}`} className="text-sm text-blue-600 hover:underline font-medium">{c.email}</a>
                     </div>
                   </div>
@@ -53,33 +53,33 @@ export default function ContactPage() {
               </div>
 
               {/* Form */}
-              <div className="border border-gray-100 rounded-2xl p-6">
+              <div className="border border-gray-100 dark:border-gray-800 rounded-2xl p-6">
                 {sent ? (
                   <div className="text-center py-8">
                     <span className="text-4xl mb-4 block">✅</span>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Message sent!</h3>
-                    <p className="text-sm text-gray-500">We&apos;ll get back to you within 24 hours.</p>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Message sent!</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">We&apos;ll get back to you within 24 hours.</p>
                   </div>
                 ) : (
                   <form onSubmit={e => { e.preventDefault(); setSent(true); }} className="space-y-4">
-                    <h2 className="text-lg font-bold text-gray-900 mb-5">Send a Message</h2>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-5">Send a Message</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">First name</label>
-                        <input required className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">First name</label>
+                        <input required className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Last name</label>
-                        <input required className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Last name</label>
+                        <input required className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Email</label>
-                      <input type="email" required className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Email</label>
+                      <input type="email" required className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subject</label>
-                      <select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Subject</label>
+                      <select className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option>Sales inquiry</option>
                         <option>Technical support</option>
                         <option>Billing question</option>
@@ -88,8 +88,8 @@ export default function ContactPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Message</label>
-                      <textarea required rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Message</label>
+                      <textarea required rows={4} className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
                     </div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-semibold text-sm rounded-xl py-3 hover:bg-blue-700 transition-colors">
                       Send Message

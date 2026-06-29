@@ -1,18 +1,18 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 
 export default function AntiSpamPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 dark:border-gray-800 py-16 text-center">
           <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Legal</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">Anti-Spam Policy</h1>
-            <p className="mt-4 text-gray-500 text-base">Last updated: June 1, 2026</p>
-            <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight">Anti-Spam Policy</h1>
+            <p className="mt-4 text-gray-500 dark:text-gray-500 text-base">Last updated: June 1, 2026</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-300 text-base leading-relaxed max-w-2xl mx-auto">
               Leads Genie is a tool for professional outreach. We have zero tolerance for spam.
               This policy explains what is and isn&apos;t allowed on our platform.
             </p>
@@ -43,8 +43,8 @@ All emails sent through Leads Genie must include a clear, functional unsubscribe
               { title: 'Legal Compliance', content: 'Users are solely responsible for ensuring their campaigns comply with all applicable laws, including CAN-SPAM (US), CASL (Canada), GDPR (EU/UK), and any other jurisdiction-specific regulations. When in doubt, consult legal counsel before launching a campaign.' },
             ].map(s => (
               <div key={s.title}>
-                <h2 className="text-xl font-bold text-gray-900 mb-3">{s.title}</h2>
-                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{s.content}</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{s.title}</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{s.content}</p>
               </div>
             ))}
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6">

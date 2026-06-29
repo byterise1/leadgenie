@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -81,7 +81,7 @@ export default function PricingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
 
@@ -117,12 +117,12 @@ export default function PricingPage() {
             {loading ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 max-w-[1400px] mx-auto">
                 {[1,2,3,4,5].map(i => (
-                  <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4 animate-pulse">
-                    <div className="h-5 w-20 bg-gray-100 rounded"/>
-                    <div className="h-3 w-32 bg-gray-100 rounded"/>
-                    <div className="h-10 w-24 bg-gray-100 rounded"/>
-                    <div className="h-10 bg-gray-100 rounded-full"/>
-                    {[1,2,3,4,5].map(j => <div key={j} className="h-3 bg-gray-100 rounded w-full"/>)}
+                  <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 space-y-4 animate-pulse">
+                    <div className="h-5 w-20 bg-gray-100 dark:bg-gray-800 rounded"/>
+                    <div className="h-3 w-32 bg-gray-100 dark:bg-gray-800 rounded"/>
+                    <div className="h-10 w-24 bg-gray-100 dark:bg-gray-800 rounded"/>
+                    <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-full"/>
+                    {[1,2,3,4,5].map(j => <div key={j} className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-full"/>)}
                   </div>
                 ))}
               </div>
@@ -135,7 +135,7 @@ export default function PricingPage() {
                   className={`relative rounded-2xl p-6 flex flex-col ${
                     plan.highlighted
                       ? 'bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-2xl ring-2 ring-blue-500 ring-offset-2 scale-[1.03] z-10'
-                      : 'bg-white border border-gray-100 hover:shadow-sm transition-shadow'
+                      : 'bg-white border border-gray-100 dark:border-gray-800 hover:shadow-sm transition-shadow'
                   }`}>
                   {plan.highlighted && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -182,7 +182,7 @@ export default function PricingPage() {
               ))}
             </div>
             )}
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-400">
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-400 dark:text-gray-500">
               {['14-day free trial', 'No credit card required', 'Cancel anytime', 'Instant setup'].map(item => (
                 <span key={item} className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ const TYPE_COLORS: Record<Account['type'], string> = {
   'gmail-oauth': 'text-red-600 bg-red-50 border-red-100',
   'gmail-app': 'text-orange-600 bg-orange-50 border-orange-100',
   'imap': 'text-violet-600 bg-violet-50 border-violet-100',
-  'smtp': 'text-gray-600 bg-gray-100 border-gray-200',
+  'smtp': 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-gray-200',
 };
 
 type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
@@ -46,34 +46,34 @@ function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
   const valid = form.email && form.host && form.user && form.pass;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 mb-2">Works with Titan, Zoho, Mailgun, SendGrid, and any non-Gmail provider.</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Works with Titan, Zoho, Mailgun, SendGrid, and any non-Gmail provider.</p>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">From Email</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">From Email</label>
         <input type="email" placeholder="you@yourdomain.com" value={form.email}
           onChange={e => set('email', e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Host</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Host</label>
         <input type="text" placeholder="smtp.titan.email" value={form.host}
           onChange={e => setHost(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
       </div>
       {[
         { label: 'SMTP Username', key: 'user', placeholder: 'Same as email usually', type: 'text' },
         { label: 'SMTP Password', key: 'pass', placeholder: '••••••••', type: 'password' },
       ].map(f => (
         <div key={f.key}>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
           <input type={f.type} placeholder={f.placeholder} value={String(form[f.key as keyof typeof form])}
             onChange={e => set(f.key as keyof typeof form, e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
         </div>
       ))}
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Port</label>
         <select value={form.port} onChange={e => set('port', e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
           {['25', '465', '587', '2525'].map(p => <option key={p}>{p}</option>)}
         </select>
       </div>
@@ -83,14 +83,14 @@ function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
         <p className="text-[11px] text-blue-600 font-medium">IMAP settings — needed for reply detection. Auto-filled from your SMTP host.</p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Host</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Host</label>
             <input placeholder="imap.titan.email" value={form.imapHost} onChange={e => set('imapHost', e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Port</label>
             <select value={form.imapPort} onChange={e => set('imapPort', e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
               {['993', '143'].map(p => <option key={p}>{p}</option>)}
             </select>
           </div>
@@ -98,7 +98,7 @@ function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
       </div>
 
       <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
+        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
         <button disabled={!valid || connecting} onClick={() => {
           const extra: Record<string, string> = { smtp_host: form.host, smtp_port: form.port, smtp_user: form.user, smtp_pass: form.pass };
           if (form.imapHost) { extra.imap_host = form.imapHost; extra.imap_port = form.imapPort; }
@@ -120,48 +120,48 @@ function ImapForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
   const valid = form.email && form.imapHost && form.smtpHost && form.pass;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 mb-2">Works with Titan, Zoho, Yahoo, Fastmail, and most providers. Enables both sending and reply detection. Not for Gmail — use OAuth above.</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Works with Titan, Zoho, Yahoo, Fastmail, and most providers. Enables both sending and reply detection. Not for Gmail — use OAuth above.</p>
       {[
         { label: 'Email Address', key: 'email', placeholder: 'you@yourprovider.com', type: 'email' },
         { label: 'Password', key: 'pass', placeholder: '••••••••', type: 'password' },
       ].map(f => (
         <div key={f.key}>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
           <input type={f.type} placeholder={f.placeholder} value={form[f.key as keyof typeof form]}
             onChange={e => set(f.key as keyof typeof form, e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
         </div>
       ))}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Host</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Host</label>
           <input placeholder="imap.yourprovider.com" value={form.imapHost} onChange={e => set('imapHost', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Port</label>
           <select value={form.imapPort} onChange={e => set('imapPort', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
             {['993', '143'].map(p => <option key={p}>{p}</option>)}
           </select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Host</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Host</label>
           <input placeholder="smtp.yourprovider.com" value={form.smtpHost} onChange={e => set('smtpHost', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Port</label>
           <select value={form.smtpPort} onChange={e => set('smtpPort', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
             {['465', '587', '25'].map(p => <option key={p}>{p}</option>)}
           </select>
         </div>
       </div>
       <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
+        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
         <button disabled={!valid || connecting} onClick={() => onConnect(form.email, { smtp_host: form.smtpHost, smtp_port: form.smtpPort, smtp_user: form.email, smtp_pass: form.pass, imap_host: form.imapHost, imap_port: form.imapPort })}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
           {connecting ? (
@@ -193,13 +193,13 @@ function GmailAppForm({ onBack, onConnect, connecting }: { onBack: () => void; o
         { label: 'App Password (16 chars)', ph: 'xxxx xxxx xxxx xxxx', val: appPass, set: setAppPass, type: 'text' },
       ].map(f => (
         <div key={f.label}>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
           <input type={f.type} placeholder={f.ph} value={f.val} onChange={e => f.set(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
         </div>
       ))}
       <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
+        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
         <button disabled={!valid || connecting} onClick={() => onConnect(email, appPass.replace(/\s/g, ''))}
           className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
           {connecting ? (
@@ -291,17 +291,17 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900">Edit Credentials</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">Edit Credentials</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
         <div className="p-6 space-y-3">
-          {loading && <p className="text-sm text-gray-400 text-center py-4">Loading…</p>}
+          {loading && <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Loading…</p>}
           {!loading && creds && (
             <>
-              <div className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-100 rounded-xl px-3 py-2">
                 {creds.email} — <span className="capitalize">{creds.type}</span>
               </div>
 
@@ -311,7 +311,7 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
 
               {creds.type === 'gmail-oauth' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-gray-500">OAuth credentials are managed by Google. If this account shows an error, use the Re-auth button on the accounts list.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-500">OAuth credentials are managed by Google. If this account shows an error, use the Re-auth button on the accounts list.</p>
                   <a href="/api/email-accounts/oauth/google"
                     className="block w-full text-center py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors">
                     Re-authorise with Google
@@ -321,11 +321,11 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
 
               {creds.type === 'gmail-app' && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">New App Password (16 chars)</label>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">New App Password (16 chars)</label>
                   <input type="text" placeholder="xxxx xxxx xxxx xxxx"
                     value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value.replace(/\s/g, ''))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
-                  <p className="text-[11px] text-gray-400 mt-1">IMAP/SMTP servers are set automatically for Gmail.</p>
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">IMAP/SMTP servers are set automatically for Gmail.</p>
                 </div>
               )}
 
@@ -336,31 +336,31 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
                     { label: 'SMTP Host', key: 'smtp_host' as const, ph: 'smtp.titan.email' },
                   ].map(f => (
                     <div key={f.key}>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
                       <input placeholder={f.ph} value={String(creds[f.key] || '')} onChange={e => set(f.key, e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Port</label>
                       <select value={String(creds.imap_port || 993)} onChange={e => set('imap_port', e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                         {['993', '143'].map(p => <option key={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Port</label>
                       <select value={String(creds.smtp_port || 465)} onChange={e => set('smtp_port', e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                         {['465', '587', '25'].map(p => <option key={p}>{p}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Password</label>
                     <input type="password" placeholder="••••••••" value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                   </div>
                 </>
               )}
@@ -372,23 +372,23 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
                     { label: 'SMTP Username', key: 'smtp_user' as const, ph: 'Same as email usually' },
                   ].map(f => (
                     <div key={f.key}>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{f.label}</label>
                       <input placeholder={f.ph} value={String(creds[f.key] || '')} onChange={e => set(f.key, e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Port</label>
                       <select value={String(creds.smtp_port || 587)} onChange={e => set('smtp_port', e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                         {['587', '465', '25', '2525'].map(p => <option key={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Password</label>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Password</label>
                       <input type="password" placeholder="••••••••" value={creds.smtp_pass || ''} onChange={e => set('smtp_pass', e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                     </div>
                   </div>
                   <button type="button" onClick={() => setShowImap(v => !v)}
@@ -403,14 +403,14 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
                       <p className="text-[11px] text-blue-600">Titan: imap.titan.email:993 · Zoho: imap.zoho.com:993</p>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Host</label>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Host</label>
                           <input placeholder="imap.titan.email" value={creds.imap_host || ''} onChange={e => set('imap_host', e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1">IMAP Port</label>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Port</label>
                           <select value={String(creds.imap_port || 993)} onChange={e => set('imap_port', e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                             {['993', '143'].map(p => <option key={p}>{p}</option>)}
                           </select>
                         </div>
@@ -422,7 +422,7 @@ function EditCredentialsModal({ accountId, onClose, onSaved }: {
 
               {creds.type !== 'gmail-oauth' && (
                 <div className="flex gap-2 pt-2">
-                  <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                   <button disabled={saving} onClick={save}
                     className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
                     {saving ? <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Saving & Testing…</> : 'Save & Test'}
@@ -483,7 +483,7 @@ const CONNECT_OPTIONS = [
     desc: 'Titan, Zoho, Mailgun — add IMAP for reply detection',
     tag: null,
     icon: (
-      <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-gray-500 dark:text-gray-500 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 12h14M12 5l7 7-7 7"/>
       </svg>
     ),
@@ -597,8 +597,8 @@ export default function EmailAccountsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Email Accounts</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Connect sending accounts — rotate across multiple for better deliverability.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Email Accounts</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Connect sending accounts — rotate across multiple for better deliverability.</p>
         </div>
         <button onClick={() => setStep('choose')}
           className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 hover:bg-blue-700 transition-colors shadow-sm w-fit">
@@ -613,9 +613,9 @@ export default function EmailAccountsPage() {
           { label: 'Warming Up', value: String(warming) },
           { label: 'Avg Health Score', value: totalAccounts ? `${avgHealth}%` : '—' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+          <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">{s.label}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
           </div>
         ))}
       </div>
@@ -639,11 +639,11 @@ export default function EmailAccountsPage() {
       })()}
 
       {accounts.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
           <div className="overflow-x-auto w-full">
           <table className="w-full min-w-[760px] border-collapse">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+              <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 <th className="px-6 py-3 text-left w-[260px]"><span className="pl-11">Account</span></th>
                 <th className="px-4 py-3 text-left w-[130px]">Type</th>
                 <th className="px-4 py-3 text-left w-[100px]">Status</th>
@@ -655,15 +655,15 @@ export default function EmailAccountsPage() {
             <tbody>
           {accounts.map((acc, i) => (
             <React.Fragment key={acc.id}>
-            <tr className="border-b border-gray-100 last:border-0">
+            <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
                     {i + 1}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{acc.email}</p>
-                    <p className="text-[10px] text-gray-400 capitalize">{acc.status}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[180px]">{acc.email}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{acc.status}</p>
                   </div>
                 </div>
               </td>
@@ -675,16 +675,16 @@ export default function EmailAccountsPage() {
               <td className="px-4 py-4">
                 <div className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${acc.status === 'active' ? 'bg-emerald-400' : acc.status === 'warming' ? 'bg-amber-400' : 'bg-red-400'}`}/>
-                  <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{acc.status}</span>
                 </div>
               </td>
               <td className="px-4 py-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-14 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
                       style={{ width: `${acc.health_score || 0}%` }}/>
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{acc.health_score || 0}%</span>
                 </div>
               </td>
               {/* Today / Limit — inline-editable limit, real-time sent display */}
@@ -701,7 +701,7 @@ export default function EmailAccountsPage() {
                         <span className={`text-xs font-bold ${atLimit ? 'text-red-600' : 'text-gray-800'}`}>
                           {sent}
                         </span>
-                        <span className="text-[10px] text-gray-400">of</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">of</span>
                         {editingLimitId === acc.id ? (
                           <input
                             autoFocus
@@ -734,14 +734,14 @@ export default function EmailAccountsPage() {
                           <button
                             onClick={() => { setEditingLimitId(acc.id); setLimitDraft(String(acc.daily_limit || 50)); }}
                             title="Click to edit daily send limit"
-                            className="group flex items-center gap-0.5 text-xs font-semibold text-gray-500 hover:text-blue-600 rounded-md px-1 py-0.5 hover:bg-blue-50 transition-all">
+                            className="group flex items-center gap-0.5 text-xs font-semibold text-gray-500 dark:text-gray-500 hover:text-blue-600 rounded-md px-1 py-0.5 hover:bg-blue-50 transition-all">
                             {limit}
-                            <svg className="w-2.5 h-2.5 text-gray-300 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <svg className="w-2.5 h-2.5 text-gray-300 dark:text-gray-600 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                           </button>
                         )}
                         {atLimit && <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5 shrink-0">AT LIMIT</span>}
                       </div>
-                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${atLimit ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-blue-400'}`}
                           style={{ width: `${pct}%` }}/>
                       </div>
@@ -776,18 +776,18 @@ export default function EmailAccountsPage() {
                   </button>
                   <button onClick={() => setEditCredId(acc.id)}
                     title="Edit credentials (SMTP/IMAP host, password)"
-                    className="text-gray-300 hover:text-blue-500 transition-colors p-1">
+                    className="text-gray-300 dark:text-gray-600 hover:text-blue-500 transition-colors p-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
                   <button onClick={() => setConfirmDeleteId(acc.id)}
-                    className="text-gray-300 hover:text-red-400 transition-colors p-1">
+                    className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
                 </div>
               </td>
             </tr>
             {testResult[acc.id]?.msg && (
-              <tr className="border-b border-gray-100">
+              <tr className="border-b border-gray-100 dark:border-gray-800">
                 <td colSpan={6} className={`px-6 py-2 text-[11px] font-semibold ${testResult[acc.id].ok ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
                   {testResult[acc.id].ok ? '✓ ' : '✗ '}{testResult[acc.id].msg}
                 </td>
@@ -804,8 +804,8 @@ export default function EmailAccountsPage() {
           <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
             <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
           </div>
-          <h3 className="text-base font-bold text-gray-900 mb-2">No email accounts connected</h3>
-          <p className="text-sm text-gray-400 mb-6 max-w-sm leading-relaxed">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">No email accounts connected</h3>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6 max-w-sm leading-relaxed">
             Connect Gmail (OAuth or App Password), IMAP, or Custom SMTP. Rotate across multiple accounts for better deliverability.
           </p>
           <button onClick={() => setStep('choose')}
@@ -849,11 +849,11 @@ export default function EmailAccountsPage() {
       {step && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setStep(null)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">
                 {step === 'choose' ? 'Connect Email Account' : CONNECT_OPTIONS.find(o => o.id === step)?.name}
               </h2>
-              <button onClick={() => setStep(null)} className="text-gray-400 hover:text-gray-700 transition-colors">
+              <button onClick={() => setStep(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
@@ -866,16 +866,16 @@ export default function EmailAccountsPage() {
                 <div className="space-y-2.5">
                   {CONNECT_OPTIONS.map(opt => (
                     <button key={opt.id} onClick={() => setStep(opt.id)}
-                      className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
+                      className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
                       <span className="shrink-0">{opt.icon}</span>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-900">{opt.name}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{opt.name}</p>
                           {opt.tag && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">{opt.tag}</span>}
                         </div>
-                        <p className="text-xs text-gray-400">{opt.desc}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{opt.desc}</p>
                       </div>
-                      <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                      <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                     </button>
                   ))}
                 </div>
@@ -886,10 +886,10 @@ export default function EmailAccountsPage() {
                   <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
                     {CONNECT_OPTIONS[0].icon}
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">You'll be redirected to Google to authorise access.</p>
-                  <p className="text-xs text-gray-400 mb-6">We only request permission to send email on your behalf.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">You'll be redirected to Google to authorise access.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">We only request permission to send email on your behalf.</p>
                   <div className="flex gap-2">
-                    <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors">Back</button>
+                    <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
                     <a href="/api/email-accounts/oauth/google" target="_blank" rel="noopener noreferrer"
                       className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors text-center">
                       Connect with Google

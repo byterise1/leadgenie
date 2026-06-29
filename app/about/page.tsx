@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ const aboutFaqs = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -52,8 +52,8 @@ export default function AboutPage() {
                 { v: '42M+',   l: 'Emails delivered' },
               ].map(s => (
                 <div key={s.l}>
-                  <p className="text-4xl font-extrabold text-gray-900">{s.v}</p>
-                  <p className="mt-2 text-gray-500 font-medium">{s.l}</p>
+                  <p className="text-4xl font-extrabold text-gray-900 dark:text-white">{s.v}</p>
+                  <p className="mt-2 text-gray-500 dark:text-gray-500 font-medium">{s.l}</p>
                 </div>
               ))}
             </div>
@@ -63,9 +63,9 @@ export default function AboutPage() {
                 { title: 'Our Mission', desc: 'To make professional cold email outreach accessible to every business — from solo founders to enterprise sales teams — with tools that actually improve deliverability and drive real pipeline.' },
                 { title: 'Our Values',  desc: 'We believe in ethical outreach. We help businesses reach the right people with the right message. We actively fight spam, maintain strict acceptable use policies, and cooperate with email providers to keep the ecosystem healthy.' },
               ].map(item => (
-                <div key={item.title} className="border border-gray-100 rounded-2xl p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h2>
-                  <p className="text-gray-600 text-sm leading-relaxed">{item.desc}</p>
+                <div key={item.title} className="border border-gray-100 dark:border-gray-800 rounded-2xl p-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{item.title}</h2>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </div>

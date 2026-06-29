@@ -1,13 +1,11 @@
-'use client';
+﻿'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-
-type Attachment = { name: string; url: string };
-type ThreadMsg = { role: 'user' | 'admin'; body: string; ts: string; attachments?: Attachment[] };
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 type Ticket = {
   id: string;
+  user_id: string;
   user_email: string;
   subject: string;
   message: string;
@@ -15,268 +13,220 @@ type Ticket = {
   status: string;
   priority: string;
   admin_reply: string | null;
-  messages: ThreadMsg[] | null;
-  attachments: Attachment[] | null;
+  admin_seen_at: string | null;
+  messages: { role: string; body: string; ts: string }[] | null;
   created_at: string;
   updated_at: string;
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-emerald-50 text-emerald-700',
-  in_progress: 'bg-amber-50 text-amber-700',
-  closed: 'bg-gray-100 text-gray-500',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700',
   high: 'bg-orange-50 text-orange-700',
-  normal: 'bg-blue-50 text-blue-700',
-  low: 'bg-gray-100 text-gray-500',
+  normal: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400',
+  low: 'bg-gray-100 dark:bg-gray-800 text-gray-500',
 };
 
-function AttachmentList({ attachments }: { attachments: Attachment[] }) {
-  if (!attachments.length) return null;
-  return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {attachments.map((a, i) => (
-        <a key={i} href={a.url} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1">
-          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-          </svg>
-          {a.name}
-        </a>
-      ))}
-    </div>
-  );
+const STATUS_COLORS: Record<string, string> = {
+  open: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400',
+  in_progress: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400',
+  closed: 'bg-gray-100 dark:bg-gray-800 text-gray-500',
+};
+
+function relativeDate(d: string) {
+  const diff = Date.now() - new Date(d).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function TicketDetailPage() {
-  const params = useParams();
+function msgCount(t: Ticket) {
+  return 1 + (t.admin_reply ? 1 : 0);
+}
+
+export default function AdminSupportPage() {
   const router = useRouter();
-  const id = params?.id as string;
-
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newReply, setNewReply] = useState('');
-  const [status, setStatus] = useState('');
-  const [priority, setPriority] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
-    fetch(`/api/admin/support/${id}`)
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch('/api/admin/support')
       .then(r => r.json())
-      .then(d => {
-        if (!d.error) {
-          setTicket(d);
-          setStatus(d.status);
-          setPriority(d.priority);
-        }
-      })
+      .then(d => { if (Array.isArray(d)) setTickets(d); })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, []);
 
-  const sendReply = async () => {
-    if (!newReply.trim()) return;
-    setSaving(true);
-    setError('');
-    const res = await fetch('/api/admin/support', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, new_reply: newReply.trim(), status, priority }),
-    });
-    const data = await res.json();
-    if (data.error) { setError(data.error); setSaving(false); return; }
-    setTicket(data);
-    setStatus(data.status);
-    setPriority(data.priority);
-    setNewReply('');
-    setSaving(false);
+  useEffect(() => { load(); }, [load]);
+
+  const isUnread = (t: Ticket) => {
+    if (t.status === 'closed') return false;
+    if (!t.admin_seen_at) return true;
+    if (new Date(t.updated_at) > new Date(t.admin_seen_at)) {
+      const msgs = Array.isArray(t.messages) ? t.messages : [];
+      return msgs.length > 0 && msgs[msgs.length - 1]?.role === 'user';
+    }
+    return false;
   };
+  const unread = tickets.filter(isUnread).length;
+  const openCount = tickets.filter(t => t.status === 'open').length;
+  const waitingCount = tickets.filter(t => t.status === 'in_progress').length;
+  const resolved30d = tickets.filter(t => {
+    if (t.status !== 'closed') return false;
+    return (Date.now() - new Date(t.updated_at).getTime()) < 30 * 24 * 60 * 60 * 1000;
+  }).length;
 
-  const updateMeta = async (overrideStatus?: string) => {
-    setSaving(true);
-    setError('');
-    const res = await fetch('/api/admin/support', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: overrideStatus ?? status, priority }),
-    });
-    const data = await res.json();
-    if (data.error) { setError(data.error); setSaving(false); return; }
-    setTicket(data);
-    setStatus(data.status);
-    setPriority(data.priority);
-    setSaving(false);
-  };
-
-  const initials = (email: string) => email.charAt(0).toUpperCase();
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-  if (loading) {
-    return (
-      <main className="flex-1 p-6">
-        <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6"/>
-        <div className="h-7 w-64 bg-gray-100 rounded animate-pulse mb-4"/>
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-4 bg-gray-100 rounded animate-pulse"/>)}
-        </div>
-      </main>
-    );
-  }
-
-  if (!ticket) {
-    return (
-      <main className="flex-1 p-6">
-        <button onClick={() => router.push('/admin/support')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-          Back
-        </button>
-        <p className="text-sm text-gray-400">Ticket not found.</p>
-      </main>
-    );
-  }
-
-  // Build thread: original message first, then messages array
-  const thread: ThreadMsg[] = [];
-  const firstMsg: ThreadMsg = { role: 'user', body: ticket.message, ts: ticket.created_at };
-  if (ticket.attachments?.length) firstMsg.attachments = ticket.attachments;
-  thread.push(firstMsg);
-  const extras = Array.isArray(ticket.messages) ? ticket.messages : [];
-  for (const m of extras) {
-    if (m.role === 'user' && m.body === ticket.message) continue;
-    thread.push(m);
-  }
-  if (extras.length === 0 && ticket.admin_reply) {
-    thread.push({ role: 'admin', body: ticket.admin_reply, ts: ticket.updated_at });
-  }
+  const filtered = tickets.filter(t => {
+    if (statusFilter && t.status !== statusFilter) return false;
+    if (categoryFilter && t.category !== categoryFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!t.subject.toLowerCase().includes(q) && !t.user_email.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
-    <main className="flex-1 p-6 max-w-3xl">
-      <button onClick={() => router.push('/admin/support')}
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors mb-5">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-        </svg>
-        Support tickets
-      </button>
-
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <h1 className="text-xl font-bold text-gray-900">{ticket.subject}</h1>
-        {ticket.status === 'closed' && (
-          <button onClick={() => updateMeta('open')} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors shrink-0">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            Reopen
-          </button>
-        )}
+    <main className="flex-1 p-6 space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Support Tickets</h1>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Every ticket opened by a user. Reply, assign, close.</p>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap mb-6 text-xs">
-        <span className={`font-bold rounded-full px-2.5 py-1 ${STATUS_COLORS[ticket.status] ?? 'bg-gray-100 text-gray-500'}`}>
-          {ticket.status === 'closed' ? '• Closed' : ticket.status === 'in_progress' ? '• In Progress' : '• Open'}
-        </span>
-        <span className={`font-bold rounded-full px-2.5 py-1 uppercase ${PRIORITY_COLORS[ticket.priority] ?? PRIORITY_COLORS.normal}`}>
-          {ticket.priority}
-        </span>
-        <span className="text-gray-500">From <span className="font-semibold text-gray-700">{ticket.user_email}</span></span>
-        <span className="text-gray-300">·</span>
-        <span className="text-gray-500 capitalize">{ticket.category}</span>
-        <span className="text-gray-300">·</span>
-        <span className="text-gray-500">Opened {fmtDate(ticket.created_at)}</span>
+      {/* Stat cards — same style as admin overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-blue-500">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Unread</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{unread}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Awaiting your reply</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-emerald-500">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Open</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{openCount}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Active threads</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-amber-500">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Waiting on User</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{waitingCount}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">They have to reply</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 border-t-2 border-t-violet-500">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Resolved (30d)</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{resolved30d}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Closed out</p>
+        </div>
       </div>
 
-      {/* Conversation thread */}
-      <div className="space-y-4 mb-6">
-        {thread.map((msg, i) => msg.role === 'user' ? (
-          <div key={i} className="flex gap-3 items-start">
-            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-bold text-gray-600">
-              {initials(ticket.user_email)}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-sm font-semibold text-gray-700">{ticket.user_email}</span>
-                <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search subject or user..."
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">STATUS: All</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+          className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">CATEGORY: All</option>
+          <option value="billing">Billing</option>
+          <option value="technical">Technical</option>
+          <option value="general">General</option>
+          <option value="account">Account</option>
+        </select>
+        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 shrink-0">{filtered.length} of {tickets.length}</span>
+      </div>
+
+      {/* Ticket list */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        {loading ? (
+          <div className="divide-y divide-gray-50 dark:divide-gray-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-5 py-4 flex items-center gap-4">
+                <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full animate-pulse shrink-0"/>
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/2"/>
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/3"/>
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-5 w-14 bg-gray-100 dark:bg-gray-800 rounded-full animate-pulse"/>
+                  <div className="h-5 w-14 bg-gray-100 dark:bg-gray-800 rounded-full animate-pulse"/>
+                </div>
               </div>
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>
-              </div>
-              {msg.attachments?.length ? <AttachmentList attachments={msg.attachments} /> : null}
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center">
+            <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300 dark:text-gray-600 dark:text-gray-300 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
             </div>
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-500 dark:text-gray-500 dark:text-gray-500">No tickets found</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">All caught up!</p>
           </div>
         ) : (
-          <div key={i} className="flex gap-3 items-start flex-row-reverse">
-            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-sm font-bold text-blue-600">A</div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1.5 justify-end">
-                <span className="text-xs text-gray-400">{fmtDate(msg.ts)}</span>
-                <span className="text-sm font-semibold text-gray-700">Admin · Leads Genie</span>
+          <div className="divide-y divide-gray-50 dark:divide-gray-800">
+            {filtered.map(t => (
+              <div key={t.id} onClick={() => {
+                  setTickets(prev => prev.map(x => x.id === t.id ? { ...x, admin_seen_at: new Date().toISOString() } : x));
+                  router.push(`/admin/support/${t.id}`);
+                }}
+                className={`px-5 py-4 flex items-center gap-4 hover:bg-gray-50 dark:bg-gray-800 cursor-pointer transition-colors group ${isUnread(t) ? 'bg-blue-50/30' : ''}`}>
+                {/* Unread dot + icon */}
+                <div className="relative shrink-0">
+                  {isUnread(t) && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white z-10"/>
+                  )}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUnread(t) ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <svg className={`w-4 h-4 ${isUnread(t) ? 'text-blue-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm truncate ${isUnread(t) ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>{t.subject}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[160px]">{t.user_email}</span>
+                    <span className="text-gray-200 text-xs">·</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 capitalize">{t.category}</span>
+                    <span className="text-gray-200 text-xs">·</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{msgCount(t)} message{msgCount(t) !== 1 ? 's' : ''}</span>
+                    <span className="text-gray-200 text-xs">·</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{relativeDate(t.created_at)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 uppercase ${PRIORITY_COLORS[t.priority] ?? PRIORITY_COLORS.normal}`}>
+                    {t.priority}
+                  </span>
+                  <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${STATUS_COLORS[t.status] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                    {t.status === 'in_progress' ? 'In Progress' : t.status === 'closed' ? '• Closed' : '• Open'}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 dark:text-gray-300 group-hover:text-gray-500 dark:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
               </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl rounded-tr-none px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.body}</p>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
-
-      {ticket.status === 'closed' ? (
-        <div className="text-center py-5 border-t border-gray-100 text-sm text-gray-400">
-          This ticket is closed.{' '}
-          <button onClick={() => updateMeta('open')} className="text-blue-600 font-semibold hover:text-blue-700">
-            Reopen
-          </button>{' '}
-          to send another reply.
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Status</label>
-              <select value={status} onChange={e => setStatus(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Priority</label>
-              <select value={priority} onChange={e => setPriority(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Send Reply</label>
-            <textarea value={newReply} onChange={e => setNewReply(e.target.value)} rows={4}
-              placeholder="Type your reply to the user… (each send is a new message)"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-          </div>
-
-          {error && <p className="text-xs text-red-500">{error}</p>}
-
-          <div className="flex items-center justify-between gap-3">
-            <button onClick={() => updateMeta()} disabled={saving}
-              className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
-              {saving ? 'Saving…' : 'Update Status'}
-            </button>
-            <button onClick={sendReply} disabled={saving || !newReply.trim()}
-              className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Sending…' : 'Send Reply'}
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

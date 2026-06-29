@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -277,7 +277,7 @@ function BrandPill({ brand }: { brand: Brand }) {
 
 function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   return (
-    <div className="flex-shrink-0 w-[85vw] sm:w-[420px] snap-center bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5" style={{ scrollSnapAlign: 'center' }}>
+    <div className="flex-shrink-0 w-[85vw] sm:w-[420px] snap-center bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col gap-5" style={{ scrollSnapAlign: 'center' }}>
       <svg className="w-8 h-8 text-blue-100" fill="currentColor" viewBox="0 0 32 32">
         <path d="M10 8C6.13 8 3 11.13 3 15v9h9v-9H6c0-2.21 1.79-4 4-4V8zm14 0c-3.87 0-7 3.13-7 7v9h9v-9h-6c0-2.21 1.79-4 4-4V8z"/>
       </svg>
@@ -288,12 +288,12 @@ function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
           </svg>
         ))}
       </div>
-      <p className="text-gray-700 text-base leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
-      <div className="flex items-center gap-3.5 pt-5 border-t border-gray-100">
+      <p className="text-gray-700 dark:text-gray-200 text-base leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+      <div className="flex items-center gap-3.5 pt-5 border-t border-gray-100 dark:border-gray-800">
         <PersonAvatar idx={t.avatarIdx} size={50} />
         <div className="flex-1 min-w-0">
-          <p className="font-extrabold text-gray-900 text-sm">{t.name}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{t.role}</p>
+          <p className="font-extrabold text-gray-900 dark:text-white text-sm">{t.name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{t.role}</p>
         </div>
         <div className="shrink-0 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5 whitespace-nowrap">{t.company}</div>
       </div>
@@ -331,7 +331,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
 
       {/* ------------------------------------------
@@ -372,13 +372,13 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
             className="mt-9 mx-auto max-w-[600px]">
             <div className="flex items-center bg-white rounded-2xl shadow-2xl px-5 py-3.5 gap-3 ring-1 ring-white/10">
-              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input type="text" value={query} onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="Ask AI to write your first cold email campaign..."
-                className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder:text-gray-400 font-medium" />
+                className="flex-1 text-sm text-gray-700 dark:text-gray-200 outline-none bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 font-medium" />
               <button onClick={handleSearch} disabled={loading}
                 className="shrink-0 h-9 w-9 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 shadow-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -393,24 +393,24 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="mt-4 mx-auto max-w-[600px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden text-left">
               {error && <div className="flex items-center gap-3 px-5 py-4"><span className="text-red-500 shrink-0"><IcWarning c="w-5 h-5" /></span><p className="text-sm text-red-600 font-medium">{error}</p></div>}
-              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 font-medium">Leads Genie AI is thinking...</p></div>}
+              {loading && <div className="flex items-center gap-3 px-5 py-4"><div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin shrink-0" /><p className="text-sm text-gray-500 dark:text-gray-500 font-medium">Leads Genie AI is thinking...</p></div>}
               {result?.type === 'answer' && <>
                 <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2"><span className="text-indigo-600"><IcRobot c="w-4 h-4" /></span><p className="text-xs font-bold text-indigo-700">Leads Genie AI</p></div>
-                <div className="px-5 py-4"><p className="text-sm text-gray-700 leading-relaxed">{result.answer}</p></div>
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
-                  <p className="text-xs text-gray-400">Want to see it in action?</p>
+                <div className="px-5 py-4"><p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{result.answer}</p></div>
+                <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Want to see it in action?</p>
                   <Link href="/signup" className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl px-4 py-2 hover:bg-blue-700 transition-colors shrink-0">Try Leads Genie Free <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></Link>
                 </div>
               </>}
               {result?.type === 'email' && <>
                 <div className="px-5 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2"><span className="text-blue-600"><IcSparkles c="w-4 h-4" /></span><p className="text-xs font-bold text-blue-700">Your email is ready</p></div>
                 <div className="px-5 py-4 space-y-2.5">
-                  <div className="flex items-start gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">To</span><span className="text-xs text-gray-700 font-medium">{result.to}</span></div>
-                  <div className="flex items-start gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider w-14 shrink-0 mt-0.5">Subject</span><span className="text-xs text-gray-900 font-semibold">{result.subject}</span></div>
-                  <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 leading-relaxed whitespace-pre-line">{result.body}</div>
+                  <div className="flex items-start gap-2"><span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-14 shrink-0 mt-0.5">To</span><span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{result.to}</span></div>
+                  <div className="flex items-start gap-2"><span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-14 shrink-0 mt-0.5">Subject</span><span className="text-xs text-gray-900 dark:text-white font-semibold">{result.subject}</span></div>
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{result.body}</div>
                 </div>
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
-                  <p className="text-xs text-gray-400">No credit card required</p>
+                <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">No credit card required</p>
                   <button onClick={() => {
                     if (result?.type === 'email') {
                       try { localStorage.setItem('prefill_template', JSON.stringify({ subject: result.subject, body: result.body })); } catch {}
@@ -447,9 +447,9 @@ export default function HomePage() {
       {/* ------------------------------------------
           TRUSTED BY — continuous marquee, no pause
       ------------------------------------------ */}
-      <section className="bg-white border-b border-gray-100 py-16 overflow-hidden">
+      <section className="bg-white border-b border-gray-100 dark:border-gray-800 py-16 overflow-hidden">
         <div className="container text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Trusted by companies worldwide</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Trusted by companies worldwide</p>
         </div>
         <div className="relative mt-10 pb-2" style={maskFade}>
           <div className="flex w-max animate-marquee">
@@ -461,7 +461,7 @@ export default function HomePage() {
       {/* ------------------------------------------
           STATS — horizontal icon + number
       ------------------------------------------ */}
-      <section className="bg-white border-b border-gray-100">
+      <section className="bg-white border-b border-gray-100 dark:border-gray-800">
         <div className="container px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 sm:grid-cols-4">
             {([
@@ -471,8 +471,8 @@ export default function HomePage() {
               { v: '4.9/5',  l: 'G2 Rating',        sub: 'From 1,200+ reviews',     icon: <IcStar c="w-5 h-5" />,  color: '#f59e0b', bg: 'bg-amber-50'   },
             ] as const).map((s, i) => {
               const borderCls = [
-                'border-r border-b border-gray-100 sm:border-b-0',
-                'border-b border-gray-100 sm:border-b-0 sm:border-r',
+                'border-r border-b border-gray-100 dark:border-gray-800 sm:border-b-0',
+                'border-b border-gray-100 dark:border-gray-800 sm:border-b-0 sm:border-r',
                 'border-r border-gray-100',
                 '',
               ][i];
@@ -486,8 +486,8 @@ export default function HomePage() {
                   </div>
                   <div className="text-left min-w-0">
                     <p className="text-xl sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                    <p className="text-[11px] sm:text-xs font-bold text-gray-700 mt-0.5 leading-tight">{s.l}</p>
-                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium leading-tight hidden sm:block">{s.sub}</p>
+                    <p className="text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5 leading-tight">{s.l}</p>
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-gray-500 font-medium leading-tight hidden sm:block">{s.sub}</p>
                   </div>
                 </motion.div>
               );
@@ -509,10 +509,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}
               className="flex-none lg:w-[42%] text-center lg:text-left">
               <SectionBadge icon={<IcMail />} label="Email Accounts" />
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
                 Add Unlimited Sending Accounts
               </h2>
-              <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
+              <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg leading-relaxed">
                 Connect Gmail, Outlook, and custom SMTP accounts — as many as you need.
                 Rotate between senders automatically to stay under daily limits and
                 protect your domain reputation.
@@ -529,15 +529,15 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
-                  <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                  <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50">
                     <div className="flex items-center gap-2.5">
                       <IcAtSign c="w-4 h-4 text-blue-500" />
-                      <p className="text-sm font-bold text-gray-900">Email Accounts</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Email Accounts</p>
                       <span className="text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">5 active</span>
                     </div>
                     <button className="flex items-center gap-1.5 text-xs font-bold bg-blue-600 text-white rounded-xl px-3.5 py-2">+ Add Account</button>
                   </div>
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-gray-50 dark:divide-gray-800">
                     {[
                       { email: 'alex@company.io',    provider: 'Gmail',   health: 98, status: 'Active',  sends: '142/200', ai: 0 },
                       { email: 'sarah@outreach.co',  provider: 'Outlook', health: 95, status: 'Active',  sends: '87/200',  ai: 1 },
@@ -548,17 +548,17 @@ export default function HomePage() {
                       <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 transition-colors">
                         <PersonAvatar idx={acc.ai} size={36} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
-                          <p className="text-xs text-gray-400">{acc.provider}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.email}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">{acc.provider}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="w-14 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div className="w-14 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                             <div className="h-full rounded-full" style={{ width: `${acc.health}%`, background: acc.health > 80 ? '#22c55e' : acc.health > 50 ? '#f59e0b' : '#ef4444' }} />
                           </div>
-                          <span className="text-xs text-gray-500 w-7 text-right font-medium">{acc.health}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-500 w-7 text-right font-medium">{acc.health}</span>
                         </div>
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${acc.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{acc.status}</span>
-                        <span className="text-xs text-gray-400 shrink-0 hidden sm:block font-medium">{acc.sends}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 hidden sm:block font-medium">{acc.sends}</span>
                       </div>
                     ))}
                   </div>
@@ -573,7 +573,7 @@ export default function HomePage() {
           2. EMAIL WARMUP
           Layout: card LEFT — text RIGHT
       ------------------------------------------ */}
-      <section id="warmup" className="bg-gray-50 py-24">
+      <section id="warmup" className="bg-gray-50 dark:bg-gray-800 py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
 
@@ -582,10 +582,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}
               className="flex-none lg:w-[42%] text-center lg:text-left">
               <SectionBadge icon={<IcFire />} label="Email Warmup" />
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
                 Land in the Inbox. Every Time.
               </h2>
-              <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
+              <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg leading-relaxed">
                 Our AI warmup network automatically builds your sender reputation by sending, opening,
                 and replying to emails on your behalf — 24/7 in the background, before you launch
                 a single cold email campaign.
@@ -602,10 +602,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
               <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50">
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Warmup Dashboard</p>
-                    <p className="text-xs text-gray-400 mt-0.5">alex@company.io — Running 18 days</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Warmup Dashboard</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">alex@company.io — Running 18 days</p>
                   </div>
                   <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Warming Up
@@ -620,17 +620,17 @@ export default function HomePage() {
                     ].map(s => (
                       <div key={s.l} className={`rounded-2xl p-2 sm:p-4 border text-center ${s.bg}`}>
                         <p className={`text-sm sm:text-xl font-extrabold ${s.color}`}>{s.v}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-semibold leading-tight">{s.l}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1 font-semibold leading-tight">{s.l}</p>
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inbox Score — Last 30 Days</p>
+                  <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Inbox Score — Last 30 Days</p>
                   <div className="h-20 flex items-end gap-0.5">
                     {[42,51,58,63,60,69,72,75,78,82,80,85,83,88,86,91,89,93,90,95,92,96,94,97,95,97,96,98,97,98].map((h, i) => (
                       <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `rgba(59,130,246,${0.18 + i * 0.028})` }} />
                     ))}
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                     <span>Day 1 — 42%</span>
                     <span className="text-green-600 font-bold">Today — 98% ✓</span>
                   </div>
@@ -655,10 +655,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}
               className="flex-none lg:w-[42%] text-center lg:text-left">
               <SectionBadge icon={<IcRocket />} label="Campaigns" />
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
                 Launch Campaigns That Get Replies
               </h2>
-              <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
+              <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg leading-relaxed">
                 Build multi-step email sequences with AI personalisation, smart follow-ups,
                 and inbox rotation. Schedule, A/B test, pause, or scale — all from one dashboard.
               </p>
@@ -675,10 +675,10 @@ export default function HomePage() {
               className="flex-1 w-full">
               <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-5 sm:p-6">
                 <div className="grid sm:grid-cols-2 gap-4 text-left">
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-2 mb-3">
                       <IcRocket c="w-4 h-4 text-blue-600" />
-                      <p className="text-xs font-bold text-gray-900">Campaign: SaaS Founders Q3</p>
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">Campaign: SaaS Founders Q3</p>
                     </div>
                     <div className="space-y-2">
                       {[
@@ -687,13 +687,13 @@ export default function HomePage() {
                         { step: 3, day: 'Day 7',  label: 'Follow-up #2',   open: '29%' },
                         { step: 4, day: 'Day 14', label: 'Break-up Email', open: '52%', reply: '18%' },
                       ].map(s => (
-                        <div key={s.step} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50/50 transition-colors">
+                        <div key={s.step} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50/50 transition-colors">
                           <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-black flex items-center justify-center shrink-0">{s.step}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-gray-800">{s.label}</p>
-                            <p className="text-[10px] text-gray-400">{s.day}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">{s.day}</p>
                           </div>
-                          <div className="text-right shrink-0 text-[10px] text-gray-400">
+                          <div className="text-right shrink-0 text-[10px] text-gray-400 dark:text-gray-500">
                             <span className="font-bold text-green-600">{s.open}</span>
                             {s.reply && <span className="ml-1 font-bold text-blue-600">{s.reply}</span>}
                           </div>
@@ -701,17 +701,17 @@ export default function HomePage() {
                       ))}
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-3">AI Preview</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold mb-3">AI Preview</p>
                     <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
                         <PersonAvatar idx={0} size={24} />
-                        <span className="text-xs text-gray-700 font-semibold truncate">John Doe — VP Sales, Acme Corp</span>
+                        <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold truncate">John Doe — VP Sales, Acme Corp</span>
                       </div>
                       <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 text-xs text-gray-800 font-semibold">
                         Quick question about Acme&apos;s outbound stack
                       </div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-3 text-xs text-gray-700 leading-relaxed">
+                      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-3 text-xs text-gray-700 dark:text-gray-200 leading-relaxed">
                         Hi John,<br /><br />I noticed Acme Corp just expanded into enterprise — congrats on the Series B!<br /><br />We help VP Sales teams book 30–50 meetings/month...
                       </div>
                       <button className="w-full bg-blue-600 text-white text-xs font-bold rounded-xl py-2.5 hover:bg-blue-700 transition-colors">Send Campaign</button>
@@ -729,7 +729,7 @@ export default function HomePage() {
           4. UNIBOX
           Layout: card LEFT — text RIGHT
       ------------------------------------------ */}
-      <section id="unibox" className="bg-gray-50 py-24">
+      <section id="unibox" className="bg-gray-50 dark:bg-gray-800 py-24">
         <div className="container">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
 
@@ -738,10 +738,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}
               className="flex-none lg:w-[42%] text-center lg:text-left">
               <SectionBadge icon={<IcInbox />} label="Unibox" />
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
                 Every Reply. One Smart Inbox.
               </h2>
-              <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
+              <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg leading-relaxed">
                 Stop switching between 20 different email accounts. Leads Genie&apos;s Unibox pulls every
                 reply into one place — filter by campaign, label by intent, assign to teammates,
                 and close deals faster.
@@ -758,14 +758,14 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
-                  <div className="flex flex-col gap-2 px-4 sm:px-5 pt-3 pb-2.5 sm:pt-3.5 sm:pb-3.5 border-b border-gray-100 bg-gray-50/70 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
+                  <div className="flex flex-col gap-2 px-4 sm:px-5 pt-3 pb-2.5 sm:pt-3.5 sm:pb-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/70 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
                     <div className="flex items-center gap-2.5">
-                      <p className="text-sm font-bold text-gray-900">Unibox</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Unibox</p>
                       <span className="text-xs font-black bg-blue-600 text-white rounded-full px-2.5 py-0.5">8 new</span>
                     </div>
                     <div className="flex items-center gap-1">
                       {['All','Interested','Not Now','DNC'].map((f, i) => (
-                        <button key={f} className={`text-[10px] sm:text-[11px] font-bold rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 ${i === 0 ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{f}</button>
+                        <button key={f} className={`text-[10px] sm:text-[11px] font-bold rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 ${i === 0 ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-500 hover:bg-gray-100'}`}>{f}</button>
                       ))}
                     </div>
                   </div>
@@ -781,14 +781,14 @@ export default function HomePage() {
                       <PersonAvatar idx={mail.idx} size={38} />
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-sm text-gray-900 ${!mail.read ? 'font-extrabold' : 'font-semibold'}`}>{mail.from}</span>
-                          <span className="text-xs text-gray-400">— {mail.co}</span>
+                          <span className={`text-sm text-gray-900 dark:text-white ${!mail.read ? 'font-extrabold' : 'font-semibold'}`}>{mail.from}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">— {mail.co}</span>
                           {!mail.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
                         </div>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{mail.preview}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-0.5">{mail.preview}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="text-[10px] text-gray-400">{mail.time} ago</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{mail.time} ago</span>
                         <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${mail.tagColor}`}>{mail.tag}</span>
                       </div>
                     </div>
@@ -813,10 +813,10 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}
               className="flex-none lg:w-[42%] text-center lg:text-left">
               <SectionBadge icon={<IcBarChart />} label="Analytics" />
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
                 Know Exactly What&apos;s Working
               </h2>
-              <p className="mt-4 text-gray-500 text-base sm:text-lg leading-relaxed">
+              <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg leading-relaxed">
                 Track opens, clicks, replies, bounces, and unsubscribes in real-time. See which
                 subject lines and follow-up steps drive the most meetings — then double down
                 on what works.
@@ -831,11 +831,11 @@ export default function HomePage() {
             {/* Card */}
             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
-              className="flex-1 w-full bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden border border-gray-100">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
+              className="flex-1 w-full bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden border border-gray-100 dark:border-gray-800">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/60">
                 <div>
-                  <p className="text-sm font-bold text-gray-900">Campaign Analytics</p>
-                  <p className="text-xs text-gray-400 mt-0.5">SaaS Founders Q3 — Last 30 days</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Campaign Analytics</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SaaS Founders Q3 — Last 30 days</p>
                 </div>
                 <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full px-3 py-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />Live
@@ -849,9 +849,9 @@ export default function HomePage() {
                     { l: 'Clicked', v: '14.7%', color: 'text-indigo-600' },
                     { l: 'Replied', v: '18.4%', color: 'text-green-600'  },
                   ].map(m => (
-                    <div key={m.l} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                    <div key={m.l} className="bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-center">
                       <p className={`text-lg font-extrabold ${m.color}`}>{m.v}</p>
-                      <p className="text-xs text-gray-500 font-bold">{m.l}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 font-bold">{m.l}</p>
                     </div>
                   ))}
                 </div>
@@ -860,7 +860,7 @@ export default function HomePage() {
                     <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `rgba(59,130,246,${0.18 + i * 0.028})` }} />
                   ))}
                 </div>
-                <div className="border-t border-gray-100 pt-3 space-y-2">
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
                   {[
                     { icon: <IcMailOpen c="w-3 h-3" />, event: 'Email opened',   who: 'Sarah Chen', time: '2s',  color: 'text-blue-500',   idx: 0 },
                     { icon: <IcCursor c="w-3 h-3" />,   event: 'Link clicked',   who: 'James Park', time: '47s', color: 'text-indigo-500', idx: 1 },
@@ -870,10 +870,10 @@ export default function HomePage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <PersonAvatar idx={a.idx} size={24} />
                         <span className={`shrink-0 ${a.color}`}>{a.icon}</span>
-                        <span className="text-xs font-bold text-gray-700 whitespace-nowrap">{a.event}</span>
-                        <span className="text-xs text-gray-400 truncate">— {a.who}</span>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap">{a.event}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 truncate">— {a.who}</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 shrink-0">{a.time} ago</span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{a.time} ago</span>
                     </div>
                   ))}
                 </div>
@@ -887,15 +887,15 @@ export default function HomePage() {
       {/* ------------------------------------------
           6. AI WORKFLOWS
       ------------------------------------------ */}
-      <section id="workflows" className="bg-gray-50 py-24">
+      <section id="workflows" className="bg-gray-50 dark:bg-gray-800 py-24">
         <div className="container text-center">
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcSparkles />} label="AI Workflows" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
               Automate Every Follow-Up
             </h2>
-            <p className="mt-4 text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+            <p className="mt-4 text-gray-500 dark:text-gray-500 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
               Set your triggers once — Leads Genie automatically handles follow-ups, tags leads by
               intent, and routes hot prospects to your team. No missed opportunities, ever.
             </p>
@@ -907,22 +907,22 @@ export default function HomePage() {
           </motion.div>
           <div className="mt-14 grid sm:grid-cols-3 gap-6 max-w-[1100px] mx-auto">
             {[
-              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Leads Genie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 text-blue-700'   },
+              { icon: <IcMailOpen c="w-7 h-7" />, iconRing: 'border-2 border-blue-200',   iconColor: 'text-blue-600',   when: 'Lead Opens Your Email',    then: 'Auto-sends personalised follow-up in 2 days',         desc: 'The moment a prospect opens your email, Leads Genie queues a personalised follow-up automatically — no manual work, no missed timing.', result: '+24% reply rate',       resultBg: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400'   },
               { icon: <IcChat c="w-7 h-7" />,    iconRing: 'border-2 border-green-200',  iconColor: 'text-green-600',  when: 'Lead Replies Positively',  then: 'Tagged as Interested + routed to Unibox',             desc: "When a prospect replies with interest, Leads Genie auto-tags them, removes them from the sequence, and surfaces them in your Unibox for immediate action.", result: 'Zero missed hot leads', resultBg: 'bg-green-50 text-green-700' },
               { icon: <IcCalendar c="w-7 h-7" />, iconRing: 'border-2 border-purple-200', iconColor: 'text-purple-600', when: 'Meeting Gets Booked',       then: 'Removed from all sequences + CRM synced',             desc: 'Once a meeting is booked, Leads Genie instantly stops all outreach, syncs to your CRM, and notifies your team — zero duplicate messages.', result: 'No duplicate outreach', resultBg: 'bg-purple-50 text-purple-700' },
             ].map((wf, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.13 }}
-                className="relative bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group text-left">
+                className="relative bg-white rounded-3xl p-8 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group text-left">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${wf.iconRing} ${wf.iconColor}`}>{wf.icon}</div>
                 <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${wf.iconColor}`}>TRIGGER</p>
-                <h3 className="text-lg font-extrabold text-gray-900 leading-tight mb-2">{wf.when}</h3>
+                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white leading-tight mb-2">{wf.when}</h3>
                 <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-                  <p className="text-xs text-gray-400 font-semibold">{wf.then}</p>
+                  <svg className="w-3 h-3 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">{wf.then}</p>
                 </div>
-                <p className="text-sm text-gray-500 leading-relaxed">{wf.desc}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 leading-relaxed">{wf.desc}</p>
                 <div className={`mt-6 inline-flex items-center gap-2 text-xs font-black px-4 py-2 rounded-full ${wf.resultBg}`}>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                   {wf.result}
@@ -941,10 +941,10 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6 }}>
             <SectionBadge icon={<IcStar />} label="Testimonials" />
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
               Real Results. Real Customers.
             </h2>
-            <p className="mt-3 text-gray-400 text-base font-medium">
+            <p className="mt-3 text-gray-400 dark:text-gray-500 text-base font-medium">
               Trusted by 8,500+ sales teams, agencies, and SaaS founders worldwide.
             </p>
           </motion.div>
@@ -959,7 +959,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-400 font-medium select-none">
+        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-500 font-medium select-none">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
           Scroll to see all reviews
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>

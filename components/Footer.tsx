@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -55,12 +55,12 @@ const legal = [
 function FooterCol({ heading, links }: { heading: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-900 mb-5">{heading}</h3>
+      <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-900 dark:text-white mb-5">{heading}</h3>
       <ul className="space-y-3">
         {links.map(item => (
           <li key={item.label}>
             <Link href={item.href}
-              className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors duration-150">
+              className="group flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500 hover:text-blue-600 transition-colors duration-150">
               <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400">›</span>
               {item.label}
             </Link>
@@ -87,7 +87,7 @@ export function Footer() {
             <Link href="/" className="inline-flex mb-4">
               <Logo size={58} textSize="text-[16px]" textColor="text-white" />
             </Link>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-xs mb-6">
+            <p className="text-sm text-gray-400 dark:text-gray-500 leading-relaxed max-w-xs mb-6">
               The cold email outreach platform built for modern sales teams. Send smarter,
               land in more inboxes, and book more meetings — on autopilot.
             </p>
@@ -101,13 +101,13 @@ export function Footer() {
               ].map(s => (
                 <div key={s.l} className="bg-gray-900 rounded-xl p-3 text-center border border-gray-800">
                   <p className="text-sm font-extrabold text-white">{s.v}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 font-medium">{s.l}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5 font-medium">{s.l}</p>
                 </div>
               ))}
             </div>
 
             {/* Social links placeholder — add real URLs when profiles exist */}
-            <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               Follow us on X &amp; LinkedIn — coming soon
             </div>
@@ -115,12 +115,12 @@ export function Footer() {
 
           {/* Columns */}
           <div className="dark-footer">
-            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 mb-5">Product</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500 mb-5">Product</h3>
             <ul className="space-y-3">
               {product.map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
-                    className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
+                    className="group flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500 hover:text-white transition-colors duration-150">
                     <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
@@ -130,12 +130,12 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 mb-5">Solutions</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500 mb-5">Solutions</h3>
             <ul className="space-y-3">
               {solutions.map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
-                    className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
+                    className="group flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500 hover:text-white transition-colors duration-150">
                     <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
@@ -145,12 +145,12 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 mb-5">Resources</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500 mb-5">Resources</h3>
             <ul className="space-y-3">
               {resources.map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
-                    className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
+                    className="group flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500 hover:text-white transition-colors duration-150">
                     <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
@@ -160,12 +160,12 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 mb-5">Company</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500 mb-5">Company</h3>
             <ul className="space-y-3">
               {company.map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
-                    className="group flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors duration-150">
+                    className="group flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500 hover:text-white transition-colors duration-150">
                     <span className="w-0 group-hover:w-3 overflow-hidden transition-all duration-200 text-blue-400 shrink-0">›</span>
                     {item.label}
                   </Link>
@@ -177,14 +177,14 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-600 order-2 sm:order-1">
+          <p className="text-xs text-gray-600 dark:text-gray-300 order-2 sm:order-1">
             © 2026 Leads Genie, Inc. All rights reserved. Built for cold email professionals.
           </p>
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-1 gap-y-2 order-1 sm:order-2">
             {legal.map((item, i) => (
               <span key={item.label} className="flex items-center gap-1">
                 <Link href={item.href}
-                  className="text-xs text-gray-600 hover:text-gray-300 transition-colors duration-150 px-1.5">
+                  className="text-xs text-gray-600 dark:text-gray-300 hover:text-gray-300 dark:text-gray-600 transition-colors duration-150 px-1.5">
                   {item.label}
                 </Link>
                 {i < legal.length - 1 && <span className="text-gray-800 text-xs hidden sm:inline">·</span>}

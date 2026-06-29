@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -32,7 +32,7 @@ const features = [
 
 export default function B2BSalesPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -52,20 +52,20 @@ export default function B2BSalesPage() {
           </div>
         </section>
 
-        <section className="border-b border-gray-100">
+        <section className="border-b border-gray-100 dark:border-gray-800">
           <div className="container px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 border-l border-t border-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 border-l border-t border-gray-100 dark:border-gray-800">
               {[
                 { v: '47', l: 'Avg Meetings / Month', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> },
                 { v: '18%', l: 'Avg Reply Rate', color: '#10b981', bg: '#f0fdf4', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg> },
                 { v: '3×', l: 'Faster Than Manual', color: '#8b5cf6', bg: '#f5f3ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg> },
                 { v: '$0', l: 'Extra SDR Cost', color: '#059669', bg: '#ecfdf5', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
               ].map(s => (
-                <div key={s.l} className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors border-r border-b border-gray-100">
+                <div key={s.l} className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors border-r border-b border-gray-100 dark:border-gray-800">
                   <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
                   <div className="min-w-0">
                     <p className="text-lg sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                    <p className="text-xs font-bold text-gray-700 mt-0.5 leading-tight">{s.l}</p>
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5 leading-tight">{s.l}</p>
                   </div>
                 </div>
               ))}
@@ -75,27 +75,27 @@ export default function B2BSalesPage() {
 
         <section className="py-20">
           <div className="container max-w-[1100px]">
-            <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-14">Your full outbound stack, in one place</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white text-center mb-14">Your full outbound stack, in one place</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map(f => (
-                <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
-                  <h3 className="text-base font-bold text-gray-900">{f.title}</h3>
-                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                <div key={f.title} className="border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">{f.title}</h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-gray-50 py-20">
+        <section className="bg-gray-50 dark:bg-gray-800 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — I had our first 5-step sequence running in under 20 minutes.&rdquo;</p>
+            <p className="text-xl text-gray-700 dark:text-gray-200 leading-relaxed italic">&ldquo;We booked 47 qualified meetings in our first month. The campaign builder is incredibly intuitive — I had our first 5-step sequence running in under 20 minutes.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=68" alt="Briken Bufi" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
-                <p className="text-sm font-bold text-gray-900">Briken Bufi</p>
-                <p className="text-xs text-gray-500">CEO & Co-Founder, Aella Creative Force</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Briken Bufi</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-500">CEO & Co-Founder, Aella Creative Force</p>
               </div>
             </div>
           </div>

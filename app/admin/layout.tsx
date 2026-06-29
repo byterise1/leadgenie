@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/Logo';
+import { ThemeToggle } from '@/components/ThemeProvider';
 
 const navSections = [
   {
@@ -182,17 +183,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {sidebarOpen && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setSidebarOpen(false)}/>}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white border-r border-gray-100 flex flex-col z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 shrink-0 gap-3">
+      <aside className={`fixed left-0 top-0 h-full w-[220px] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <div className="px-5 h-14 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 shrink-0 gap-3">
           <div className="flex items-center gap-3">
             <Logo size={28} textSize="text-[14px]" />
             <span className="text-[10px] font-bold bg-red-500 text-white rounded px-1.5 py-0.5 leading-tight">ADMIN</span>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors" aria-label="Close menu">
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close menu">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -202,15 +203,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
           {navSections.map(section => (
             <div key={section.label}>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1.5">{section.label}</p>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-1.5">{section.label}</p>
               {section.items.map(item => (
                 <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}>
-                  <span className={isActive(item.href) ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
+                  <span className={isActive(item.href) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}>{item.icon}</span>
                   {item.label}
                   {item.href === '/admin/support' && supportBadge > 0 && (
                     <span className="ml-auto min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
@@ -223,14 +224,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        <div className="px-3 py-3 border-t border-gray-100 shrink-0 space-y-1">
+        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-1">
+          <div className="flex items-center justify-between px-3 py-1 mb-1">
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Theme</span>
+            <ThemeToggle />
+          </div>
           <Link href="/dashboard"
-            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
+            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             Back to Dashboard
           </Link>
           <button onClick={signOut}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Sign out
           </button>
@@ -239,20 +244,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main content */}
       <div className="flex-1 md:ml-[220px] min-w-0 flex flex-col">
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3 shrink-0 sticky top-0 z-20">
-          <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-4 gap-3 shrink-0 sticky top-0 z-20">
+          <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-500"/>
-            <span className="text-sm font-bold text-gray-900">Admin Panel</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">Admin Panel</span>
           </div>
           <div className="flex-1"/>
 
           {/* Notification bell */}
           <div className="relative" ref={bellRef}>
             <button onClick={() => setShowBell(v => !v)}
-              className="relative p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              className="relative p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
               </svg>
@@ -265,9 +270,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
 
             {showBell && (
-              <div className="absolute right-0 top-11 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <p className="text-sm font-bold text-gray-900">Notifications</p>
+              <div className="absolute right-0 top-11 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Notifications</p>
                   {notifs.length > 0 && (
                     <button onClick={() => {
                       setNotifs([]);
@@ -281,30 +286,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                 </div>
                 {notifs.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
+                  <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No new notifications</div>
                 ) : (
-                  <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                  <div className="divide-y divide-gray-50 dark:divide-gray-800 max-h-72 overflow-y-auto">
                     {notifs.map(n => {
                       const isSupport = n.link?.includes('/support');
                       const isCampaign = n.link?.includes('/campaigns');
                       const category = isSupport ? 'Support' : isCampaign ? 'Campaign' : 'Notice';
-                      const categoryColor = isSupport ? 'bg-blue-100 text-blue-700' : isCampaign ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500';
+                      const categoryColor = isSupport ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400' : isCampaign ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
                       const dot = isSupport ? 'bg-blue-500' : isCampaign ? 'bg-emerald-500' : 'bg-gray-400';
                       return (
                         <button key={n.id} onClick={() => dismissNotif(n)}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors">
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                           <div className="flex items-start gap-2.5">
                             <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${dot}`}/>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${categoryColor}`}>{category}</span>
                                 {n.created_at && (
-                                  <span className="text-[10px] text-gray-400">{new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                 )}
                               </div>
-                              <p className="text-xs font-semibold text-gray-800 leading-snug">{n.message}</p>
+                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-snug">{n.message}</p>
                               {n.link && (
-                                <p className="text-[10px] text-blue-500 font-semibold mt-1">
+                                <p className="text-[10px] text-blue-500 dark:text-blue-400 font-semibold mt-1">
                                   {isSupport ? 'Open ticket →' : isCampaign ? 'View campaign →' : 'View →'}
                                 </p>
                               )}
@@ -319,7 +324,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </div>
 
-          <Link href="/dashboard" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1.5">
+          <Link href="/dashboard" className="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             User view
           </Link>

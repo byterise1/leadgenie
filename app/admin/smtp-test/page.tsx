@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef } from 'react';
 
@@ -40,7 +40,7 @@ export default function SmtpTestPage() {
 
         <div>
           <h1 className="text-lg font-bold text-white">SMTP Port 25 Test</h1>
-          <p className="text-xs text-gray-400 mt-1">Routes through Hetzner SOCKS5 (157.180.121.10:1080) → domain:25 directly</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Routes through Hetzner SOCKS5 (157.180.121.10:1080) → domain:25 directly</p>
         </div>
 
         <div className="flex gap-2">
@@ -64,7 +64,7 @@ export default function SmtpTestPage() {
         </div>
 
         {loading && (
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs text-gray-400 animate-pulse">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
             Connecting via Hetzner SOCKS5 → port 25…
           </div>
         )}
@@ -78,7 +78,7 @@ export default function SmtpTestPage() {
                                             'border-yellow-700 bg-yellow-950'
             }`}>
               <span className={verdictColor}>{result.verdict}</span>
-              <span className="ml-3 text-xs font-normal text-gray-400">{result.duration_ms}ms</span>
+              <span className="ml-3 text-xs font-normal text-gray-400 dark:text-gray-500">{result.duration_ms}ms</span>
             </div>
 
             {/* SMTP dialog */}
@@ -104,7 +104,7 @@ export default function SmtpTestPage() {
           </div>
         )}
 
-        <p className="text-[10px] text-gray-600">Temp test page — remove after verifying proxy works.</p>
+        <p className="text-[10px] text-gray-600 dark:text-gray-300 dark:text-gray-300">Temp test page — remove after verifying proxy works.</p>
       </div>
     </div>
   );

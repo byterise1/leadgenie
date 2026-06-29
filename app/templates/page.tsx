@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -112,7 +112,7 @@ function useTemplate(t: { title: string; subject: string; preview: string }) {
 
 export default function TemplatesPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -129,19 +129,19 @@ export default function TemplatesPage() {
           <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {templates.map(t => (
-                <div key={t.title} className="border border-gray-100 rounded-2xl overflow-hidden flex flex-col bg-white hover:shadow-sm transition-shadow">
+                <div key={t.title} className="border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden flex flex-col bg-white hover:shadow-sm transition-shadow">
                   <div className="p-6 border-b border-gray-50">
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${catColors[t.category]}`}>{t.category}</span>
-                      <div className="flex items-center gap-3 text-[11px] text-gray-400 font-medium">
+                      <div className="flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500 font-medium">
                         <span>Open {t.stats.open}</span>
                         <span>Reply {t.stats.reply}</span>
                       </div>
                     </div>
-                    <h2 className="text-sm font-bold text-gray-900">{t.title}</h2>
+                    <h2 className="text-sm font-bold text-gray-900 dark:text-white">{t.title}</h2>
                   </div>
-                  <div className="p-6 bg-gray-50 flex-1">
-                    <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">
+                  <div className="p-6 bg-gray-50 dark:bg-gray-800 flex-1">
+                    <pre className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap font-sans">
                       {t.preview}
                     </pre>
                   </div>
@@ -160,7 +160,7 @@ export default function TemplatesPage() {
             </div>
 
             <div className="mt-14 text-center">
-              <p className="text-gray-500 text-sm mb-4">Sign up to access 100+ templates and import them directly into your campaigns.</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">Sign up to access 100+ templates and import them directly into your campaigns.</p>
               <button
                 onClick={() => { window.location.href = '/signup'; }}
                 className="inline-flex items-center bg-gray-900 text-white text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-700 transition-colors">

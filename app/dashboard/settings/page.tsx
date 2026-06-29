@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 
@@ -148,12 +148,12 @@ export default function SettingsPage() {
   if (!loaded) {
     return (
       <main className="flex-1 p-6">
-        <div className="h-8 w-40 bg-gray-100 rounded-xl animate-pulse mb-6"/>
+        <div className="h-8 w-40 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse mb-6"/>
         <div className="flex gap-8">
           <div className="w-52 space-y-1">
-            {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse"/>)}
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"/>)}
           </div>
-          <div className="flex-1 max-w-xl h-80 bg-gray-100 rounded-2xl animate-pulse"/>
+          <div className="flex-1 max-w-xl h-80 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"/>
         </div>
       </main>
     );
@@ -162,16 +162,16 @@ export default function SettingsPage() {
   return (
     <main className="flex-1 p-4 sm:p-6 pb-24">
       <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Manage your account and preferences.</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Manage your account and preferences.</p>
       </div>
 
       {/* Mobile tab bar */}
-      <div className="flex sm:hidden gap-1 bg-gray-100 rounded-xl p-1 mb-5 overflow-x-auto">
+      <div className="flex sm:hidden gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-5 overflow-x-auto">
         {tabs.map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); setSaveMsg(''); }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              tab === t.id ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'
             }`}>
             <span className={tab === t.id ? 'text-blue-600' : 'text-gray-400'}>{t.icon}</span>
             {t.id === 'sending' ? 'Sending' : t.label}
@@ -184,7 +184,7 @@ export default function SettingsPage() {
           {tabs.map(t => (
             <button key={t.id} onClick={() => { setTab(t.id); setSaveMsg(''); }}
               className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                tab === t.id ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                tab === t.id ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:text-white hover:bg-gray-50'
               }`}>
               <span className={tab === t.id ? 'text-blue-600' : 'text-gray-400'}>{t.icon}</span>
               {t.label}
@@ -196,10 +196,10 @@ export default function SettingsPage() {
 
           {/* ── Profile ── */}
           {tab === 'profile' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-              <h2 className="text-base font-bold text-gray-900">Profile Information</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Profile Information</h2>
 
-              <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
+              <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800">
                 <div className="relative group">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="avatar" className="w-16 h-16 rounded-2xl object-cover"/>
@@ -232,8 +232,8 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">{fullName || 'Your Name'}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{email}</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{fullName || 'Your Name'}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{email}</p>
                   <button onClick={() => avatarRef.current?.click()} className="text-xs text-blue-600 hover:text-blue-700 font-semibold mt-1">
                     Change photo
                   </button>
@@ -241,40 +241,40 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Full Name</label>
                 <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Smith"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Email Address</label>
                 <input type="email" value={email} disabled placeholder="you@company.com"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed"/>
-                <p className="text-xs text-gray-400 mt-1">Email cannot be changed here.</p>
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"/>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Email cannot be changed here.</p>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Company Name</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Company Name</label>
                 <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Acme Inc."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Website</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Website</label>
                 <input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yoursite.com"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Timezone</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Timezone</label>
                 <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                   {TIMEZONES.map(tz => <option key={tz}>{tz}</option>)}
                 </select>
               </div>
 
               {saveMsg && (
-                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-100' : 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100'}`}>
                   {saveMsg}
                 </div>
               )}
@@ -288,70 +288,70 @@ export default function SettingsPage() {
 
           {/* ── Sending Defaults ── */}
           {tab === 'sending' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-              <h2 className="text-base font-bold text-gray-900">Sending Defaults</h2>
-              <p className="text-sm text-gray-400 -mt-2">These apply to all new campaigns unless overridden.</p>
+            <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Sending Defaults</h2>
+              <p className="text-sm text-gray-400 dark:text-gray-500 -mt-2">These apply to all new campaigns unless overridden.</p>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Default "From" Name</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Default "From" Name</label>
                 <input
                   type="text"
                   value={fromName}
                   onChange={e => setFromName(e.target.value)}
                   placeholder="John at Acme"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Daily Email Limit</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Daily Email Limit</label>
                   <input
                     type="number"
                     value={dailyLimit}
                     onChange={e => setDailyLimit(Number(e.target.value))}
                     min={1} max={500}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Min Delay (mins)</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Min Delay (mins)</label>
                   <input
                     type="number"
                     value={minDelay}
                     onChange={e => setMinDelay(Number(e.target.value))}
                     min={1}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sending Hours</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Sending Hours</label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">From</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">From</p>
                     <input
                       type="time"
                       value={fromHour}
                       onChange={e => setFromHour(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">To</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">To</p>
                     <input
                       type="time"
                       value={toHour}
                       onChange={e => setToHour(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Active Days</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Active Days</p>
                 <div className="flex gap-2">
                   {ALL_DAYS.map(d => (
                     <button
@@ -360,7 +360,7 @@ export default function SettingsPage() {
                       className={`w-9 h-9 rounded-full text-xs font-bold border transition-all ${
                         activeDays.has(d)
                           ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-400 border-gray-200 hover:border-blue-300'
+                          : 'bg-white text-gray-400 dark:text-gray-500 border-gray-200 hover:border-blue-300'
                       }`}>
                       {d}
                     </button>
@@ -369,7 +369,7 @@ export default function SettingsPage() {
               </div>
 
               {saveMsg && (
-                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${saveMsg === 'Saved successfully' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-100' : 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100'}`}>
                   {saveMsg}
                 </div>
               )}
@@ -383,9 +383,9 @@ export default function SettingsPage() {
 
           {/* ── Notifications ── */}
           {tab === 'notifications' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-1">
-              <h2 className="text-base font-bold text-gray-900 mb-1">Notification Preferences</h2>
-              <p className="text-sm text-gray-400 mb-4">Toggling saves instantly. In-app bell alerts appear for enabled types.</p>
+            <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-1">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">Notification Preferences</h2>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Toggling saves instantly. In-app bell alerts appear for enabled types.</p>
               {([
                 { key: 'new_reply', label: 'New reply received', desc: 'When a prospect replies to any campaign email' },
                 { key: 'campaign_complete', label: 'Campaign completed', desc: 'When all leads in a campaign have been emailed' },
@@ -393,10 +393,10 @@ export default function SettingsPage() {
                 { key: 'unsubscribe', label: 'Unsubscribe received', desc: 'When a lead clicks unsubscribe in your email' },
                 { key: 'warmup_alert', label: 'Warmup health alert', desc: 'When a sending account warmup score drops (coming soon)' },
               ] as { key: keyof typeof notifs; label: string; desc: string }[]).map(n => (
-                <div key={n.key} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
+                <div key={n.key} className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{n.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{n.desc}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{n.label}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{n.desc}</p>
                   </div>
                   <Toggle
                     on={notifs[n.key]}

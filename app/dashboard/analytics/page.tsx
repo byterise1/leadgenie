@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Skeleton } from '@/components/Skeleton';
@@ -169,13 +169,13 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Track your campaign performance.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Track your campaign performance.</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto max-w-full">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 overflow-x-auto max-w-full">
           {RANGE_OPTIONS.map(o => (
             <button key={o.value} onClick={() => setRange(o.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${range === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${range === o.value ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-500 hover:text-gray-700'}`}>
               {o.label}
             </button>
           ))}
@@ -184,14 +184,14 @@ export default function AnalyticsPage() {
 
       {/* Custom date picker */}
       {range === 'custom' && (
-        <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-5 py-4 flex-wrap">
-          <span className="text-xs font-semibold text-gray-400 shrink-0">Date range</span>
+        <div className="flex items-center gap-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-4 flex-wrap">
+          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 shrink-0">Date range</span>
           <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"/>
-          <span className="text-xs text-gray-400">to</span>
+            className="border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"/>
+          <span className="text-xs text-gray-400 dark:text-gray-500">to</span>
           <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
             min={customFrom}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"/>
+            className="border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"/>
           <button onClick={applyCustomRange} disabled={!customFrom || !customTo}
             className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40">
             Apply
@@ -202,30 +202,30 @@ export default function AnalyticsPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {kpis.map((k, i) => (
-          <div key={k.label} className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 ${i === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
-            <p className="text-xs font-semibold text-gray-400 mb-2">{k.label}</p>
-            {loading && !stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 mb-1">{k.value}</p>}
-            <p className="text-xs text-gray-400">{stats && stats.totalSent === 0 ? 'No data for period' : rangeLabel}</p>
+          <div key={k.label} className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 ${i === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">{k.label}</p>
+            {loading && !stats ? <Skeleton className="h-7 w-16 mb-2" /> : <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{k.value}</p>}
+            <p className="text-xs text-gray-400 dark:text-gray-500">{stats && stats.totalSent === 0 ? 'No data for period' : rangeLabel}</p>
           </div>
         ))}
       </div>
 
       {/* Campaign breakdown */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-gray-900">Campaign Breakdown</h3>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Campaign Breakdown</h3>
             {loading && <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">Updating…</span>}
             {!loading && range !== 'all' && stats && (
-              <span className="text-[10px] font-semibold text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5">
                 {rangeLabel}{range === 'custom' && customFrom ? `: ${customFrom} → ${customTo}` : ''}
               </span>
             )}
           </div>
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto max-w-full">
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 overflow-x-auto max-w-full">
             {SORT_OPTIONS.map(o => (
               <button key={o.value} onClick={() => setSort(o.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${sort === o.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${sort === o.value ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-500 hover:text-gray-700'}`}>
                 {o.label}
               </button>
             ))}
@@ -234,16 +234,16 @@ export default function AnalyticsPage() {
         <div className="overflow-x-auto w-full">
           <table className="w-full min-w-[900px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
                 {['Campaign', 'Created', 'Status', 'Sent', 'Opened', 'Open Rate', 'Clicked', 'Click Rate', 'Replied', 'Reply Rate'].map(col => (
-                  <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{col}</th>
+                  <th key={col} className="px-5 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {!stats ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-100">
+                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                     {Array.from({ length: 10 }).map((_, j) => (
                       <td key={j} className="px-5 py-4"><Skeleton className={`h-3.5 ${j === 0 ? 'w-32' : j === 1 ? 'w-20' : 'w-12'}`} /></td>
                     ))}
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
                 ))
               ) : stats.campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-5 py-14 text-center text-sm text-gray-400">
+                  <td colSpan={10} className="px-5 py-14 text-center text-sm text-gray-400 dark:text-gray-500">
                     No campaign data yet. Launch a campaign to see analytics.
                   </td>
                 </tr>
@@ -274,8 +274,8 @@ export default function AnalyticsPage() {
                       <td colSpan={10} className="px-5 py-16 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <svg className="w-8 h-8 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                          <p className="text-sm font-semibold text-gray-500">No emails sent {periodLabel}</p>
-                          <p className="text-xs text-gray-400">Try a different date range to see campaign data.</p>
+                          <p className="text-sm font-semibold text-gray-500 dark:text-gray-500 dark:text-gray-500">No emails sent {periodLabel}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">Try a different date range to see campaign data.</p>
                         </div>
                       </td>
                     </tr>
@@ -283,27 +283,27 @@ export default function AnalyticsPage() {
                 }
 
                 return filtered.map(c => (
-                <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 max-w-[180px] truncate">{c.name}</td>
-                  <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
+                <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 dark:text-white max-w-[180px] truncate">{c.name}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                     {new Date(c.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    <span className="block text-[10px] text-gray-300">{new Date(c.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="block text-[10px] text-gray-300 dark:text-gray-600">{new Date(c.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                   </td>
                   <td className="px-5 py-3">
                     <span className={`text-[10px] font-bold rounded-full px-2.5 py-1 border capitalize ${
-                      c.status === 'active'    ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      c.status === 'paused'    ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                      c.status === 'completed' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                      'bg-gray-100 text-gray-500 border-gray-200'
+                      c.status === 'active'    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-100' :
+                      c.status === 'paused'    ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-100' :
+                      c.status === 'completed' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-100' :
+                      'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 border-gray-200'
                     }`}>{c.status}</span>
                   </td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.sent}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.opened}</td>
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.open_rate}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.clicked ?? 0}</td>
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.click_rate ?? '—'}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-700">{c.replied}</td>
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{c.reply_rate}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{c.sent}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{c.opened}</td>
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 dark:text-white">{c.open_rate}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{c.clicked ?? 0}</td>
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 dark:text-white">{c.click_rate ?? '—'}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{c.replied}</td>
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900 dark:text-white">{c.reply_rate}</td>
                 </tr>
               ));
               })()}

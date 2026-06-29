@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -33,13 +33,13 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex flex-col">
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-[420px]">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset your password</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Reset your password</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">
               {sent ? 'Check your inbox for a reset link.' : "Enter your email and we'll send you a reset link."}
             </p>
           </div>
@@ -52,8 +52,8 @@ export default function ForgotPasswordPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                   </svg>
                 </div>
-                <p className="text-sm text-gray-700 font-semibold">Email sent to <span className="text-blue-600">{email}</span></p>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-sm text-gray-700 dark:text-gray-200 font-semibold">Email sent to <span className="text-blue-600">{email}</span></p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
                   Click the link in the email to set a new password. Check your spam folder if you don't see it within a minute.
                 </p>
                 <button
@@ -71,14 +71,14 @@ export default function ForgotPasswordPage() {
                 )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Email address</label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="you@gmail.com"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     />
                   </div>
                   <button
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
             )}
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">
             Remember it?{' '}
             <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
               Sign in

@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ const catColors: Record<string, string> = {
 
 export default function BlogPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -32,17 +32,17 @@ export default function BlogPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {blogPosts.map(post => (
                 <Link key={post.slug} href={`/blog/${post.slug}`}
-                  className="border border-gray-200 rounded-2xl p-6 hover:shadow-md hover:-translate-y-0.5 transition-all group block">
-                  <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${catColors[post.category] || 'bg-gray-100 text-gray-600'}`}>
+                  className="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 hover:shadow-md hover:-translate-y-0.5 transition-all group block">
+                  <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 ${catColors[post.category] || 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>
                     {post.category}
                   </span>
-                  <h2 className="mt-3 text-base font-bold text-gray-900 leading-snug group-hover:text-blue-600 transition-colors">
+                  <h2 className="mt-3 text-base font-bold text-gray-900 dark:text-white leading-snug group-hover:text-blue-600 transition-colors">
                     {post.title}
                   </h2>
-                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">{post.desc}</p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-500 leading-relaxed">{post.desc}</p>
                   <div className="mt-4 flex items-center justify-between">
-                    <p className="text-xs text-gray-400 font-medium">{post.readTime}</p>
-                    <p className="text-xs text-gray-400">{post.date}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">{post.readTime}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{post.date}</p>
                   </div>
                 </Link>
               ))}

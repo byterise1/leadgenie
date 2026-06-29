@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -55,13 +55,13 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex flex-col">
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-[420px]">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Set a new password</h1>
-            <p className="text-sm text-gray-500">Choose a strong password for your account.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Set a new password</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">Choose a strong password for your account.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
                   </svg>
                 </div>
                 <p className="text-sm font-semibold text-gray-800">Password updated!</p>
-                <p className="text-xs text-gray-400">Redirecting you to your dashboard…</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Redirecting you to your dashboard…</p>
               </div>
             ) : (
               <>
@@ -91,7 +91,7 @@ export default function ResetPasswordPage() {
                 {ready && (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">New password</label>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}
@@ -99,12 +99,12 @@ export default function ResetPasswordPage() {
                           value={password}
                           onChange={e => setPassword(e.target.value)}
                           placeholder="Min 8 characters"
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-11 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(v => !v)}
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors">
                           {showPassword ? (
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
@@ -120,14 +120,14 @@ export default function ResetPasswordPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Confirm password</label>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
                         value={confirm}
                         onChange={e => setConfirm(e.target.value)}
                         placeholder="Repeat your password"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       />
                     </div>
 

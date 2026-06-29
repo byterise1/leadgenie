@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 
@@ -35,16 +35,16 @@ type Stats = {
 };
 
 const PLAN_COLORS: Record<string, string> = {
-  starter: 'bg-blue-50 text-blue-700',
-  pro: 'bg-violet-50 text-violet-700',
-  agency: 'bg-amber-50 text-amber-700',
+  starter: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400',
+  pro: 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400',
+  agency: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  paid: 'bg-emerald-50 text-emerald-700',
-  refunded: 'bg-amber-50 text-amber-700',
-  failed: 'bg-red-50 text-red-600',
-  pending: 'bg-gray-100 text-gray-500',
+  paid: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400',
+  refunded: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400',
+  failed: 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400',
+  pending: 'bg-gray-100 dark:bg-gray-800 text-gray-500',
 };
 
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
@@ -54,9 +54,9 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
     color === 'purple' ? 'border-t-2 border-t-violet-500' : '';
   return (
     <div className={`bg-white rounded-2xl border border-gray-100 p-5 ${border}`}>
-      <p className="text-xs font-semibold text-gray-400 mb-3">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-1">{sub}</p>}
+      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">{label}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+      {sub && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -89,16 +89,16 @@ export default function AdminBillingPage() {
       )}
 
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Billing</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Revenue, active subscriptions, and refunds.</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Billing</h1>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Revenue, active subscriptions, and refunds.</p>
       </div>
 
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5">
-              <div className="h-3 w-24 bg-gray-100 rounded animate-pulse mb-4"/>
-              <div className="h-7 w-16 bg-gray-100 rounded animate-pulse"/>
+              <div className="h-3 w-24 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mb-4"/>
+              <div className="h-7 w-16 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"/>
             </div>
           ))}
         </div>
@@ -114,10 +114,10 @@ export default function AdminBillingPage() {
           {/* Plan breakdown */}
           {Object.keys(stats.planBreakdown).length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h2 className="text-sm font-bold text-gray-900 mb-4">Active Plan Breakdown</h2>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Active Plan Breakdown</h2>
               <div className="flex flex-wrap gap-3">
                 {Object.entries(stats.planBreakdown).map(([plan, count]) => (
-                  <div key={plan} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${PLAN_COLORS[plan] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <div key={plan} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${PLAN_COLORS[plan] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>
                     <span className="capitalize">{plan}</span>
                     <span className="opacity-70">· {count} user{count !== 1 ? 's' : ''}</span>
                   </div>
@@ -127,50 +127,50 @@ export default function AdminBillingPage() {
           )}
 
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
             {(['transactions', 'users'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${tab === t ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-500 hover:text-gray-700'}`}>
                 {t === 'transactions' ? 'Recent Transactions' : 'Active Subscribers'}
               </button>
             ))}
           </div>
 
           {tab === 'transactions' && (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-sm min-w-[640px]">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
                       {['User', 'Description', 'Amount', 'Status', 'Date', 'Action'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {stats.recentEvents.length === 0 ? (
-                      <tr><td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-400">No transactions yet.</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-400 dark:text-gray-500">No transactions yet.</td></tr>
                     ) : stats.recentEvents.map(ev => (
-                      <tr key={ev.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={ev.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         <td className="px-4 py-3">
-                          <p className="text-xs font-semibold text-gray-700 max-w-[160px] truncate">{ev.user_email}</p>
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 max-w-[160px] truncate">{ev.user_email}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="text-xs text-gray-600 capitalize">{ev.description || ev.plan_id || ev.type}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-300 capitalize">{ev.description || ev.plan_id || ev.type}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm font-bold text-gray-900">${ev.amount_dollars}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">${ev.amount_dollars}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${STATUS_COLORS[ev.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                          <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${STATUS_COLORS[ev.status] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
                             {ev.status}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs text-gray-400">{new Date(ev.created_at).toLocaleDateString()}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(ev.created_at).toLocaleDateString()}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
                         </td>
                       </tr>
                     ))}
@@ -181,34 +181,34 @@ export default function AdminBillingPage() {
           )}
 
           {tab === 'users' && (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-sm min-w-[480px]">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
                       {['User', 'Email', 'Plan', 'Since'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {stats.activeUsersList.length === 0 ? (
-                      <tr><td colSpan={4} className="px-4 py-16 text-center text-sm text-gray-400">No paying users yet.</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-16 text-center text-sm text-gray-400 dark:text-gray-500">No paying users yet.</td></tr>
                     ) : stats.activeUsersList.map(u => (
-                      <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         <td className="px-4 py-3">
-                          <p className="text-sm font-semibold text-gray-900">{u.full_name || '—'}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{u.full_name || '—'}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="text-xs text-gray-500">{u.email}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-500">{u.email}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${PLAN_COLORS[u.plan] ?? 'bg-gray-100 text-gray-600'}`}>
+                          <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${PLAN_COLORS[u.plan] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>
                             {u.plan}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString()}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(u.created_at).toLocaleDateString()}</span>
                         </td>
                       </tr>
                     ))}
@@ -219,7 +219,7 @@ export default function AdminBillingPage() {
           )}
         </>
       ) : (
-        <p className="text-sm text-gray-400">Failed to load billing data.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">Failed to load billing data.</p>
       )}
     </main>
   );

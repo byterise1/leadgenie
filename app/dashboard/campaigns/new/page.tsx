@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
@@ -283,12 +283,12 @@ export default function NewCampaignPage() {
       {/* Header */}
       <div className="w-full max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/dashboard/campaigns" className="text-gray-400 hover:text-gray-700 transition-colors">
+          <Link href="/dashboard/campaigns" className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">New Campaign</h1>
-            <p className="text-sm text-gray-400">Set up your cold email sequence</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">New Campaign</h1>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Set up your cold email sequence</p>
           </div>
         </div>
 
@@ -315,7 +315,7 @@ export default function NewCampaignPage() {
             <div key={s} className="flex items-center">
               <button onClick={() => { if (i < step) { setStepErrors([]); setStep(i); } else if (i === step + 1) { const errs = validateStep(step); if (errs.length) { setStepErrors(errs); } else { setStepErrors([]); setStep(i); } } }} className="flex items-center gap-2">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  i < step ? 'bg-blue-600 text-white' : i === step ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-gray-100 text-gray-400'
+                  i < step ? 'bg-blue-600 text-white' : i === step ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                 }`}>
                   {i < step ? <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg> : i + 1}
                 </span>
@@ -332,39 +332,39 @@ export default function NewCampaignPage() {
 
         {/* ── Step 0: Details ── */}
         {step === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+          <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Campaign Name</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Campaign Name</label>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. SaaS Founders Q3 Outreach"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Sender Name <span className="font-normal text-gray-400">(what recipients see)</span>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                Sender Name <span className="font-normal text-gray-400 dark:text-gray-500">(what recipients see)</span>
               </label>
-              <p className="text-xs text-gray-400 mb-2">
-                This is the name shown in the inbox — e.g. <span className="font-semibold text-gray-600">John at Acme</span>. It overrides whatever name is on your Gmail/SMTP account.
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                This is the name shown in the inbox — e.g. <span className="font-semibold text-gray-600 dark:text-gray-300 dark:text-gray-300">John at Acme</span>. It overrides whatever name is on your Gmail/SMTP account.
               </p>
               <input
                 value={fromName}
                 onChange={e => setFromName(e.target.value)}
                 placeholder="e.g. John at Acme, or ByteRise Team"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
               {fromName && (
-                <p className="text-[11px] text-gray-400 mt-1.5">
-                  Recipients will see: <span className="font-semibold text-gray-700">{fromName} &lt;your@gmail.com&gt;</span>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                  Recipients will see: <span className="font-semibold text-gray-700 dark:text-gray-200">{fromName} &lt;your@gmail.com&gt;</span>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Campaign Goal</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Campaign Goal</label>
               <div className="grid grid-cols-3 gap-2">
                 {['Book a Meeting', 'Demo Request', 'Partnership', 'Product Trial', 'Content Share', 'Event Invite'].map(g => (
                   <button key={g} type="button" onClick={() => setGoal(g)}
-                    className={`border rounded-xl py-2.5 text-xs font-semibold transition-all ${goal === g ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'}`}>
+                    className={`border rounded-xl py-2.5 text-xs font-semibold transition-all ${goal === g ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 dark:text-gray-300 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'}`}>
                     {g}
                   </button>
                 ))}
@@ -374,19 +374,19 @@ export default function NewCampaignPage() {
             {/* Lead List — required */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700">Lead List</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Lead List</label>
                 <Link href="/dashboard/leads" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">Manage lists ↗</Link>
               </div>
               {leadLists.length === 0 ? (
-                <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
-                  <p className="text-sm text-gray-400 mb-2">No lists yet — create one first</p>
+                <div className="border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">No lists yet — create one first</p>
                   <Link href="/dashboard/leads" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">+ Create a lead list ↗</Link>
                 </div>
               ) : (
                 <select
                   value={selectedListId}
                   onChange={e => setSelectedListId(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                   <option value="">— Select a list —</option>
                   {leadLists.map(list => (
                     <option key={list.id} value={list.id}>
@@ -400,35 +400,35 @@ export default function NewCampaignPage() {
             {/* Sending accounts */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700">Sending Accounts</label>
-                <span className="text-xs text-gray-400">Round-robin rotation</span>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Sending Accounts</label>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Round-robin rotation</span>
               </div>
               {(() => {
                 const okAccounts = realAccounts.filter(a => a.status !== 'error');
                 const errorAccounts = realAccounts.filter(a => a.status === 'error');
                 if (realAccounts.length === 0) return (
-                  <div className="border border-dashed border-gray-200 rounded-xl p-4 text-center">
-                    <p className="text-sm text-gray-400 mb-2">No accounts connected yet</p>
+                  <div className="border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">No accounts connected yet</p>
                     <Link href="/dashboard/email-accounts" className="text-xs font-bold text-blue-600 hover:underline">+ Connect account →</Link>
                   </div>
                 );
                 return (
                   <div className="space-y-2">
                     {okAccounts.length > 0 && (
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
-                        <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                        <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                           <input type="checkbox" checked={allAccounts} onChange={toggleAllAccounts} className="w-4 h-4 rounded accent-blue-600"/>
-                          <span className="text-sm font-semibold text-gray-700">All accounts ({okAccounts.length})</span>
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">All accounts ({okAccounts.length})</span>
                         </label>
                         {okAccounts.map(acc => (
-                          <label key={acc.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors">
+                          <label key={acc.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <input type="checkbox" checked={allAccounts || selectedAccounts.includes(acc.id)} onChange={() => toggleAccount(acc.id)} className="w-4 h-4 rounded accent-blue-600"/>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${acc.status === 'warming' ? 'bg-amber-400' : 'bg-emerald-400'}`}/>
                                 <p className="text-sm text-gray-800 font-medium truncate">{acc.email}</p>
                               </div>
-                              <p className="text-xs text-gray-400 pl-3">{acc.type} · {acc.status === 'warming' ? 'Warming up' : 'Active'}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 pl-3">{acc.type} · {acc.status === 'warming' ? 'Warming up' : 'Active'}</p>
                             </div>
                             {acc.remaining_today !== undefined && (
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${acc.remaining_today === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
@@ -446,7 +446,7 @@ export default function NewCampaignPage() {
                           <div key={acc.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-red-50 last:border-0 opacity-60">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"/>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-700 font-medium truncate">{acc.email}</p>
+                              <p className="text-sm text-gray-700 dark:text-gray-200 font-medium truncate">{acc.email}</p>
                               <p className="text-xs text-red-400">{acc.type} · Connection error</p>
                             </div>
                             <Link href="/dashboard/email-accounts" className="text-[10px] font-bold text-red-500 hover:text-red-700 shrink-0">Fix →</Link>
@@ -465,17 +465,17 @@ export default function NewCampaignPage() {
             {/* Daily limit */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-semibold text-gray-700">Daily Email Limit</label>
-                <span className="text-xs text-gray-400">Across all selected accounts</span>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Daily Email Limit</label>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Across all selected accounts</span>
               </div>
               <div className="flex items-center gap-3">
                 <input type="number" value={dailyLimitStr}
                   onChange={e => setDailyLimitStr(e.target.value)}
                   onBlur={() => setDailyLimitStr(String(Math.max(1, parseInt(dailyLimitStr) || 1)))}
-                  className="w-36 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
-                <span className="text-sm text-gray-400">emails / day</span>
+                  className="w-36 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                <span className="text-sm text-gray-400 dark:text-gray-500">emails / day</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">Recommended: 50–200/day per account to protect deliverability.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Recommended: 50–200/day per account to protect deliverability.</p>
             </div>
           </div>
         )}
@@ -484,25 +484,25 @@ export default function NewCampaignPage() {
         {step === 1 && (
           <div className="space-y-4">
             {emails.map((email, idx) => (
-              <div key={idx} className="bg-white rounded-2xl border border-gray-100 p-6">
+              <div key={idx} className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
-                    <span className="text-sm font-bold text-gray-900">{idx === 0 ? 'Initial Email' : `Follow-up ${idx}`}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{idx === 0 ? 'Initial Email' : `Follow-up ${idx}`}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     {idx > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
                         <span>Send after</span>
                         <select value={email.delay} onChange={e => updateEmail(idx, 'delay', Number(e.target.value))}
-                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-2 focus:ring-blue-400">
+                          className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-2 focus:ring-blue-400">
                           {/* TEST MODE: units are minutes. Change label to "days" and update instrumentation.ts for production */}
                           {[1,2,3,5,10,15].map(d => <option key={d} value={d}>{d} min</option>)}
                         </select>
                       </div>
                     )}
                     {idx > 0 && (
-                      <button onClick={() => setEmails(em => em.filter((_, i) => i !== idx))} className="text-gray-300 hover:text-red-400 transition-colors p-1">
+                      <button onClick={() => setEmails(em => em.filter((_, i) => i !== idx))} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
                     )}
@@ -510,7 +510,7 @@ export default function NewCampaignPage() {
                 </div>
 
                 <button type="button" onClick={() => setTemplatePickerIdx(idx)}
-                  className="w-full flex items-center gap-2 border border-dashed border-gray-200 rounded-xl px-4 py-2.5 mb-3 text-xs font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all text-left">
+                  className="w-full flex items-center gap-2 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 mb-3 text-xs font-semibold text-gray-400 dark:text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all text-left">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                   {email.templateId ? `Template: ${allTemplates.find(t => t.id === email.templateId)?.name ?? 'Custom'} — change` : 'Pick from template library (optional)'}
                 </button>
@@ -525,7 +525,7 @@ export default function NewCampaignPage() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                           email.threadMode === 'reply'
                             ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                            : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
+                            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-500 dark:text-gray-500 hover:border-gray-300 hover:bg-gray-100'
                         }`}>
                         {email.threadMode === 'reply' ? (
                           <>
@@ -539,7 +539,7 @@ export default function NewCampaignPage() {
                           </>
                         )}
                       </button>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
                         {email.threadMode === 'reply'
                           ? 'Sends as a reply to Step 1 — appears in same inbox thread'
                           : 'Sends as a separate email with its own subject line'}
@@ -551,7 +551,7 @@ export default function NewCampaignPage() {
                   <div className="flex items-center gap-3 py-2 border-t border-dashed border-gray-100">
                     <button type="button" onClick={() => updateEmail(idx, 'abEnabled', !email.abEnabled)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                        email.abEnabled ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
+                        email.abEnabled ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 text-gray-500 dark:text-gray-500 hover:border-gray-300'
                       }`}>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                       A/B Test
@@ -566,7 +566,7 @@ export default function NewCampaignPage() {
                   {(idx === 0 || email.threadMode === 'new_thread') && (
                     <input placeholder="Subject line" value={email.subject}
                       onChange={e => updateEmail(idx, 'subject', e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
                   )}
                   {idx > 0 && email.threadMode === 'reply' && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100">
@@ -578,8 +578,8 @@ export default function NewCampaignPage() {
                   {/* Body — Edit / Preview tabs */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-bold text-gray-500">Body</p>
-                      <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-500 dark:text-gray-500">Body</p>
+                      <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
                         {(['Edit', 'Preview'] as const).map(t => (
                           <button key={t} type="button"
                             onClick={() => setPreviewSteps(prev => {
@@ -587,14 +587,14 @@ export default function NewCampaignPage() {
                               if (t === 'Preview') n.add(idx); else n.delete(idx);
                               return n;
                             })}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${(t === 'Preview') === previewSteps.has(idx) ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${(t === 'Preview') === previewSteps.has(idx) ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-500 hover:text-gray-700'}`}>
                             {t}
                           </button>
                         ))}
                       </div>
                     </div>
                     {previewSteps.has(idx) ? (
-                      <div className="border border-gray-200 rounded-xl overflow-hidden min-h-[160px]">
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-h-[160px]">
                         {email.body ? (
                           <iframe
                             srcDoc={bodyToHtml(email.body, 'To unsubscribe, click here: {{unsubscribe_link}}', email.includeUnsub)}
@@ -603,13 +603,13 @@ export default function NewCampaignPage() {
                             sandbox="allow-same-origin"
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-32 text-sm text-gray-300">No body yet</div>
+                          <div className="flex items-center justify-center h-32 text-sm text-gray-300 dark:text-gray-600">No body yet</div>
                         )}
                       </div>
                     ) : (
                       <textarea rows={6} placeholder={`Hi {{first_name}},\n\nWrite your email here...\n\n[Your Name]`}
                         value={email.body} onChange={e => updateEmail(idx, 'body', e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none font-mono"/>
                     )}
                   </div>
 
@@ -634,12 +634,12 @@ export default function NewCampaignPage() {
                     </div>
                   )}
 
-                  <p className="text-[10px] text-gray-400">Variables: <span className="font-mono">{'{{first_name}}'}</span>, <span className="font-mono">{'{{company}}'}</span>, <span className="font-mono">{'{{title}}'}</span></p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">Variables: <span className="font-mono">{'{{first_name}}'}</span>, <span className="font-mono">{'{{company}}'}</span>, <span className="font-mono">{'{{title}}'}</span></p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-dashed border-gray-100">
                     <div>
-                      <p className="text-xs font-semibold text-gray-700">Include unsubscribe footer</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">Adds opt-out link at the bottom of this email</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Include unsubscribe footer</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Adds opt-out link at the bottom of this email</p>
                     </div>
                     <Toggle on={email.includeUnsub} onToggle={() => updateEmail(idx, 'includeUnsub', !email.includeUnsub)}/>
                   </div>
@@ -648,7 +648,7 @@ export default function NewCampaignPage() {
             ))}
 
             <button onClick={() => setEmails(e => [...e, { ...DEFAULT_EMAIL, delay: 3, threadMode: 'reply' }])}
-              className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-4 text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
+              className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl py-4 text-sm font-semibold text-gray-400 dark:text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
               + Add Follow-up Step
             </button>
           </div>
@@ -656,13 +656,13 @@ export default function NewCampaignPage() {
 
         {/* ── Step 2: Schedule ── */}
         {step === 2 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+          <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-5">
 
             {/* Instant Start toggle */}
             <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${instantStart ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
               <div>
-                <p className="text-sm font-bold text-gray-900">Instant Start</p>
-                <p className="text-xs text-gray-400 mt-0.5">Send immediately — no scheduled window or date</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Instant Start</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Send immediately — no scheduled window or date</p>
               </div>
               <Toggle on={instantStart} onToggle={() => setInstantStart(v => !v)}/>
             </div>
@@ -670,20 +670,20 @@ export default function NewCampaignPage() {
             {!instantStart && (
               <>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Start Date <span className="text-gray-400 dark:text-gray-500 font-normal">(optional)</span></label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white transition"/>
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white transition"/>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Sending Window</label>
-                  <p className="text-xs text-gray-400 mb-2 -mt-1">Emails are only sent within this time range in the selected timezone.</p>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Sending Window</label>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 -mt-1">Emails are only sent within this time range in the selected timezone.</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'From', val: fromTime, set: setFromTime },
                       { label: 'To', val: toTime, set: setToTime },
                     ].map(f => (
                       <div key={f.label}>
-                        <p className="text-xs text-gray-400 mb-1">{f.label}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{f.label}</p>
                         <input type="time" value={f.val} onChange={e => f.set(e.target.value)}
                           className={`w-full border rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition ${!timeWindowValid ? 'border-red-300 focus:ring-red-400' : 'border-gray-200'}`}/>
                       </div>
@@ -700,18 +700,18 @@ export default function NewCampaignPage() {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delay Between Emails</label>
-              <p className="text-xs text-gray-400 mb-2">Randomised gap to simulate human behaviour and avoid spam flags.</p>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">Delay Between Emails</label>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Randomised gap to simulate human behaviour and avoid spam flags.</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Min delay (mins)', val: minDelayStr, set: setMinDelayStr },
                   { label: 'Max delay (mins)', val: maxDelayStr, set: setMaxDelayStr },
                 ].map(f => (
                   <div key={f.label}>
-                    <p className="text-xs text-gray-400 mb-1">{f.label}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{f.label}</p>
                     <input type="number" min="0" step="1" value={f.val}
                       onChange={e => f.set(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
                   </div>
                 ))}
               </div>
@@ -727,23 +727,23 @@ export default function NewCampaignPage() {
                   Sending window ({schedWindowMins} min) is shorter than your min delay ({parsedMinDelay} min) — only 1 email will send per window
                 </p>
               )}
-              <p className="text-[11px] text-gray-400 mt-1.5">Recommended: 1–5 min for warm accounts, 3–10 min for cold.</p>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">Recommended: 1–5 min for warm accounts, 3–10 min for cold.</p>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Active Days</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Active Days</label>
               <div className="flex gap-2">
                 {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d, i) => (
                   <button key={d} type="button" onClick={() => toggleDay(i)}
-                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${activeDays[i] ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${activeDays[i] ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-200'}`}>
                     {d}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Timezone</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Timezone</label>
               <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
                 {['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'].map(tz => <option key={tz}>{tz}</option>)}
               </select>
             </div>
@@ -761,28 +761,28 @@ export default function NewCampaignPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Window</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Window</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
                       {instantStart ? '24 hrs' : `${Math.floor(schedWindowMins / 60) > 0 ? `${Math.floor(schedWindowMins / 60)}h ` : ''}${schedWindowMins % 60 > 0 ? `${schedWindowMins % 60}m` : ''}`}
                     </p>
-                    <p className="text-[10px] text-gray-400">{activeDayCount} day{activeDayCount !== 1 ? 's' : ''}/week</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeDayCount} day{activeDayCount !== 1 ? 's' : ''}/week</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Max / Window</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount} email{emailsPerWindowPerAccount !== 1 ? 's' : ''}</p>
-                    <p className="text-[10px] text-gray-400">capacity per account</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Max / Window</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerWindowPerAccount} email{emailsPerWindowPerAccount !== 1 ? 's' : ''}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">capacity per account</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerDay} emails</p>
-                    <p className="text-[10px] text-gray-400">limit: {dailyLimit}/day</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Per Day</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerDay} emails</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">limit: {dailyLimit}/day</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Completes In</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
                       {listLeadCount === 0 ? '—' : daysToComplete === null ? '∞' : `~${daysToComplete} day${daysToComplete !== 1 ? 's' : ''}`}
                     </p>
-                    <p className="text-[10px] text-gray-400">{listLeadCount > 0 ? `${listLeadCount} leads` : 'no list yet'}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{listLeadCount > 0 ? `${listLeadCount} leads` : 'no list yet'}</p>
                   </div>
                 </div>
                 {listLeadCount > 0 && daysToComplete !== null && daysToComplete > 30 && (
@@ -799,9 +799,9 @@ export default function NewCampaignPage() {
         {/* ── Step 3: Review ── */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-              <h3 className="font-bold text-gray-900">Campaign Summary</h3>
-              <div className="divide-y divide-gray-100">
+            <div className="bg-white rounded-2xl border border-gray-100 dark:border-gray-800 p-6 space-y-5">
+              <h3 className="font-bold text-gray-900 dark:text-white">Campaign Summary</h3>
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {[
                   { label: 'Campaign Name', value: name || '—' },
                   { label: 'Goal', value: goal },
@@ -816,7 +816,7 @@ export default function NewCampaignPage() {
                   { label: 'Start Date', value: startDate || 'Immediately' },
                 ].map(r => (
                   <div key={r.label} className="flex items-center justify-between py-3">
-                    <span className="text-sm text-gray-500">{r.label}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">{r.label}</span>
                     <span className={`text-sm font-semibold ${r.value?.startsWith('⚠️') ? 'text-amber-600' : 'text-gray-900'}`}>{r.value}</span>
                   </div>
                 ))}
@@ -832,28 +832,28 @@ export default function NewCampaignPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Window</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Window</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
                       {instantStart ? '24 hrs' : schedWindowMins > 0 ? `${Math.floor(schedWindowMins/60) > 0 ? `${Math.floor(schedWindowMins/60)}h ` : ''}${schedWindowMins%60 > 0 ? `${schedWindowMins%60}m` : ''}` : '—'}
                     </p>
-                    <p className="text-[10px] text-gray-400">{activeDayCount} active day{activeDayCount !== 1 ? 's' : ''}/week</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeDayCount} active day{activeDayCount !== 1 ? 's' : ''}/week</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Max / Window</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerWindowPerAccount}/account</p>
-                    <p className="text-[10px] text-gray-400">capacity, {avgDelayMins.toFixed(1)} min avg gap</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Max / Window</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerWindowPerAccount}/account</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">capacity, {avgDelayMins.toFixed(1)} min avg gap</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Per Day</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">~{emailsPerDay} emails</p>
-                    <p className="text-[10px] text-gray-400">{activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × limit {dailyLimit}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Per Day</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerDay} emails</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × limit {dailyLimit}</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Completes In</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Completes In</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
                       {listLeadCount === 0 ? '—' : daysToComplete === null ? '∞' : `~${daysToComplete} day${daysToComplete !== 1 ? 's' : ''}`}
                     </p>
-                    <p className="text-[10px] text-gray-400">{listLeadCount > 0 ? `${listLeadCount} leads` : 'no list selected'}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{listLeadCount > 0 ? `${listLeadCount} leads` : 'no list selected'}</p>
                   </div>
                 </div>
                 {listLeadCount > 0 && daysToComplete !== null && daysToComplete > 30 && (
@@ -967,7 +967,7 @@ export default function NewCampaignPage() {
         {/* Nav */}
         <div className="flex items-center justify-between mt-4">
           <button onClick={() => { setStepErrors([]); setStep(s => Math.max(0, s - 1)); }} disabled={step === 0}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            className="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             ← Back
           </button>
           {step < steps.length - 1 && (
@@ -990,30 +990,30 @@ export default function NewCampaignPage() {
           onClick={e => { if (e.target === e.currentTarget) { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); } }}>
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-base font-bold text-gray-900">Choose a Template</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Choose a Template</h2>
               <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
-                className="text-gray-400 hover:text-gray-700 transition-colors">
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
             {/* Search */}
             <div className="px-4 pt-3 pb-2 shrink-0">
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input
                   type="text"
                   placeholder="Search templates…"
                   value={templateSearch}
                   onChange={e => setTemplateSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition"/>
               </div>
             </div>
             {/* Category tabs */}
             <div className="flex flex-wrap gap-1 px-4 pb-3 shrink-0">
               {templateCategories.map(cat => (
                 <button key={cat} onClick={() => setTemplateCategory(cat)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${templateCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${templateCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 hover:bg-gray-200'}`}>
                   {cat}
                 </button>
               ))}
@@ -1021,27 +1021,27 @@ export default function NewCampaignPage() {
             {/* List */}
             <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-2 min-h-0">
               {filteredTemplates.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 py-10">No templates match your search.</p>
+                <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-10">No templates match your search.</p>
               ) : filteredTemplates.map(t => (
                 <button key={t.id} onClick={() => { applyTemplate(templatePickerIdx, t); setTemplateSearch(''); setTemplateCategory('All'); }}
-                  className="w-full flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
+                  className="w-full flex items-start gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-bold text-gray-900">{t.name}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{t.name}</p>
                       <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t.category}</span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate">Subject: {t.subject}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 truncate">Subject: {t.subject}</p>
                   </div>
-                  <svg className="w-4 h-4 text-gray-300 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                  <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                 </button>
               ))}
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 shrink-0">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0">
               <button onClick={() => { setTemplatePickerIdx(null); setTemplateSearch(''); setTemplateCategory('All'); }}
-                className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+                className="w-full py-2.5 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors">Cancel</button>
             </div>
           </div>
         </div>

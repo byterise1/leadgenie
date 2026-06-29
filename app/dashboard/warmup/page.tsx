@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { SkeletonRow } from '@/components/Skeleton';
@@ -78,10 +78,10 @@ function RampBar({ day, target = 30 }: { day: number; target?: number }) {
   return (
     <div className="flex flex-col gap-1 min-w-0 flex-1">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-gray-400">Day {day} of {target}</span>
-        <span className="text-[10px] font-semibold text-gray-600">{todayTarget}/day target</span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">Day {day} of {target}</span>
+        <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300 dark:text-gray-300">{todayTarget}/day target</span>
       </div>
-      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
         <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }}/>
       </div>
     </div>
@@ -175,8 +175,8 @@ export default function WarmupPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Email Warmup</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Automatically build sender reputation to avoid the spam folder.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Email Warmup</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Automatically build sender reputation to avoid the spam folder.</p>
         </div>
       </div>
 
@@ -197,17 +197,17 @@ export default function WarmupPage() {
           { label: 'Emails sent today', value: String(totalSentToday) },
           { label: 'Total warmup sent', value: totalWarmupSent.toLocaleString() },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 mb-2">{s.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+          <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">{s.label}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${tab === t.id ? 'bg-white text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-500 hover:text-gray-700'}`}>
             {t.label}
           </button>
         ))}
@@ -216,7 +216,7 @@ export default function WarmupPage() {
       {tab === 'accounts' && (
         <>
           {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
               {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i}/>)}
             </div>
           ) : accounts.length === 0 ? (
@@ -227,8 +227,8 @@ export default function WarmupPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z"/>
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">No accounts connected</h3>
-              <p className="text-sm text-gray-400 mb-6 max-w-sm leading-relaxed">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">No accounts connected</h3>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-6 max-w-sm leading-relaxed">
                 Connect an email account first, then enable warmup to automatically build its sender reputation.
               </p>
               <a href="/dashboard/email-accounts"
@@ -237,11 +237,11 @@ export default function WarmupPage() {
               </a>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
               <div className="overflow-x-auto w-full">
                 <table className="w-full min-w-[700px] border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                       <th className="px-6 py-3 text-left">Account</th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Score</th>
@@ -258,11 +258,11 @@ export default function WarmupPage() {
                   const historyDays = rows.length;
                   const showHistoryBadge = historyDays > 0 && (acc.warmup_day ?? 0) === 0;
                   return (
-                    <tr key={acc.id} className="border-b border-gray-100 last:border-0">
+                    <tr key={acc.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
                       <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{acc.email}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">{acc.email}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          <p className="text-[10px] text-gray-400">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">{acc.type} · {acc.warmup_emails_sent} warmup sent</p>
                           {showHistoryBadge && (
                             <span className="text-[10px] font-bold bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">
                               {historyDays}d prior history
@@ -285,7 +285,7 @@ export default function WarmupPage() {
                               )}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-600 capitalize">{acc.status}</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{acc.status}</span>
                           )}
                         </div>
                       </td>
@@ -300,42 +300,42 @@ export default function WarmupPage() {
                           if (acc.warmup_enabled && d >= tgt) return (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold text-emerald-600">Running at 40/day ✓</span>
-                              <span className="text-[10px] text-gray-400">30-day ramp complete — maintaining</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500">30-day ramp complete — maintaining</span>
                             </div>
                           );
                           if (!acc.warmup_enabled && d >= tgt) return (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold text-emerald-600">Warmup complete ✓</span>
-                              <span className="text-[10px] text-gray-400">Re-enable to keep warming</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500">Re-enable to keep warming</span>
                             </div>
                           );
                           if (showHistoryBadge) return (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold text-violet-600">Previously warmed {historyDays} days</span>
-                              <span className="text-[10px] text-gray-400">{totalHistorySent} emails sent in prior sessions</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500">{totalHistorySent} emails sent in prior sessions</span>
                             </div>
                           );
-                          return <span className="text-xs text-gray-400">Warmup off</span>;
+                          return <span className="text-xs text-gray-400 dark:text-gray-500">Warmup off</span>;
                         })()}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="w-16 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
                               style={{ width: `${acc.health_score || 0}%` }}/>
                           </div>
-                          <span className="text-xs font-semibold text-gray-700">{acc.health_score || 0}%</span>
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{acc.health_score || 0}%</span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         {(() => {
                           const safe = safeDailyLimit(acc.warmup_day ?? 0);
-                          if (safe.limit === 0) return <span className="text-[11px] text-gray-400">Not ready</span>;
-                          const cls = safe.color === 'blue' ? 'bg-blue-50 text-blue-700' :
-                            safe.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
-                            safe.color === 'amber' ? 'bg-amber-50 text-amber-700' :
+                          if (safe.limit === 0) return <span className="text-[11px] text-gray-400 dark:text-gray-500">Not ready</span>;
+                          const cls = safe.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                            safe.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
+                            safe.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400' :
                             safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
-                            safe.color === 'violet' ? 'bg-violet-50 text-violet-700' : 'bg-rose-50 text-rose-700';
+                            safe.color === 'violet' ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' : 'bg-rose-50 text-rose-700';
                           return <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${cls}`}>{safe.label}</span>;
                         })()}
                       </td>
@@ -362,8 +362,8 @@ export default function WarmupPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-sm font-bold text-gray-900 mb-4">How warmup works</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">How warmup works</h3>
             <div className="grid sm:grid-cols-4 gap-4">
               {[
                 { step: '1', title: 'Enable warmup', desc: 'Toggle warmup on for any connected account', color: 'blue' },
@@ -375,8 +375,8 @@ export default function WarmupPage() {
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold text-white shrink-0 ${
                     s.color === 'blue' ? 'bg-blue-600' : s.color === 'indigo' ? 'bg-indigo-600' : s.color === 'emerald' ? 'bg-emerald-600' : 'bg-violet-600'
                   }`}>{s.step}</span>
-                  <p className="text-xs font-bold text-gray-900">{s.title}</p>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">{s.desc}</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{s.title}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">{s.desc}</p>
                 </div>
               ))}
             </div>
@@ -387,7 +387,7 @@ export default function WarmupPage() {
       {tab === 'settings' && (
         <div className="space-y-4 max-w-2xl">
           {/* What is daily limit — explainer */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,11 +396,11 @@ export default function WarmupPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-1">What is the daily warmup limit?</h3>
-                <p className="text-xs text-gray-500 leading-relaxed max-w-lg">
-                  This is the <span className="font-semibold text-gray-700">maximum number of warmup emails</span> your inbox will send per day
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">What is the daily warmup limit?</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-500 leading-relaxed max-w-lg">
+                  This is the <span className="font-semibold text-gray-700 dark:text-gray-200">maximum number of warmup emails</span> your inbox will send per day
                   during the ramp period. The system starts low (2/day on Day 1) and gradually increases
-                  toward your limit over 30 days. Keeping it between <span className="font-semibold text-gray-700">30–50/day</span> is recommended —
+                  toward your limit over 30 days. Keeping it between <span className="font-semibold text-gray-700 dark:text-gray-200">30–50/day</span> is recommended —
                   high enough to build reputation fast, low enough to look natural to email providers.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -410,8 +410,8 @@ export default function WarmupPage() {
                     { label: 'High volume', range: '60–100/day', color: 'amber' },
                   ].map(r => (
                     <span key={r.label} className={`text-[11px] font-semibold rounded-full px-2.5 py-1 ${
-                      r.color === 'blue' ? 'bg-blue-50 text-blue-700' :
-                      r.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                      r.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                      r.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
                     }`}>
                       {r.label}: {r.range}
                     </span>
@@ -422,27 +422,27 @@ export default function WarmupPage() {
           </div>
 
           {/* Per-account limit selector */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-bold text-gray-900">Daily Warmup Limit</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Set the peak number of warmup emails each inbox sends per day after the 30-day ramp. Warmup auto-stops when done — re-enable to maintain.</p>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Daily Warmup Limit</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Set the peak number of warmup emails each inbox sends per day after the 30-day ramp. Warmup auto-stops when done — re-enable to maintain.</p>
             </div>
             {accounts.length === 0 ? (
-              <div className="px-6 py-8 text-sm text-gray-400 text-center">No accounts connected.</div>
+              <div className="px-6 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">No accounts connected.</div>
             ) : accounts.map((acc, idx) => {
               const target = acc.warmup_target ?? 30;
               const isRecommended = target >= 30 && target <= 50;
               return (
-                <div key={acc.id} className={`px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                <div key={acc.id} className={`px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${idx !== accounts.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{acc.email}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.email}</p>
                       {!acc.warmup_enabled && (
-                        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">warmup off</span>
+                        <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 shrink-0">warmup off</span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <p className="text-[11px] text-gray-400">{acc.type} · Day {acc.warmup_day ?? 0} of 14</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">{acc.type} · Day {acc.warmup_day ?? 0} of 14</p>
                       {isRecommended && (
                         <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">Recommended</span>
                       )}
@@ -457,7 +457,7 @@ export default function WarmupPage() {
                           className={`px-3 py-1.5 text-xs font-bold transition-colors ${
                             target === v
                               ? 'bg-blue-600 text-white'
-                              : 'bg-white text-gray-500 hover:bg-gray-50'
+                              : 'bg-white text-gray-500 dark:text-gray-500 hover:bg-gray-50'
                           }`}>
                           {v}
                         </button>
@@ -466,7 +466,7 @@ export default function WarmupPage() {
                     <select
                       value={target}
                       onChange={e => updateTarget(acc.id, Number(e.target.value))}
-                      className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none sm:min-w-[130px]">
+                      className="border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none sm:min-w-[130px]">
                       {[10, 15, 20, 25, 30, 35, 40, 50, 60, 80, 100].map(v => (
                         <option key={v} value={v}>{v}/day</option>
                       ))}
@@ -478,9 +478,9 @@ export default function WarmupPage() {
           </div>
 
           {/* Safe campaign send limits — dynamic per account */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-sm font-bold text-gray-900 mb-1">Safe campaign send limits</h3>
-            <p className="text-xs text-gray-400 mb-4">Auto-calculated per account based on warmup age. Keep warmup running in background while sending campaigns.</p>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Safe campaign send limits</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Auto-calculated per account based on warmup age. Keep warmup running in background while sending campaigns.</p>
 
             {/* Per-account dynamic limits */}
             {accounts.length > 0 && (
@@ -496,21 +496,21 @@ export default function WarmupPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-800 truncate">{acc.email}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }}/>
                           </div>
-                          <span className="text-[10px] text-gray-400 whitespace-nowrap">Day {acc.warmup_day ?? 0}</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">Day {acc.warmup_day ?? 0}</span>
                         </div>
                       </div>
                       {safe.limit === 0 ? (
-                        <span className="text-[11px] text-gray-400 shrink-0">Not ready</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Not ready</span>
                       ) : (
                         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                          safe.color === 'blue' ? 'bg-blue-50 text-blue-700' :
-                          safe.color === 'emerald' ? 'bg-emerald-50 text-emerald-700' :
-                          safe.color === 'amber' ? 'bg-amber-50 text-amber-700' :
+                          safe.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                          safe.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
+                          safe.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400' :
                           safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
-                          safe.color === 'violet' ? 'bg-violet-50 text-violet-700' : 'bg-rose-50 text-rose-700'
+                          safe.color === 'violet' ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' : 'bg-rose-50 text-rose-700'
                         }`}>{safe.label}</span>
                       )}
                     </div>
@@ -520,7 +520,7 @@ export default function WarmupPage() {
             )}
 
             {/* Progression reference table */}
-            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Full year progression</p>
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Full year progression</p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
                 { range: 'Day 1–29',    limit: 'Not ready',  color: 'gray' },
@@ -531,8 +531,8 @@ export default function WarmupPage() {
                 { range: 'Day 180–364', limit: '300/day',    color: 'violet' },
                 { range: 'Day 365+',    limit: '500/day',    color: 'rose' },
               ].map(r => (
-                <div key={r.range} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-[10px] text-gray-500">{r.range}</span>
+                <div key={r.range} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-500 dark:text-gray-500">{r.range}</span>
                   <span className={`text-[10px] font-bold ${
                     r.color === 'gray' ? 'text-gray-400' :
                     r.color === 'blue' ? 'text-blue-600' :
@@ -562,13 +562,13 @@ export default function WarmupPage() {
         <div className="space-y-4">
           {/* Per-account history */}
           {historyLoading ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
               {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i}/>)}
             </div>
           ) : accounts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 flex flex-col items-center text-center">
-              <p className="text-sm font-semibold text-gray-400">No accounts connected</p>
-              <p className="text-xs text-gray-400 mt-0.5">Connect an account and enable warmup to see history here.</p>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-12 flex flex-col items-center text-center">
+              <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">No accounts connected</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Connect an account and enable warmup to see history here.</p>
             </div>
           ) : (
             accounts.map(acc => {
@@ -579,7 +579,7 @@ export default function WarmupPage() {
               const isExpanded = expandedEmail === acc.email;
 
               return (
-                <div key={acc.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div key={acc.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
                   {/* Account summary header */}
                   <button
                     onClick={() => setExpandedEmail(isExpanded ? null : acc.email)}
@@ -587,13 +587,13 @@ export default function WarmupPage() {
                     <div className="flex items-center gap-4">
                       <ScoreRing score={latestScore}/>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{acc.email}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{acc.email}</p>
                         <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-[11px] text-gray-400">Day {maxDayReached} reached</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-400">{totalSent.toLocaleString()} total warmup emails</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-400">{rows.length} days recorded</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">Day {maxDayReached} reached</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">·</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">{totalSent.toLocaleString()} total warmup emails</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">·</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">{rows.length} days recorded</span>
                         </div>
                       </div>
                     </div>
@@ -601,7 +601,7 @@ export default function WarmupPage() {
                       {maxDayReached >= (acc.warmup_target ?? 30) && (
                         <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">Warmup complete ✓</span>
                       )}
-                      <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
                       </svg>
                     </div>
@@ -609,43 +609,43 @@ export default function WarmupPage() {
 
                   {/* Daily history table — expanded */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100">
+                    <div className="border-t border-gray-100 dark:border-gray-800">
                       {rows.length === 0 ? (
                         <div className="px-6 py-8 text-center">
-                          <p className="text-sm text-gray-400">No history recorded yet.</p>
-                          <p className="text-xs text-gray-400 mt-1">History is saved each time the warmup worker runs (every 6 hours).</p>
+                          <p className="text-sm text-gray-400 dark:text-gray-500">No history recorded yet.</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">History is saved each time the warmup worker runs (every 6 hours).</p>
                         </div>
                       ) : (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs min-w-[500px]">
                             <thead>
-                              <tr className="bg-gray-50 border-b border-gray-100">
-                                <th className="text-left px-6 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Date</th>
-                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Day</th>
-                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Emails Sent</th>
-                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Health Score</th>
-                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 uppercase tracking-wider">Progress</th>
+                              <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800">
+                                <th className="text-left px-6 py-2.5 font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Day</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Emails Sent</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Health Score</th>
+                                <th className="text-left px-4 py-2.5 font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Progress</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                               {rows.map(row => {
                                 const pct = Math.min(100, Math.round((Math.min(row.day_number, 14) / 14) * 100));
                                 return (
                                   <tr key={row.date} className="hover:bg-gray-50/60 transition-colors">
-                                    <td className="px-6 py-3 font-medium text-gray-700">{row.date}</td>
-                                    <td className="px-4 py-3 text-gray-600">
+                                    <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">{row.date}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 dark:text-gray-300">
                                       {row.day_number <= 14 ? `Day ${row.day_number}` : `Day 14+ (${row.day_number})`}
                                     </td>
-                                    <td className="px-4 py-3 font-semibold text-gray-900">{row.emails_sent}</td>
+                                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.emails_sent}</td>
                                     <td className="px-4 py-3">
                                       <ScoreBadge score={row.health_score}/>
                                     </td>
                                     <td className="px-4 py-3">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="w-20 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                                           <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }}/>
                                         </div>
-                                        <span className="text-gray-400">{pct}%</span>
+                                        <span className="text-gray-400 dark:text-gray-500">{pct}%</span>
                                       </div>
                                     </td>
                                   </tr>
@@ -663,8 +663,8 @@ export default function WarmupPage() {
           )}
 
           {/* Health score guide */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-sm font-bold text-gray-900 mb-4">Health Score Guide</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Health Score Guide</h3>
             <div className="grid sm:grid-cols-3 gap-4">
               {[
                 { range: '80–100', label: 'Excellent', color: 'emerald', desc: 'Safe to send campaigns' },
@@ -677,9 +677,9 @@ export default function WarmupPage() {
                 }`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`w-2 h-2 rounded-full ${s.color === 'emerald' ? 'bg-emerald-500' : s.color === 'amber' ? 'bg-amber-500' : 'bg-red-500'}`}/>
-                    <span className="text-xs font-bold text-gray-700">{s.range} · {s.label}</span>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{s.range} · {s.label}</span>
                   </div>
-                  <p className="text-[11px] text-gray-500">{s.desc}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-500 dark:text-gray-500">{s.desc}</p>
                 </div>
               ))}
             </div>

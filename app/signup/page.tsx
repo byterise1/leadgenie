@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -74,7 +74,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex flex-col">
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -83,8 +83,8 @@ export default function SignupPage() {
             <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold rounded-full px-3 py-1 mb-4">
               No credit card required
             </span>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Start finding leads today</h1>
-            <p className="text-sm text-gray-500">Join 8,500+ sales teams using Leads Genie to grow.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Start finding leads today</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">Join 8,500+ sales teams using Leads Genie to grow.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -95,10 +95,10 @@ export default function SignupPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                   </svg>
                 </div>
-                <p className="text-sm font-bold text-gray-900">Check your email</p>
-                <p className="text-xs text-gray-500 leading-relaxed">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Check your email</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
                   We sent a confirmation link to{' '}
-                  <span className="font-semibold text-gray-700">{form.email}</span>.
+                  <span className="font-semibold text-gray-700 dark:text-gray-200">{form.email}</span>.
                   <br/>Click it to activate your account, then sign in.
                 </p>
                 <Link href="/login" className="inline-block mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
@@ -109,7 +109,7 @@ export default function SignupPage() {
               <>
                 <button
                   onClick={handleGoogle}
-                  className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-5"
+                  className="w-full flex items-center justify-center gap-3 border border-gray-200 dark:border-gray-700 rounded-xl py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mb-5"
                 >
                   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -122,7 +122,7 @@ export default function SignupPage() {
 
                 <div className="relative mb-5">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
-                  <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">or sign up with email</span></div>
+                  <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400 dark:text-gray-500">or sign up with email</span></div>
                 </div>
 
                 {error && (
@@ -138,31 +138,31 @@ export default function SignupPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Full name</label>
                     <input
                       type="text"
                       required
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="John Smith"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Email address</label>
                     <input
                       type="email"
                       required
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       placeholder="you@gmail.com"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Password</label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -171,12 +171,12 @@ export default function SignupPage() {
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                         placeholder="Minimum 8 characters"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-11 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(v => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors">
                         {showPassword ? (
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
@@ -210,11 +210,11 @@ export default function SignupPage() {
                   </button>
                 </form>
 
-                <p className="mt-5 text-center text-xs text-gray-400 leading-relaxed">
+                <p className="mt-5 text-center text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
                   By creating an account you agree to our{' '}
-                  <Link href="/terms" className="underline underline-offset-2 hover:text-gray-600 transition-colors">Terms</Link>{' '}
+                  <Link href="/terms" className="underline underline-offset-2 hover:text-gray-600 dark:text-gray-300 transition-colors">Terms</Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-600 transition-colors">Privacy Policy</Link>.
+                  <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-600 dark:text-gray-300 transition-colors">Privacy Policy</Link>.
                 </p>
               </>
             )}
@@ -226,13 +226,13 @@ export default function SignupPage() {
               { icon: '📨', text: '42M+ emails sent' },
               { icon: '⭐', text: '4.9/5 on G2' },
             ].map((item) => (
-              <p key={item.text} className="text-xs font-semibold text-gray-500 flex items-center gap-1">
+              <p key={item.text} className="text-xs font-semibold text-gray-500 dark:text-gray-500 flex items-center gap-1">
                 <span>{item.icon}</span>{item.text}
               </p>
             ))}
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-500 dark:text-gray-500">
             Already have an account?{' '}
             <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">Sign in</Link>
           </p>

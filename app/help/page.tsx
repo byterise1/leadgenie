@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -45,7 +45,7 @@ const sectionIcons: Record<string, React.ReactNode> = {
 
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -64,12 +64,12 @@ export default function HelpPage() {
           <div className="container max-w-[1100px]">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {helpSections.map(section => (
-                <div key={section.id} id={section.id} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow">
-                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <div key={section.id} id={section.id} className="border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-sm transition-shadow">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                     {sectionIcons[section.id]}
                   </div>
-                  <h2 className="text-base font-bold text-gray-900">{section.title}</h2>
-                  <p className="mt-1 text-sm text-gray-500 leading-relaxed mb-4">{section.subtitle}</p>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">{section.title}</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-500 leading-relaxed mb-4">{section.subtitle}</p>
                   <ul className="space-y-2">
                     {section.articles.map(article => (
                       <li key={article.q}>
@@ -89,12 +89,12 @@ export default function HelpPage() {
               ))}
             </div>
 
-            <div className="mt-14 border border-gray-100 rounded-2xl p-6 text-center">
-              <p className="text-lg font-bold text-gray-900 mb-2">Still need help?</p>
-              <p className="text-gray-500 text-sm mb-6">Our support team responds within a few hours on business days.</p>
+            <div className="mt-14 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 text-center">
+              <p className="text-lg font-bold text-gray-900 dark:text-white mb-2">Still need help?</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm mb-6">Our support team responds within a few hours on business days.</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link href="/contact"
-                  className="border border-gray-200 text-gray-700 text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-50 transition-colors">
+                  className="border border-gray-200 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-full px-7 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   Contact Support
                 </Link>
                 <Link href="/login"

@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { FAQAccordion } from '@/components/FAQAccordion';
 import Link from 'next/link';
@@ -32,7 +32,7 @@ const features = [
 
 export default function SaaSPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         <section className="hero-gradient pb-24 pt-20 text-center">
@@ -52,20 +52,20 @@ export default function SaaSPage() {
           </div>
         </section>
 
-        <section className="border-b border-gray-100">
+        <section className="border-b border-gray-100 dark:border-gray-800">
           <div className="container px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 border-l border-t border-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 border-l border-t border-gray-100 dark:border-gray-800">
               {[
                 { v: '2,000+', l: 'SaaS Companies', color: '#3b82f6', bg: '#eff6ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg> },
                 { v: '61%', l: 'Avg Open Rate', color: '#10b981', bg: '#f0fdf4', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> },
                 { v: '10×', l: 'ROI on Outbound', color: '#8b5cf6', bg: '#f5f3ff', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg> },
                 { v: '14 days', l: 'To First Meetings', color: '#f59e0b', bg: '#fffbeb', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> },
               ].map(s => (
-                <div key={s.l} className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors border-r border-b border-gray-100">
+                <div key={s.l} className="flex items-center gap-2 sm:gap-4 py-5 sm:py-8 px-3 sm:px-6 hover:bg-gray-50/60 transition-colors border-r border-b border-gray-100 dark:border-gray-800">
                   <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
                   <div className="min-w-0">
                     <p className="text-lg sm:text-3xl font-extrabold tracking-tight leading-none" style={{ color: s.color }}>{s.v}</p>
-                    <p className="text-xs font-bold text-gray-700 mt-0.5 leading-tight">{s.l}</p>
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5 leading-tight">{s.l}</p>
                   </div>
                 </div>
               ))}
@@ -75,27 +75,27 @@ export default function SaaSPage() {
 
         <section className="py-20">
           <div className="container max-w-[1100px]">
-            <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-14">Outbound that works at every growth stage</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white text-center mb-14">Outbound that works at every growth stage</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map(f => (
-                <div key={f.title} className="border border-gray-100 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
-                  <h3 className="text-base font-bold text-gray-900">{f.title}</h3>
-                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                <div key={f.title} className="border border-gray-100 dark:border-gray-800 rounded-2xl p-6 hover:shadow-sm transition-shadow flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shrink-0">{f.icon}</div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">{f.title}</h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-500 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-gray-50 py-20">
+        <section className="bg-gray-50 dark:bg-gray-800 py-20">
           <div className="container max-w-3xl text-center">
-            <p className="text-xl text-gray-700 leading-relaxed italic">&ldquo;Our open rates jumped from 28% to 61% after switching to Leads Genie. The AI personalisation is genuinely impressive — it sounds human on every email.&rdquo;</p>
+            <p className="text-xl text-gray-700 dark:text-gray-200 leading-relaxed italic">&ldquo;Our open rates jumped from 28% to 61% after switching to Leads Genie. The AI personalisation is genuinely impressive — it sounds human on every email.&rdquo;</p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <img src="https://i.pravatar.cc/150?img=3" alt="Alex Baldovin" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
               <div className="text-left">
-                <p className="text-sm font-bold text-gray-900">Alex Baldovin</p>
-                <p className="text-xs text-gray-500">CEO, Authbound</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Alex Baldovin</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 dark:text-gray-500">CEO, Authbound</p>
               </div>
             </div>
           </div>

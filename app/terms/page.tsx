@@ -1,20 +1,20 @@
-import { Navbar } from '@/components/Navbar';
+﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 dark:text-white">
       <Navbar />
       <main>
         {/* Header */}
-        <section className="border-b border-gray-100 py-16 text-center">
+        <section className="border-b border-gray-100 dark:border-gray-800 py-16 text-center">
           <div className="container max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-3">Legal</p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">Terms of Service</h1>
-            <p className="mt-4 text-gray-500 text-base">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight">Terms of Service</h1>
+            <p className="mt-4 text-gray-500 dark:text-gray-500 text-base">
               Last updated: June 1, 2026 â€” Effective: June 1, 2026
             </p>
-            <p className="mt-4 text-gray-600 text-base leading-relaxed max-w-2xl mx-auto">
+            <p className="mt-4 text-gray-600 dark:text-gray-300 text-base leading-relaxed max-w-2xl mx-auto">
               Please read these Terms carefully before using Leads Genie. By accessing or using
               our platform, you agree to be bound by these Terms.
             </p>
@@ -146,8 +146,8 @@ Support: help@leadsgenie.io`,
                 },
               ].map(section => (
                 <div key={section.title}>
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">{section.title}</h2>
-                  <div className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{section.content}</div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{section.title}</h2>
+                  <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{section.content}</div>
                 </div>
               ))}
             </div>

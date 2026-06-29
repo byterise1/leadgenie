@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 
@@ -44,19 +44,19 @@ function PlanEditor({ plan, onSave, saving }: { plan: Plan; onSave: (p: Plan) =>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${
-            plan.id === 'free' ? 'bg-gray-100 text-gray-500' :
-            plan.id === 'starter' ? 'bg-blue-50 text-blue-700' :
-            plan.id === 'pro' ? 'bg-violet-50 text-violet-700' :
-            'bg-amber-50 text-amber-700'
+            plan.id === 'free' ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' :
+            plan.id === 'starter' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+            plan.id === 'pro' ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' :
+            'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
           }`}>{form.name}</span>
           {form.highlighted && <span className="text-[10px] font-bold bg-violet-600 text-white rounded-full px-2 py-0.5">Featured</span>}
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 cursor-pointer">
             <input type="checkbox" checked={form.highlighted} onChange={e => update('highlighted', e.target.checked)} className="accent-violet-600"/>
             Featured
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 cursor-pointer">
             <input type="checkbox" checked={form.active} onChange={e => update('active', e.target.checked)} className="accent-blue-600"/>
             Active
           </label>
@@ -65,45 +65,45 @@ function PlanEditor({ plan, onSave, saving }: { plan: Plan; onSave: (p: Plan) =>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Plan Name</label>
+          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Plan Name</label>
           <input value={form.name} onChange={e => update('name', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Tagline</label>
+          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Tagline</label>
           <input value={form.tagline} onChange={e => update('tagline', e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Monthly Price ($)</label>
+          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Monthly Price ($)</label>
           <input type="number" min={0} value={form.monthly_price} onChange={e => update('monthly_price', Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Annual Price ($)</label>
+          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Annual Price ($)</label>
           <input type="number" min={0} value={form.annual_price} onChange={e => update('annual_price', Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Credits / Month</label>
+          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Credits / Month</label>
           <input type="number" min={0} value={form.credits_per_month} onChange={e => update('credits_per_month', Number(e.target.value))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
       </div>
 
       <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">CTA Button Label</label>
+        <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">CTA Button Label</label>
         <input value={form.cta_label} onChange={e => update('cta_label', e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       </div>
 
       <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Features (one per line)</label>
+        <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1 block">Features (one per line)</label>
         <textarea value={featuresText} onChange={e => { setFeaturesText(e.target.value); setDirty(true); }} rows={6}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"/>
+          className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"/>
       </div>
 
       {dirty && (
@@ -156,15 +156,15 @@ export default function AdminPricingPage() {
       )}
 
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Pricing Plans</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Edit plan names, prices, credits, and features. Changes update the billing page and pricing page immediately.</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pricing Plans</h1>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Edit plan names, prices, credits, and features. Changes update the billing page and pricing page immediately.</p>
       </div>
 
       {loading ? (
         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-              {Array.from({ length: 5 }).map((_, j) => <div key={j} className="h-8 bg-gray-100 rounded-xl animate-pulse"/>)}
+            <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+              {Array.from({ length: 5 }).map((_, j) => <div key={j} className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"/>)}
             </div>
           ))}
         </div>
@@ -178,8 +178,8 @@ export default function AdminPricingPage() {
 
       {!loading && plans.length === 0 && (
         <div className="flex flex-col items-center py-20 text-center">
-          <p className="text-sm font-semibold text-gray-600 mb-2">No pricing plans found</p>
-          <p className="text-xs text-gray-400">Run the <span className="font-mono bg-gray-100 px-1.5 rounded">migration_pricing_plans.sql</span> migration in Supabase to seed the plans.</p>
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">No pricing plans found</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Run the <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded">migration_pricing_plans.sql</span> migration in Supabase to seed the plans.</p>
         </div>
       )}
     </main>

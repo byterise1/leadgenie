@@ -172,13 +172,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       <NavigationProgress />
       <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 md:ml-[220px] min-w-0 flex flex-col overflow-x-hidden">
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3 shrink-0 sticky top-0 z-20">
-          <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-4 gap-3 shrink-0 sticky top-0 z-20">
+          <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
@@ -187,12 +187,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex-1"/>
 
-          <div className="hidden sm:flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-1.5 bg-white">
+          <div className="hidden sm:flex items-center gap-2.5 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 bg-white dark:bg-gray-800">
             <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="currentColor">
               <path d="M7 15.5c0 .049.006.096.007.145a7.3 7.3 0 1 1 8.638-8.638c-.049 0-.096-.007-.145-.007a8.557 8.557 0 0 0-.877.045 6.296 6.296 0 1 0-7.578 7.578A8.557 8.557 0 0 0 7 15.5zm.983-11.27l-.119-.992A5.3 5.3 0 0 0 3.2 8.558c.002.153.01.303.024.45l.995-.093a4.508 4.508 0 0 1-.019-.367A4.3 4.3 0 0 1 7.983 4.23zM22.8 15.5a7.3 7.3 0 1 1-7.3-7.3 7.308 7.308 0 0 1 7.3 7.3zm-1 0a6.3 6.3 0 1 0-6.3 6.3 6.307 6.307 0 0 0 6.3-6.3zm-10.58.415a4.508 4.508 0 0 1-.02-.367 4.3 4.3 0 0 1 3.783-4.318l-.119-.992a5.3 5.3 0 0 0-4.664 5.32c.002.153.01.303.024.45zm8.028-4.163l-.707.707a4.3 4.3 0 1 1-6.082 6.082l-.707.707a5.3 5.3 0 0 0 7.496-7.496z"/>
             </svg>
-            <span className="text-xs font-bold text-gray-900">{credits - usedCredits}<span className="font-normal text-gray-400">/{credits}</span></span>
-            <div className="w-px h-3.5 bg-gray-200"/>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">{credits - usedCredits}<span className="font-normal text-gray-400 dark:text-gray-500">/{credits}</span></span>
+            <div className="w-px h-3.5 bg-gray-200 dark:bg-gray-700"/>
             <Link href="/dashboard/billing" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap">
               Upgrade
             </Link>
@@ -201,7 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Notification bell */}
           <div ref={notifRef} className="relative">
             <button onClick={openNotifications}
-              className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors relative"
+              className="p-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative"
               title="Notifications">
               <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -214,9 +214,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden" style={{ colorScheme: 'light' }}>
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900">
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
                     Notifications {notifications.length > 0 && <span className="text-blue-600">({notifications.length})</span>}
                   </span>
                   <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         Mark all read
                       </button>
                     )}
-                    <button onClick={() => setNotifOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors ml-1">
+                    <button onClick={() => setNotifOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors ml-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                   </div>
@@ -234,14 +234,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                 {notifications.length === 0 ? (
                   <div className="px-4 py-10 text-center">
-                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                     </div>
-                    <p className="text-sm font-semibold text-gray-500">All caught up</p>
-                    <p className="text-xs text-gray-400 mt-0.5">No new notifications</p>
+                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">All caught up</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">No new notifications</p>
                   </div>
                 ) : (
-                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800">
                     {notifications.map(n => {
                       const isSupport = n.link?.includes('/support');
                       const isCampaign = n.link?.includes('/campaigns');
@@ -251,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       const dot = n.type === 'warning' ? 'bg-amber-400' : n.type === 'error' ? 'bg-red-500' : isSupport ? 'bg-blue-500' : 'bg-emerald-500';
                       return (
                         <div key={n.id}
-                          className={`group flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${n.link ? 'cursor-pointer' : ''}`}
+                          className={`group flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${n.link ? 'cursor-pointer' : ''}`}
                           onClick={() => handleNotifClick(n)}>
                           <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${dot}`}/>
                           <div className="flex-1 min-w-0">
@@ -259,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                               <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${categoryColor}`}>{category}</span>
                               <span className="text-[10px] text-gray-400">{new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
-                            <p className="text-xs font-semibold text-gray-800 leading-snug">{n.message}</p>
+                            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-snug">{n.message}</p>
                             {n.link && (
                               <p className="text-[10px] text-blue-500 font-semibold mt-1">
                                 {isInbox ? 'View in Inbox →' : isSupport ? 'Open ticket →' : isCampaign ? 'View campaign →' : 'View →'}
@@ -280,7 +280,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
 
-          <Link href="/dashboard/help" className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Help">
+          <Link href="/dashboard/help" className="p-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Help">
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>

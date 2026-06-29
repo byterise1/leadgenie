@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -136,7 +136,7 @@ export default function SupportWidget() {
       {open && (
         <div
           ref={panelRef}
-          className="w-[calc(100vw-2rem)] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+          className="w-[calc(100vw-2rem)] sm:w-[360px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col"
           style={{ maxHeight: 'calc(100vh - 5rem)', height: '520px', colorScheme: 'light' }}
         >
           {/* Header */}
@@ -157,7 +157,7 @@ export default function SupportWidget() {
           <div className="flex-1 overflow-y-auto">
             {view === 'list' && (
               <div className="h-full flex flex-col">
-                <div className="px-4 py-3 border-b border-gray-100 shrink-0 flex gap-2">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0 flex gap-2">
                   <button
                     onClick={() => setView('new')}
                     className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-semibold rounded-xl py-2 hover:bg-blue-700 transition-colors"
@@ -169,7 +169,7 @@ export default function SupportWidget() {
                   </button>
                   <button
                     onClick={() => { setOpen(false); router.push('/dashboard/support'); }}
-                    className="px-3 py-2 border border-gray-200 text-gray-600 text-xs font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                    className="px-3 py-2 border border-gray-200 text-gray-600 dark:text-gray-300 text-xs font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     View All
                   </button>
@@ -186,14 +186,14 @@ export default function SupportWidget() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
                       </svg>
                     </div>
-                    <p className="text-sm font-semibold text-gray-700">No tickets yet</p>
-                    <p className="text-xs text-gray-400 mt-1">We typically reply within 24 hours.</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">No tickets yet</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">We typically reply within 24 hours.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-gray-50 dark:divide-gray-800">
                     {tickets.map(t => (
                       <button key={t.id} onClick={() => goToTicket(t)}
-                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${hasNewReply(t) ? 'bg-blue-50/50' : ''}`}>
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${hasNewReply(t) ? 'bg-blue-50/50' : ''}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2 flex-1 min-w-0">
                             {hasNewReply(t) && (
@@ -212,20 +212,20 @@ export default function SupportWidget() {
                               </span>
                             )}
                             <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 capitalize ${
-                              t.status === 'open' ? 'bg-gray-100 text-gray-500' :
-                              t.status === 'in_progress' ? 'bg-amber-50 text-amber-600' :
-                              'bg-gray-100 text-gray-400'
+                              t.status === 'open' ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' :
+                              t.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' :
+                              'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                               {t.status.replace('_', ' ')}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-gray-400 capitalize">{t.category}</span>
-                          <span className="text-[10px] text-gray-300">·</span>
-                          <span className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleDateString()}</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{t.category}</span>
+                          <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(t.created_at).toLocaleDateString()}</span>
                           {t.admin_reply && !hasNewReply(t) && (
-                            <span className="text-[10px] text-gray-400 ml-auto">Tap to view reply →</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">Tap to view reply →</span>
                           )}
                         </div>
                       </button>
@@ -237,7 +237,7 @@ export default function SupportWidget() {
 
             {view === 'new' && (
               <div className="p-4 space-y-4">
-                <button onClick={() => setView('list')} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                <button onClick={() => setView('list')} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                   </svg>
@@ -245,9 +245,9 @@ export default function SupportWidget() {
                 </button>
 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Category</label>
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5 block">Category</label>
                   <select value={category} onChange={e => setCategory(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="billing">Billing</option>
                     <option value="technical">Technical Issue</option>
                     <option value="general">General Question</option>
@@ -256,17 +256,17 @@ export default function SupportWidget() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Subject</label>
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5 block">Subject</label>
                   <input value={subject} onChange={e => setSubject(e.target.value)}
                     placeholder="Describe your issue briefly"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Message</label>
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5 block">Message</label>
                   <textarea value={message} onChange={e => setMessage(e.target.value)}
                     rows={4} placeholder="Tell us more about the issue…"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                 </div>
 
                 {/* File attachment */}
@@ -274,7 +274,7 @@ export default function SupportWidget() {
                   <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.csv"
                     className="hidden" onChange={e => setFiles(Array.from(e.target.files ?? []))}/>
                   <button onClick={() => fileRef.current?.click()} type="button"
-                    className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                     </svg>
@@ -299,8 +299,8 @@ export default function SupportWidget() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
                   </svg>
                 </div>
-                <p className="text-base font-bold text-gray-900 mb-1">Ticket submitted!</p>
-                <p className="text-sm text-gray-400 mb-6">We&apos;ll reply within 24 hours. You&apos;ll get a notification.</p>
+                <p className="text-base font-bold text-gray-900 dark:text-white mb-1">Ticket submitted!</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">We&apos;ll reply within 24 hours. You&apos;ll get a notification.</p>
                 <button
                   onClick={() => { setView('list'); }}
                   className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
