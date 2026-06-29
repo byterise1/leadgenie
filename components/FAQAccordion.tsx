@@ -14,7 +14,7 @@ const DEFAULT_FAQS = [
 export function FAQAccordion({ faqs = DEFAULT_FAQS }: { faqs?: { q: string; a: string }[] }) {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-white dark:bg-gray-950">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto text-center mb-14">
           <span className="inline-block text-xs font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-full px-3 py-1 mb-4 uppercase tracking-widest">FAQ</span>
@@ -26,11 +26,11 @@ export function FAQAccordion({ faqs = DEFAULT_FAQS }: { faqs?: { q: string; a: s
           {faqs.map((faq, i) => {
             const isOpen = open === i;
             return (
-              <div key={i} className={`transition-colors ${isOpen ? 'bg-blue-50/40' : 'bg-white hover:bg-gray-50/60'}`}>
+              <div key={i} className={`transition-colors ${isOpen ? 'bg-blue-50/40 dark:bg-blue-950/30' : 'bg-white dark:bg-gray-900 hover:bg-gray-50/60 dark:hover:bg-gray-800'}`}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
                   className="w-full flex items-center justify-between px-6 py-5 text-left gap-4 group">
-                  <span className={`text-sm font-semibold leading-snug transition-colors ${isOpen ? 'text-blue-700' : 'text-gray-900 dark:text-white group-hover:text-blue-600'}`}>
+                  <span className={`text-sm font-semibold leading-snug transition-colors ${isOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
                     {faq.q}
                   </span>
                   <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-blue-600 text-white rotate-180' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>

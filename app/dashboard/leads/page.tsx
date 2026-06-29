@@ -753,7 +753,7 @@ export default function LeadsPage() {
                       </td>
                     </tr>
                   ) : leads.map(l => (
-                    <tr key={l.id} className={`border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors ${selected.has(l.id) ? 'bg-blue-50/60' : 'hover:bg-gray-50'}`}>
+                    <tr key={l.id} className={`border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors ${selected.has(l.id) ? 'bg-blue-50/60 dark:bg-blue-950/40' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                       <td className="px-4 py-3">
                         <input type="checkbox" className="rounded border-gray-300 accent-blue-600"
                           checked={selected.has(l.id)} onChange={() => toggleOne(l.id)}/>

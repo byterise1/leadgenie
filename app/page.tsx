@@ -480,7 +480,7 @@ export default function HomePage() {
                 <motion.div key={s.l}
                   initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className={`flex items-center gap-3 py-6 px-4 sm:py-8 sm:px-6 hover:bg-gray-50/60 transition-colors group ${borderCls}`}>
+                  className={`flex items-center gap-3 py-6 px-4 sm:py-8 sm:px-6 hover:bg-gray-50/60 dark:hover:bg-gray-800 transition-colors group ${borderCls}`}>
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl ${s.bg} shrink-0 group-hover:scale-110 transition-transform duration-200`} style={{ color: s.color }}>
                     {s.icon}
                   </div>
@@ -529,7 +529,7 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
-                  <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50">
+                  <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/60">
                     <div className="flex items-center gap-2.5">
                       <IcAtSign c="w-4 h-4 text-blue-500" />
                       <p className="text-sm font-bold text-gray-900 dark:text-white">Email Accounts</p>
@@ -545,7 +545,7 @@ export default function HomePage() {
                       { email: 'leads@salesteam.io', provider: 'SMTP',    health: 99, status: 'Active',  sends: '198/300', ai: 3 },
                       { email: 'outreach@scale.ai',  provider: 'Gmail',   health: 43, status: 'Warming', sends: '12/30',   ai: 4 },
                     ].map(acc => (
-                      <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 transition-colors">
+                      <div key={acc.email} className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 dark:hover:bg-gray-800/60 transition-colors">
                         <PersonAvatar idx={acc.ai} size={36} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.email}</p>
@@ -602,7 +602,7 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
               <div className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/60">
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white">Warmup Dashboard</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">alex@company.io — Running 18 days</p>
@@ -687,7 +687,7 @@ export default function HomePage() {
                         { step: 3, day: 'Day 7',  label: 'Follow-up #2',   open: '29%' },
                         { step: 4, day: 'Day 14', label: 'Break-up Email', open: '52%', reply: '18%' },
                       ].map(s => (
-                        <div key={s.step} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50/50 transition-colors">
+                        <div key={s.step} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 transition-colors">
                           <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-black flex items-center justify-center shrink-0">{s.step}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-gray-800">{s.label}</p>
@@ -758,7 +758,7 @@ export default function HomePage() {
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full">
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-200">
-                  <div className="flex flex-col gap-2 px-4 sm:px-5 pt-3 pb-2.5 sm:pt-3.5 sm:pb-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/70 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
+                  <div className="flex flex-col gap-2 px-4 sm:px-5 pt-3 pb-2.5 sm:pt-3.5 sm:pb-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/60 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
                     <div className="flex items-center gap-2.5">
                       <p className="text-sm font-bold text-gray-900 dark:text-white">Unibox</p>
                       <span className="text-xs font-black bg-blue-600 text-white rounded-full px-2.5 py-0.5">8 new</span>
@@ -777,7 +777,7 @@ export default function HomePage() {
                     { from: 'Amy Tran',   co: 'Figma',   time: '5h',  preview: "Could you send over more info about pricing...",   tag: 'Needs Info', tagColor: 'bg-purple-100 text-purple-700', read: true,  idx: 4 },
                   ].map(mail => (
                     <div key={mail.from}
-                      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 cursor-pointer transition-colors ${!mail.read ? 'bg-blue-50/20' : ''}`}>
+                      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50/80 dark:hover:bg-gray-800/60 cursor-pointer transition-colors ${!mail.read ? 'bg-blue-50/20 dark:bg-blue-950/20' : ''}`}>
                       <PersonAvatar idx={mail.idx} size={38} />
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-1.5">
@@ -832,7 +832,7 @@ export default function HomePage() {
             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay: 0.1 }}
               className="flex-1 w-full bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden border border-gray-100 dark:border-gray-800">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/60">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/60 dark:bg-gray-800/60">
                 <div>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">Campaign Analytics</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">SaaS Founders Q3 — Last 30 days</p>

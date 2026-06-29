@@ -583,7 +583,7 @@ export default function WarmupPage() {
                   {/* Account summary header */}
                   <button
                     onClick={() => setExpandedEmail(isExpanded ? null : acc.email)}
-                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/60 transition-colors text-left">
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/60 dark:hover:bg-gray-800 transition-colors text-left">
                     <div className="flex items-center gap-4">
                       <ScoreRing score={latestScore}/>
                       <div>
@@ -631,7 +631,7 @@ export default function WarmupPage() {
                               {rows.map(row => {
                                 const pct = Math.min(100, Math.round((Math.min(row.day_number, 14) / 14) * 100));
                                 return (
-                                  <tr key={row.date} className="hover:bg-gray-50/60 transition-colors">
+                                  <tr key={row.date} className="hover:bg-gray-50/60 dark:hover:bg-gray-800 transition-colors">
                                     <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">{row.date}</td>
                                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300 dark:text-gray-300">
                                       {row.day_number <= 14 ? `Day ${row.day_number}` : `Day 14+ (${row.day_number})`}

@@ -185,7 +185,7 @@ export default function AdminSupportPage() {
                   setTickets(prev => prev.map(x => x.id === t.id ? { ...x, admin_seen_at: new Date().toISOString() } : x));
                   router.push(`/admin/support/${t.id}`);
                 }}
-                className={`px-5 py-4 flex items-center gap-4 hover:bg-gray-50 dark:bg-gray-800 cursor-pointer transition-colors group ${isUnread(t) ? 'bg-blue-50/30' : ''}`}>
+                className={`px-5 py-4 flex items-center gap-4 hover:bg-gray-50 dark:bg-gray-800 cursor-pointer transition-colors group ${isUnread(t) ? 'bg-blue-50/30 dark:bg-blue-950/30' : ''}`}>
                 {/* Unread dot + icon */}
                 <div className="relative shrink-0">
                   {isUnread(t) && (
