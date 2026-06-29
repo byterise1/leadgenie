@@ -137,7 +137,7 @@ export default function SupportWidget() {
         <div
           ref={panelRef}
           className="w-[calc(100vw-2rem)] sm:w-[360px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col"
-          style={{ maxHeight: 'calc(100vh - 5rem)', height: '520px', colorScheme: 'light' }}
+          style={{ maxHeight: 'calc(100vh - 5rem)', height: '520px' }}
         >
           {/* Header */}
           <div className="bg-blue-600 px-5 py-4 text-white shrink-0">
