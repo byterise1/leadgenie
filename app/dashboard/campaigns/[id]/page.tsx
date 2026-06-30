@@ -24,9 +24,9 @@ type LeadRow = {
   current_step: number;
   last_sent_at: string | null;
   lead: { id: string; email: string; first_name?: string; last_name?: string; company?: string } | null;
-  opened?: boolean;
-  clicked?: boolean;
-  replied?: boolean;
+  opened_at?: string | null;
+  clicked_at?: string | null;
+  replied_at?: string | null;
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -295,17 +295,17 @@ export default function CampaignDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{l.lead?.company || '—'}</td>
                       <td className="px-4 py-3 text-center">
-                        {l.opened
+                        {l.opened_at
                           ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg></span>
                           : <span className="text-gray-300 dark:text-gray-600 text-sm">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {l.clicked
+                        {l.clicked_at
                           ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg></span>
                           : <span className="text-gray-300 dark:text-gray-600 text-sm">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {l.replied
+                        {l.replied_at
                           ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg></span>
                           : <span className="text-gray-300 dark:text-gray-600 text-sm">—</span>}
                       </td>
