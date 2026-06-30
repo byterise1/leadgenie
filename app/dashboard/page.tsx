@@ -140,12 +140,12 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
             <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Quick Actions</p>
             <div className="space-y-2">
               {quickActions.map(a => (
                 <Link key={a.label} href={a.href}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 dark:bg-gray-800 transition-all group">
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800/50 transition-all group">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 ${stepColor[a.color].num}`}>
                     {a.step}
                   </span>

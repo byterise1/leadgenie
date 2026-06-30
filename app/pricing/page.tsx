@@ -112,7 +112,7 @@ export default function PricingPage() {
         </section>
 
         {/* Plans */}
-        <section className="py-16">
+        <section className="py-16 bg-gray-50">
           <div className="container">
             {loading ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 max-w-[1400px] mx-auto">
@@ -135,7 +135,7 @@ export default function PricingPage() {
                   className={`relative rounded-2xl p-6 flex flex-col ${
                     plan.highlighted
                       ? 'bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-2xl ring-2 ring-blue-500 ring-offset-2 scale-[1.03] z-10'
-                      : 'bg-white border border-gray-100 dark:border-gray-800 hover:shadow-sm transition-shadow'
+                      : 'bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 hover:shadow-sm transition-shadow'
                   }`}>
                   {plan.highlighted && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -143,16 +143,16 @@ export default function PricingPage() {
                     </div>
                   )}
 
-                  <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>{plan.name}</h3>
-                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-gray-500'}`}>{plan.tagline}</p>
+                  <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{plan.name}</h3>
+                  <p className={`text-xs mb-5 ${plan.highlighted ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>{plan.tagline}</p>
 
                   <div className="mb-5">
-                    <span className={`text-4xl font-extrabold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-4xl font-extrabold ${plan.highlighted ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                       ${yearly ? plan.annual_price : plan.monthly_price}
                     </span>
-                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>/mo</span>
+                    <span className={`text-sm ml-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>/mo</span>
                     {yearly && plan.annual_price !== plan.monthly_price && (
-                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+                      <p className={`text-xs mt-1 ${plan.highlighted ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>
                         Billed ${(plan.annual_price * 12).toLocaleString()} yearly
                       </p>
                     )}
@@ -162,7 +162,7 @@ export default function PricingPage() {
                     className={`w-full text-center text-sm font-bold rounded-full py-3 mb-6 transition-colors block ${
                       plan.highlighted
                         ? 'bg-white text-blue-700 hover:bg-blue-50'
-                        : 'bg-gray-900 text-white hover:bg-gray-700'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500'
                     }`}>
                     {plan.cta_label}
                   </Link>
@@ -170,11 +170,11 @@ export default function PricingPage() {
                   <ul className="space-y-2.5 flex-1">
                     {(Array.isArray(plan.features) ? plan.features : []).map((f: string) => (
                       <li key={f} className="flex items-start gap-2.5">
-                        <svg className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? 'text-blue-200' : 'text-blue-600'}`}
+                        <svg className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? 'text-blue-200' : 'text-blue-500'}`}
                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                         </svg>
-                        <span className={`text-sm ${plan.highlighted ? 'text-blue-100' : 'text-gray-600'}`}>{f}</span>
+                        <span className={`text-sm ${plan.highlighted ? 'text-blue-100' : 'text-gray-600 dark:text-gray-300'}`}>{f}</span>
                       </li>
                     ))}
                   </ul>
