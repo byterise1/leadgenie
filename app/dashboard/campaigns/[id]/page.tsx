@@ -25,6 +25,7 @@ type LeadRow = {
   last_sent_at: string | null;
   lead: { id: string; email: string; first_name?: string; last_name?: string; company?: string } | null;
   opened?: boolean;
+  clicked?: boolean;
   replied?: boolean;
 };
 
@@ -274,7 +275,9 @@ export default function CampaignDetailPage() {
                   <tr className="border-b border-gray-100 dark:border-gray-800">
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Lead</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Company</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Step</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Opened</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Clicked</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Replied</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Sent</th>
                   </tr>
@@ -291,7 +294,21 @@ export default function CampaignDetailPage() {
                         <p className="text-xs text-gray-400 dark:text-gray-500">{l.lead?.email}</p>
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{l.lead?.company || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">Step {l.current_step + 1}</td>
+                      <td className="px-4 py-3 text-center">
+                        {l.opened
+                          ? <span className="inline-block w-4 h-4 rounded-full bg-blue-500 dark:bg-blue-400" title="Opened"/>
+                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not opened"/>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {l.clicked
+                          ? <span className="inline-block w-4 h-4 rounded-full bg-violet-500 dark:bg-violet-400" title="Clicked"/>
+                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not clicked"/>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {l.replied
+                          ? <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 dark:bg-emerald-400" title="Replied"/>
+                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not replied"/>}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full capitalize ${LEAD_STATUS_BADGE[l.status] ?? LEAD_STATUS_BADGE.sent}`}>
                           {l.status?.replace('_', ' ')}

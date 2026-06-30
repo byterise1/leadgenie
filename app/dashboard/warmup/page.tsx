@@ -56,12 +56,12 @@ function ScoreRing({ score }: { score: number }) {
   const dash = (score / 100) * circ;
   const color = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
   return (
-    <svg width="52" height="52" viewBox="0 0 52 52" className="shrink-0">
-      <circle cx="26" cy="26" r={r} fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+    <svg width="52" height="52" viewBox="0 0 52 52" className="shrink-0 text-gray-900 dark:text-white">
+      <circle cx="26" cy="26" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-gray-200 dark:text-gray-700" opacity="1"/>
       <circle cx="26" cy="26" r={r} fill="none" stroke={color} strokeWidth="5"
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
         transform="rotate(-90 26 26)"/>
-      <text x="26" y="30" textAnchor="middle" fontSize="11" fontWeight="700" fill="#111">{score}</text>
+      <text x="26" y="30" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor">{score}</text>
     </svg>
   );
 }
