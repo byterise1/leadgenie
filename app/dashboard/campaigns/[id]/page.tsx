@@ -210,11 +210,11 @@ export default function CampaignDetailPage() {
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">Email Sequence</h2>
             </div>
-            {campaign.email_steps.length === 0 ? (
+            {(campaign.email_steps ?? []).length === 0 ? (
               <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No email steps configured.</div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {[...campaign.email_steps]
+                {[...(campaign.email_steps ?? [])]
                   .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
                   .map((step, i) => (
                     <div key={step.id} className="flex items-center gap-4 px-6 py-4">
@@ -242,11 +242,11 @@ export default function CampaignDetailPage() {
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white">Sending Accounts</h2>
               </div>
-              {campaign.campaign_accounts.length === 0 ? (
+              {(campaign.campaign_accounts ?? []).length === 0 ? (
                 <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-sm">No accounts linked.</div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {campaign.campaign_accounts.map(ca => (
+                  {(campaign.campaign_accounts ?? []).map(ca => (
                     <div key={ca.account.id} className="flex items-center gap-3 px-6 py-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">
                         {ca.account.email[0].toUpperCase()}
