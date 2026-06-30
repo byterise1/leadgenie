@@ -297,17 +297,17 @@ export default function CampaignDetailPage() {
                       <td className="px-4 py-3 text-center">
                         {l.opened
                           ? <span className="inline-block w-4 h-4 rounded-full bg-blue-500 dark:bg-blue-400" title="Opened"/>
-                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not opened"/>}
+                          : <span className="inline-block w-4 h-4 rounded-full border-2 border-gray-200 dark:border-gray-700" title="Not opened"/>}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {l.clicked
                           ? <span className="inline-block w-4 h-4 rounded-full bg-violet-500 dark:bg-violet-400" title="Clicked"/>
-                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not clicked"/>}
+                          : <span className="inline-block w-4 h-4 rounded-full border-2 border-gray-200 dark:border-gray-700" title="Not clicked"/>}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {l.replied
                           ? <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 dark:bg-emerald-400" title="Replied"/>
-                          : <span className="inline-block w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" title="Not replied"/>}
+                          : <span className="inline-block w-4 h-4 rounded-full border-2 border-gray-200 dark:border-gray-700" title="Not replied"/>}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full capitalize ${LEAD_STATUS_BADGE[l.status] ?? LEAD_STATUS_BADGE.sent}`}>
