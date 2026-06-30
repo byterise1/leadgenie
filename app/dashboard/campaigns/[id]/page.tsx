@@ -284,9 +284,17 @@ export default function CampaignDetailPage() {
                   },
                   {
                     label: 'Active days',
-                    value: campaign.active_days && campaign.active_days.length > 0
-                      ? campaign.active_days.map((d: string) => d.slice(0,3)).join(', ')
-                      : 'Mon – Fri',
+                    value: (() => {
+                      const days = campaign.active_days;
+                      if (!days || !days.length) return 'Mon – Fri';
+                      const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                      // boolean[] format: [true,true,...] stored by worker
+                      if (typeof days[0] === 'boolean') {
+                        return (days as unknown as boolean[]).map((on, i) => on ? names[i] : null).filter(Boolean).join(', ') || 'Mon – Fri';
+                      }
+                      // string[] format: ['Monday','Tuesday',...]
+                      return (days as string[]).map(d => String(d).slice(0, 3)).join(', ');
+                    })(),
                   },
                   {
                     label: 'Start date',
