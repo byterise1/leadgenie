@@ -354,7 +354,7 @@ export default function CampaignDetailPage() {
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800">
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Lead</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Company</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Progress</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Opened</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Clicked</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Replied</th>
@@ -363,7 +363,11 @@ export default function CampaignDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {leads.map(l => (
+                  {leads.map(l => {
+                    const totalSteps = (campaign.email_steps ?? []).length;
+                    const stepsSent = l.current_step ?? 0;
+                    const stepsLeft = Math.max(0, totalSteps - stepsSent);
+                    return (
                     <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-6 py-3">
                         <p className="font-medium text-gray-900 dark:text-white">
@@ -373,7 +377,31 @@ export default function CampaignDetailPage() {
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500">{l.lead?.email}</p>
                       </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{l.lead?.company || '—'}</td>
+                      <td className="px-4 py-3 min-w-[140px]">
+                        {l.status === 'pending' ? (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">Not started</span>
+                        ) : l.status === 'completed' || l.status === 'replied' || l.status === 'bounced' || l.status === 'opted_out' ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: totalSteps }).map((_, i) => (
+                                <div key={i} className="w-4 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-500"/>
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{totalSteps}/{totalSteps} done</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: totalSteps }).map((_, i) => (
+                                <div key={i} className={`w-4 h-1.5 rounded-full ${i < stepsSent ? 'bg-blue-500 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}/>
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold whitespace-nowrap">
+                              {stepsSent}/{totalSteps} · {stepsLeft} left
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {l.opened_at
                           ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg></span>
@@ -396,7 +424,8 @@ export default function CampaignDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">{formatDate(l.last_sent_at)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
