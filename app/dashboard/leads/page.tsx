@@ -82,6 +82,7 @@ export default function LeadsPage() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [includeRisky, setIncludeRisky] = useState(true);
+  const [includeCrossListDupes, setIncludeCrossListDupes] = useState(false);
   const [jobFilter, setJobFilter] = useState<'all' | 'importable' | 'blocked' | 'dupes' | EmailDecision>('all');
   // Note: 'catchall' and 'unknown' no longer exist as EmailDecision types — all map to 'risky'
   const [executing, setExecuting] = useState(false);
@@ -234,10 +235,10 @@ export default function LeadsPage() {
     return activeJob.results.filter(r => {
       if (!['safe','likely_safe','risky'].includes(r.decision)) return false;
       if (r.decision === 'risky' && !includeRisky) return false;
-      if (r.dupe_lists.length > 0) return false;
+      if (r.dupe_lists.length > 0 && !includeCrossListDupes) return false;
       return true;
     }).length;
-  }, [activeJob?.results, includeRisky]);
+  }, [activeJob?.results, includeRisky, includeCrossListDupes]);
 
   // ── Import (validate → job) ────────────────────────────────────────
   const handleImport = async (file: File, isSingleLead = false) => {
@@ -270,6 +271,7 @@ export default function LeadsPage() {
         setActiveJob(job);
         setJobFilter('all');
         setIncludeRisky(true);
+        setIncludeCrossListDupes(false);
         // Auto-open modal for sync results or single lead
         if (d.status === 'done') setShowJobModal(true);
       } else {
@@ -305,7 +307,7 @@ export default function LeadsPage() {
       const res = await fetch(`/api/leads/import-jobs/${activeJob.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ include_risky: includeRisky, include_catchall: true, include_cross_list: false }),
+        body: JSON.stringify({ include_risky: includeRisky, include_catchall: true, include_cross_list: includeCrossListDupes }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -1025,6 +1027,13 @@ export default function LeadsPage() {
                   <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeRisky ? 'left-4' : 'left-0.5'}`}/>
                 </div>
                 <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-800">Include Risky</span>
+              </button>
+              <button type="button" onClick={() => setIncludeCrossListDupes(v => !v)}
+                className="flex items-center gap-2 cursor-pointer select-none group">
+                <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${includeCrossListDupes ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${includeCrossListDupes ? 'left-4' : 'left-0.5'}`}/>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-800">Add to this list if in another</span>
               </button>
               <div className="ml-auto flex items-center gap-1">
                 {([
