@@ -10,6 +10,15 @@ type Campaign = {
   status: string;
   created_at: string;
   goal?: string;
+  daily_limit?: number;
+  from_hour?: number;
+  to_hour?: number;
+  active_days?: string[];
+  timezone?: string;
+  start_date?: string | null;
+  from_name?: string;
+  min_delay_secs?: number;
+  max_delay_secs?: number;
   total_sent: number;
   total_opened: number;
   total_replied: number;
@@ -226,28 +235,91 @@ export default function CampaignDetailPage() {
             )}
           </div>
 
-          {/* Sending Accounts */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Sending Accounts</h2>
+          {/* Right column: Sending Accounts + Schedule */}
+          <div className="space-y-6">
+            {/* Sending Accounts */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">Sending Accounts</h2>
+              </div>
+              {campaign.campaign_accounts.length === 0 ? (
+                <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-sm">No accounts linked.</div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {campaign.campaign_accounts.map(ca => (
+                    <div key={ca.account.id} className="flex items-center gap-3 px-6 py-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">
+                        {ca.account.email[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{ca.account.email}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{ca.account.type}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {campaign.campaign_accounts.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No accounts linked.</div>
-            ) : (
+
+            {/* Schedule & Limits */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">Schedule & Limits</h2>
+              </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {campaign.campaign_accounts.map(ca => (
-                  <div key={ca.account.id} className="flex items-center gap-3 px-6 py-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">
-                      {ca.account.email[0].toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{ca.account.email}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{ca.account.type}</p>
-                    </div>
+                {[
+                  {
+                    label: 'Daily limit',
+                    value: `${campaign.daily_limit ?? 50} emails/day`,
+                  },
+                  {
+                    label: 'Send window',
+                    value: campaign.from_hour != null && campaign.to_hour != null
+                      ? `${String(campaign.from_hour).padStart(2,'0')}:00 – ${String(campaign.to_hour).padStart(2,'0')}:00`
+                      : 'Any time',
+                  },
+                  {
+                    label: 'Timezone',
+                    value: campaign.timezone || 'UTC',
+                  },
+                  {
+                    label: 'Active days',
+                    value: campaign.active_days && campaign.active_days.length > 0
+                      ? campaign.active_days.map((d: string) => d.slice(0,3)).join(', ')
+                      : 'Mon – Fri',
+                  },
+                  {
+                    label: 'Start date',
+                    value: campaign.start_date ? formatDate(campaign.start_date) : 'Immediately',
+                  },
+                  {
+                    label: 'Delay between emails',
+                    value: campaign.min_delay_secs != null && campaign.max_delay_secs != null
+                      ? `${Math.round(campaign.min_delay_secs / 60)}–${Math.round(campaign.max_delay_secs / 60)} min`
+                      : '—',
+                  },
+                  {
+                    label: 'Leads total',
+                    value: `${leads.length} leads${sent > 0 ? ` · ${sent} sent` : ''}`,
+                  },
+                  ...(sent > 0 && campaign.daily_limit && leads.length > sent ? [{
+                    label: 'Est. completion',
+                    value: (() => {
+                      const remaining = leads.length - sent;
+                      const daysLeft = Math.ceil(remaining / (campaign.daily_limit ?? 50));
+                      const end = new Date();
+                      end.setDate(end.getDate() + daysLeft);
+                      return `~${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (${daysLeft}d left)`;
+                    })(),
+                  }] : []),
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between px-6 py-3">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{row.label}</span>
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-right max-w-[60%]">{row.value}</span>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
