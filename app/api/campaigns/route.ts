@@ -27,21 +27,37 @@ export async function GET() {
     (lists || []).forEach((l: { id: string; name: string }) => { listMap[l.id] = { name: l.name }; });
   }
 
-  // Real counts per campaign from sent_emails (opens, clicks) and campaign_leads (replies — per-lead, deduped)
+  // Counts matching competitor behaviour: opens/clicks = unique leads, not raw email rows
   const campaignIds = (data || []).map((c: { id: string }) => c.id);
   const statsByCampaign: Record<string, { sent: number; opened: number; replied: number; clicked: number }> = {};
   if (campaignIds.length) {
     const [sentRows, repliedRows] = await Promise.all([
-      supabaseAdmin.from('sent_emails').select('campaign_id,opened_at,clicked_at').in('campaign_id', campaignIds),
+      supabaseAdmin.from('sent_emails').select('campaign_id,lead_id,opened_at,clicked_at').in('campaign_id', campaignIds),
       supabaseAdmin.from('campaign_leads').select('campaign_id').in('campaign_id', campaignIds).eq('status', 'replied'),
     ]);
-    (sentRows.data || []).forEach((s: { campaign_id: string; opened_at: string | null; clicked_at: string | null }) => {
+    // Track unique lead_ids per campaign for opens/clicks
+    const openedLeads: Record<string, Set<string>> = {};
+    const clickedLeads: Record<string, Set<string>> = {};
+    (sentRows.data || []).forEach((s: { campaign_id: string; lead_id: string; opened_at: string | null; clicked_at: string | null }) => {
       const r = statsByCampaign[s.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
       r.sent++;
-      if (s.opened_at) r.opened++;
-      if (s.clicked_at) r.clicked++;
       statsByCampaign[s.campaign_id] = r;
+      if (s.opened_at) {
+        if (!openedLeads[s.campaign_id]) openedLeads[s.campaign_id] = new Set();
+        openedLeads[s.campaign_id].add(s.lead_id);
+      }
+      if (s.clicked_at) {
+        if (!clickedLeads[s.campaign_id]) clickedLeads[s.campaign_id] = new Set();
+        clickedLeads[s.campaign_id].add(s.lead_id);
+      }
     });
+    // Write unique counts back
+    for (const cid of campaignIds) {
+      const r = statsByCampaign[cid] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
+      r.opened  = openedLeads[cid]?.size  ?? 0;
+      r.clicked = clickedLeads[cid]?.size ?? 0;
+      statsByCampaign[cid] = r;
+    }
     (repliedRows.data || []).forEach((r: { campaign_id: string }) => {
       const s = statsByCampaign[r.campaign_id] || { sent: 0, opened: 0, replied: 0, clicked: 0 };
       s.replied++;

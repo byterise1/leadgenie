@@ -18,18 +18,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Real counts from sent_emails (opens, clicks) and campaign_leads (replies — per-lead, deduped)
-  const [sentRes, openedRes, repliedRes, clickedRes] = await Promise.all([
+  // Counts matching competitor behaviour (Instantly/Smartlead):
+  // - Sent   = total emails delivered across all steps
+  // - Opens  = unique leads who opened ANY step (deduplicated by lead_id)
+  // - Clicks = unique leads who clicked ANY step (deduplicated by lead_id)
+  // - Replies= unique leads with status='replied'
+  const [sentRes, openedRows, repliedRes, clickedRows] = await Promise.all([
     supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id),
-    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('opened_at', 'is', null),
+    supabaseAdmin.from('sent_emails').select('lead_id').eq('campaign_id', id).not('opened_at', 'is', null),
     supabaseAdmin.from('campaign_leads').select('id', { count: 'exact', head: true }).eq('campaign_id', id).eq('status', 'replied'),
-    supabaseAdmin.from('sent_emails').select('id', { count: 'exact', head: true }).eq('campaign_id', id).not('clicked_at', 'is', null),
+    supabaseAdmin.from('sent_emails').select('lead_id').eq('campaign_id', id).not('clicked_at', 'is', null),
   ]);
 
-  const totalSent = sentRes.error ? data.total_sent : (sentRes.count ?? 0);
-  const totalOpened = openedRes.error ? data.total_opened : (openedRes.count ?? 0);
+  const totalSent    = sentRes.error    ? data.total_sent    : (sentRes.count ?? 0);
+  const totalOpened  = new Set((openedRows.data  || []).map((r: any) => r.lead_id)).size;
   const totalReplied = repliedRes.error ? data.total_replied : (repliedRes.count ?? 0);
-  const totalClicked = clickedRes.error ? 0 : (clickedRes.count ?? 0);
+  const totalClicked = new Set((clickedRows.data || []).map((r: any) => r.lead_id)).size;
 
   return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked });
 }
