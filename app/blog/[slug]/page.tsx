@@ -83,8 +83,9 @@ function renderMarkdown(content: string): React.ReactNode[] {
   return elements;
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = blogPosts.find(p => p.slug === params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = blogPosts.find(p => p.slug === slug);
   if (!post) notFound();
 
   const related = blogPosts.filter(p => p.slug !== post.slug && p.category === post.category).slice(0, 3);
