@@ -234,7 +234,7 @@ export default function CampaignDetailPage() {
                           {step.subject || '(no subject)'}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                          {i === 0 ? 'Sent immediately' : `+${step.delay} day${step.delay !== 1 ? 's' : ''} after previous`}
+                          {i === 0 ? 'Sent immediately' : (() => { const d = step.delay_days ?? step.delay ?? 1; return `+${d} day${d !== 1 ? 's' : ''} after previous`; })()}
                         </p>
                       </div>
                     </div>

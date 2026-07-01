@@ -200,6 +200,28 @@ export async function register() {
         return;
       }
 
+      // Enforce campaign daily limit across ALL steps (not just step 0)
+      const campaignDailyLimit = campaign.daily_limit ?? 50;
+      const { count: campaignSentToday } = await supabase
+        .from('sent_emails')
+        .select('id', { count: 'exact', head: true })
+        .eq('campaign_id', campaign.id)
+        .gte('sent_at', todayUTC.toISOString());
+      if ((campaignSentToday ?? 0) >= campaignDailyLimit) {
+        if (!job.data.isRequeued) {
+          const { emailQueue: eq } = await import('./lib/queue');
+          await eq.add('send', { ...job.data, isRequeued: true }, {
+            delay: 25 * 60 * 60 * 1000,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60000 },
+          });
+          console.log(`⏸ Campaign "${campaign.name}" at daily limit (${campaignDailyLimit}/day), requeueing in 25h`);
+        } else {
+          console.log(`⚠ Campaign "${campaign.name}" still at daily limit after requeue — skipping`);
+        }
+        return;
+      }
+
       // Credits check only on step 0 (first email) — follow-ups are free
       const { data: profileData } = await supabase
         .from('profiles')
