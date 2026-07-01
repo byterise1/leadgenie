@@ -23,7 +23,7 @@ type Campaign = {
   total_opened: number;
   total_replied: number;
   total_clicked: number;
-  email_steps: { id: string; subject: string; delay: number; step_order?: number }[];
+  email_steps: { id: string; subject: string; delay_days?: number; delay?: number; step_order?: number }[];
   campaign_accounts: { account: { id: string; email: string; type: string } }[];
 };
 
@@ -61,6 +61,14 @@ function pct(n: number, total: number) {
 function formatDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDateTime(d: string | null) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    + ' · '
+    + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function CampaignDetailPage() {
@@ -310,14 +318,26 @@ export default function CampaignDetailPage() {
                     label: 'Leads total',
                     value: `${leads.length} leads${sent > 0 ? ` · ${sent} sent` : ''}`,
                   },
-                  ...(sent > 0 && campaign.daily_limit && leads.length > sent ? [{
+                  ...(campaign.daily_limit && leads.length > 0 ? [{
                     label: 'Est. completion',
                     value: (() => {
-                      const remaining = leads.length - sent;
-                      const daysLeft = Math.ceil(remaining / (campaign.daily_limit ?? 50));
+                      const steps = campaign.email_steps ?? [];
+                      const totalSteps = steps.length;
+                      const dailyLimit = campaign.daily_limit ?? 50;
+                      // Total emails still to send across all leads × remaining steps
+                      const totalEmailsLeft = leads.reduce((acc, l) => {
+                        const done = l.current_step ?? 0;
+                        return acc + Math.max(0, totalSteps - done);
+                      }, 0);
+                      if (totalEmailsLeft === 0) return 'Complete';
+                      // Processing days = how many days at daily_limit to send all remaining emails
+                      const processingDays = Math.ceil(totalEmailsLeft / dailyLimit);
+                      // Step delay days = mandatory waits between steps (sum delay_days for steps 1+)
+                      const stepDelayDays = steps.slice(1).reduce((acc, s) => acc + (s.delay_days ?? s.delay ?? 1), 0);
+                      const totalDays = processingDays + stepDelayDays;
                       const end = new Date();
-                      end.setDate(end.getDate() + daysLeft);
-                      return `~${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (${daysLeft}d left)`;
+                      end.setDate(end.getDate() + totalDays);
+                      return `~${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (${totalDays}d)`;
                     })(),
                   }] : []),
                 ].map(row => (
@@ -422,7 +442,7 @@ export default function CampaignDetailPage() {
                           {l.status?.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">{formatDate(l.last_sent_at)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{formatDateTime(l.last_sent_at)}</td>
                     </tr>
                     );
                   })}
