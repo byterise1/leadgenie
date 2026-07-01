@@ -212,9 +212,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     .gte('sent_at', todayMidnightUtc.toISOString());
   let emailsThisDay = alreadySentToday ?? 0;
 
-  const jobs = campaignLeads.map((cl: any, i: number) => {
-    // Active leads (step 0 already sent, paused mid-sequence) resume from their next
-    // step immediately — they don't count against the daily limit.
+  // Separate cursor for follow-up (active) leads so their 2–6 min gaps
+  // don't interfere with the step-0 daily-limit window cursor.
+  let followupCursor = Date.now() + 5_000;
+
+  const jobs = campaignLeads.map((cl: any) => {
     const targetStep: number = cl.status === 'active' ? (cl.current_step ?? 1) : 0;
     let sendAt: number;
 
@@ -232,15 +234,17 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       cursor += randomGap;
       emailsThisDay++;
     } else {
-      // Active lead resuming: respect the step delay from last_sent_at.
-      // This mirrors how the worker schedules follow-ups after each step.
-      // If last_sent_at is missing, treat as due now.
+      // Active lead resuming: earliest it can send = last_sent_at + step delay.
+      // If that time is past (paused a long time), apply the same 2–6 min gap
+      // between leads so they don't all blast out at once.
       const lastSentMs = cl.last_sent_at ? new Date(cl.last_sent_at).getTime() : Date.now();
       const delayDays = stepDelayDays[targetStep] ?? 1;
-      const nextStepDue = lastSentMs + delayDays * DELAY_UNIT_MS;
-      // Spread multiple active leads 15s apart to avoid burst-sending
-      const spreadMs = (i * 15_000);
-      sendAt = Math.max(Date.now() + 5_000 + spreadMs, nextStepDue);
+      const stepDue = lastSentMs + delayDays * DELAY_UNIT_MS;
+      // followupCursor ensures at least 2–6 min between each follow-up on resume
+      followupCursor = Math.max(followupCursor, stepDue);
+      sendAt = followupCursor;
+      const randomGap = minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+      followupCursor += randomGap;
     }
 
     return {
@@ -248,7 +252,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       data: {
         campaignLeadId: cl.id,
         stepNumber: targetStep,
-        accountIndex: i % numAccounts,
+        accountIndex: Math.floor(Math.random() * numAccounts),
       },
       opts: {
         delay: Math.max(0, sendAt - Date.now()),
