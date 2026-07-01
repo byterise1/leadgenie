@@ -117,11 +117,23 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const { data: campaignLeads } = await supabaseAdmin
-    .from('campaign_leads')
-    .select('id, status, current_step')
-    .eq('campaign_id', id)
-    .in('status', ['pending', 'active']);
+  const [{ data: campaignLeads }, { data: stepsData }] = await Promise.all([
+    supabaseAdmin
+      .from('campaign_leads')
+      .select('id, status, current_step, last_sent_at')
+      .eq('campaign_id', id)
+      .in('status', ['pending', 'active']),
+    supabaseAdmin
+      .from('email_steps')
+      .select('step_number, delay_days')
+      .eq('campaign_id', id)
+      .order('step_number'),
+  ]);
+  // delay_days per step: step N fires (delay_days[N] * DELAY_UNIT_MS) after step N-1
+  const stepDelayDays: Record<number, number> = {};
+  (stepsData || []).forEach((s: any) => { stepDelayDays[s.step_number] = s.delay_days ?? 1; });
+  // TEST MODE: 60s per "day". Change to 24*60*60*1000 for production.
+  const DELAY_UNIT_MS = 60 * 1_000;
 
   if (!campaignLeads?.length) {
     if (campaign.list_id) {
@@ -220,8 +232,15 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       cursor += randomGap;
       emailsThisDay++;
     } else {
-      // Follow-up step: fire 30 seconds after resume so the worker is ready
-      sendAt = Date.now() + 30_000 + i * 5_000;
+      // Active lead resuming: respect the step delay from last_sent_at.
+      // This mirrors how the worker schedules follow-ups after each step.
+      // If last_sent_at is missing, treat as due now.
+      const lastSentMs = cl.last_sent_at ? new Date(cl.last_sent_at).getTime() : Date.now();
+      const delayDays = stepDelayDays[targetStep] ?? 1;
+      const nextStepDue = lastSentMs + delayDays * DELAY_UNIT_MS;
+      // Spread multiple active leads 15s apart to avoid burst-sending
+      const spreadMs = (i * 15_000);
+      sendAt = Math.max(Date.now() + 5_000 + spreadMs, nextStepDue);
     }
 
     return {
