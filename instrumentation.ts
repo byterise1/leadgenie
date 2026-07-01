@@ -953,11 +953,13 @@ export async function register() {
       } catch { return []; }
     }
 
-    new SyncWorker('warmup', async () => {
+    new SyncWorker('warmup', async (job: any) => {
+      const isManual = job?.data?.manual === true;
+
       // Business-hours gate: only run warmup between 07:00–21:00 UTC.
-      // Competitors (Instantly, Lemwarm) never send warmup outside daytime hours.
+      // Manual "Run Now" from admin bypasses this gate.
       const utcHour = new Date().getUTCHours();
-      if (utcHour < 7 || utcHour >= 21) {
+      if (!isManual && (utcHour < 7 || utcHour >= 21)) {
         console.log(`[warmup] Outside business hours (UTC ${utcHour}h) — skipping cycle`);
         return;
       }
@@ -1000,10 +1002,14 @@ export async function register() {
         await Promise.all(batch.map(async account => {
           try {
             // Random start offset per account (0–8 min) so all accounts don't fire simultaneously
-            await new Promise(r => setTimeout(r, Math.random() * 8 * 60 * 1000));
+            // Skipped for manual "Run Now" so admin sees results immediately
+            if (!isManual) {
+              await new Promise(r => setTimeout(r, Math.random() * 8 * 60 * 1000));
+            }
 
             const todayStr = new Date().toISOString().slice(0, 10);
-            if (account.warmup_last_run_date === todayStr) return; // already ran today
+            // Skip accounts that already ran today — except on manual trigger (allow re-run)
+            if (!isManual && account.warmup_last_run_date === todayStr) return;
             const day = (account.warmup_day ?? 0) + 1;
             const emailsToday = warmupDailyTarget(day);
 
