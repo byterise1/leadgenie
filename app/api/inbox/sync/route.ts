@@ -32,11 +32,9 @@ export async function POST(_req: NextRequest) {
     .eq('type', 'gmail-oauth')
     .neq('status', 'error');
 
-  if (!accounts?.length) return NextResponse.json({ synced: 0 });
-
   let totalSynced = 0;
 
-  for (const account of accounts) {
+  for (const account of (accounts || [])) {
     let accessToken: string;
     try {
       accessToken = await getAccessToken(account);
@@ -172,13 +170,25 @@ export async function POST(_req: NextRequest) {
   }
 
   // ── IMAP reply sync (Titan, Zoho, Yahoo, App Password, Custom SMTP) ──────────
-  const { data: imapAccounts } = await supabaseAdmin
+  // Include accounts that have either imap_host OR smtp_host (imap_host auto-derived from smtp_host)
+  const { data: imapAccountsRaw } = await supabaseAdmin
     .from('email_accounts')
     .select('*')
     .eq('user_id', user.id)
     .in('type', ['imap', 'gmail-app', 'smtp'])
-    .neq('status', 'error')
-    .not('imap_host', 'is', null);
+    .neq('status', 'error');
+
+  // Derive imap_host from smtp_host if not explicitly set (e.g. smtp.titan.email → imap.titan.email)
+  const imapAccounts = (imapAccountsRaw || []).map((a: any) => ({
+    ...a,
+    imap_host: a.imap_host || (a.smtp_host ? a.smtp_host.replace(/^smtp\./i, 'imap.') : null),
+  })).filter((a: any) => a.imap_host);
+
+  // Collect all active account IDs so we can also scan orphaned sent_emails from deleted accounts
+  const allActiveAccountIds = [
+    ...((accounts || []).map((a: any) => a.id)),
+    ...(imapAccounts.map((a: any) => a.id)),
+  ];
 
   if (imapAccounts?.length) {
     const SYSTEM_SENDER_PATTERNS = [
@@ -189,7 +199,9 @@ export async function POST(_req: NextRequest) {
 
     for (const account of imapAccounts) {
       try {
-        // Get sent emails for this account that have a stored Message-ID and no reply yet
+        // Get sent emails for this account (including orphaned ones from deleted accounts)
+        // so that if a sending account was deleted, another active IMAP account with the
+        // same credentials (re-added) can still detect the replies.
         const { data: sentEmails } = await supabaseAdmin
           .from('sent_emails')
           .select('id, message_id, lead_id, campaign_id, subject')
