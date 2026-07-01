@@ -26,14 +26,12 @@ function decodeQP(str: string): string {
 function extractSnippet(raw: string): string {
   const decoded = decodeQP(raw);
 
-  // Mark blockquote regions as "> " lines BEFORE stripping HTML tags
   const withMarkedQuotes = decoded
     .replace(/<blockquote[^>]*>/gi, '\n__QUOTE_START__\n')
     .replace(/<\/blockquote>/gi, '\n__QUOTE_END__\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(?:p|div|tr|li)>/gi, '\n');
 
-  // Strip remaining HTML, MIME structure, base64, URLs
   const stripped = withMarkedQuotes
     .replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z#0-9]+;/gi, ' ')
@@ -43,7 +41,6 @@ function extractSnippet(raw: string): string {
     .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, '')
     .replace(/https?:\/\/\S+/g, '');
 
-  // Walk line by line; stop before quoted sections
   const lines = stripped.split(/\r?\n/);
   const out: string[] = [];
   let inQuote = false;
@@ -53,15 +50,73 @@ function extractSnippet(raw: string): string {
     if (t === '__QUOTE_START__') { inQuote = true; continue; }
     if (t === '__QUOTE_END__')   { inQuote = false; continue; }
     if (inQuote) continue;
-    if (t.startsWith('>')) break;                          // plain-text quote
-    if (/^On .{10,}wrote:\s*$/.test(t)) break;            // "On X wrote:"
-    if (/^-{4,}|^_{4,}/.test(t)) break;                  // ---- signature / divider
+    if (t.startsWith('>')) break;
+    if (/^On .{10,}wrote:\s*$/.test(t)) break;
+    if (/^-{4,}|^_{4,}/.test(t)) break;
     const clean = t.replace(/\s+/g, ' ').trim();
     if (clean.length > 1) out.push(clean);
   }
 
   const snippet = out.join(' ').replace(/\s+/g, ' ').trim();
   return (snippet || out.join(' ')).slice(0, 2000);
+}
+
+function normaliseId(id: string): string {
+  return id.replace(/[<>]/g, '').toLowerCase().trim();
+}
+
+// Folders to scan in priority order — covers INBOX + common Spam/Junk folder names
+const FOLDERS_TO_SCAN = ['INBOX', 'Junk', 'Spam', '[Gmail]/Spam', 'JUNK', 'SPAM'];
+
+async function scanFolder(
+  client: ImapFlow,
+  folder: string,
+  idSet: Set<string>,
+  sentMessageIds: string[],
+  senderEmail: string,
+  since: Date,
+): Promise<Array<{ uid: number; inReplyTo: string; fromEmail: string; fromName: string; subject: string; receivedAt: string }>> {
+  try {
+    await client.getMailboxLock(folder);
+  } catch {
+    return []; // folder doesn't exist on this server
+  }
+
+  const results: Array<{ uid: number; inReplyTo: string; fromEmail: string; fromName: string; subject: string; receivedAt: string }> = [];
+
+  try {
+    const uids = await client.search({ since }, { uid: true });
+    if (!uids || (uids as number[]).length === 0) return [];
+
+    for await (const msg of client.fetch(uids as number[], { envelope: true }, { uid: true })) {
+      const env = msg.envelope;
+      if (!env) continue;
+
+      // Skip messages sent by us
+      const from = env.from?.[0];
+      const fromEmail = from?.address || '';
+      if (fromEmail.toLowerCase() === senderEmail.toLowerCase()) continue;
+
+      const inReplyTo = env.inReplyTo ? normaliseId(env.inReplyTo) : '';
+      if (!inReplyTo || !idSet.has(inReplyTo)) continue;
+
+      const matchedId = sentMessageIds.find(mid => normaliseId(mid) === inReplyTo);
+      if (!matchedId) continue;
+
+      results.push({
+        uid: msg.uid as number,
+        inReplyTo: matchedId,
+        fromEmail,
+        fromName: from?.name || '',
+        subject: env.subject || '',
+        receivedAt: (env.date || new Date()).toISOString(),
+      });
+    }
+  } finally {
+    // Lock was already released when getMailboxLock succeeded
+  }
+
+  return results;
 }
 
 export async function fetchImapReplies(
@@ -89,84 +144,95 @@ export async function fetchImapReplies(
   const client = new ImapFlow(imapConfig);
 
   const replies: ImapReply[] = [];
+  const since = new Date(Date.now() - sinceDays * 24 * 3600 * 1000);
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
-    try {
-      const since = new Date(Date.now() - sinceDays * 24 * 3600 * 1000);
-      const uids = await client.search({ since }, { uid: true });
 
-      if (!uids || (uids as number[]).length === 0) return [];
+    // Collect matching messages from INBOX + Spam/Junk folders
+    const allMatches: Array<{ uid: number; inReplyTo: string; fromEmail: string; fromName: string; subject: string; receivedAt: string; folder: string }> = [];
 
-      // Pass 1: envelope only — find matching replies
-      type ReplyInfo = { uid: number; inReplyTo: string; fromEmail: string; fromName: string; subject: string; receivedAt: string };
-      const matchingUids: number[] = [];
-      const replyInfos: ReplyInfo[] = [];
-
-      for await (const msg of client.fetch(uids as number[], { envelope: true }, { uid: true })) {
-        const env = msg.envelope;
-        if (!env) continue;
-
-        const inReplyTo = env.inReplyTo ? normaliseId(env.inReplyTo) : '';
-        if (!inReplyTo || !idSet.has(inReplyTo)) continue;
-
-        const from = env.from?.[0];
-        const fromEmail = from?.address || '';
-        if (fromEmail.toLowerCase() === account.email.toLowerCase()) continue;
-
-        const matchedId = sentMessageIds.find(mid => normaliseId(mid) === inReplyTo);
-        if (!matchedId) continue;
-
-        matchingUids.push(msg.uid as number);
-        replyInfos.push({
-          uid: msg.uid as number,
-          inReplyTo: matchedId,
-          fromEmail,
-          fromName: from?.name || '',
-          subject: env.subject || '',
-          receivedAt: (env.date || new Date()).toISOString(),
-        });
+    for (const folder of FOLDERS_TO_SCAN) {
+      let lock: { release: () => void } | null = null;
+      try {
+        lock = await client.getMailboxLock(folder);
+      } catch {
+        continue; // folder doesn't exist — skip silently
       }
+      try {
+        const uids = await client.search({ since }, { uid: true });
+        if (!uids || (uids as number[]).length === 0) continue;
 
-      // Pass 2: fetch first 2KB of body for snippet (matching messages only)
-      const snippetMap = new Map<number, string>();
-      if (matchingUids.length > 0) {
-        try {
-          for await (const msg of client.fetch(
-            matchingUids,
-            { bodyParts: ['TEXT'] } as any,
-            { uid: true },
-          )) {
-            const bp = (msg as any).bodyParts as Map<string, Buffer> | undefined;
-            const buf = bp?.get('TEXT') ?? bp?.get('text');
-            if (buf) snippetMap.set(msg.uid as number, extractSnippet(buf.toString('utf8')));
+        for await (const msg of client.fetch(uids as number[], { envelope: true }, { uid: true })) {
+          const env = msg.envelope;
+          if (!env) continue;
+
+          const fromAddr = env.from?.[0];
+          const fromEmail = fromAddr?.address || '';
+          if (fromEmail.toLowerCase() === account.email.toLowerCase()) continue;
+
+          const inReplyTo = env.inReplyTo ? normaliseId(env.inReplyTo) : '';
+          if (!inReplyTo || !idSet.has(inReplyTo)) continue;
+
+          const matchedId = sentMessageIds.find(mid => normaliseId(mid) === inReplyTo);
+          if (!matchedId) continue;
+
+          // Dedup: same uid+folder pair only once
+          if (!allMatches.some(m => m.uid === (msg.uid as number) && m.folder === folder)) {
+            allMatches.push({
+              uid: msg.uid as number,
+              folder,
+              inReplyTo: matchedId,
+              fromEmail,
+              fromName: fromAddr?.name || '',
+              subject: env.subject || '',
+              receivedAt: (env.date || new Date()).toISOString(),
+            });
           }
-        } catch { /* snippet is optional */ }
+        }
+      } finally {
+        lock.release();
       }
+    }
 
-      for (const info of replyInfos) {
-        replies.push({
-          inReplyTo: info.inReplyTo,
-          fromEmail: info.fromEmail,
-          fromName: info.fromName,
-          subject: info.subject,
-          receivedAt: info.receivedAt,
-          snippet: snippetMap.get(info.uid) || '',
-        });
-      }
-    } finally {
-      lock.release();
+    if (allMatches.length === 0) return [];
+
+    // Fetch snippets for matching messages (INBOX only — body fetch on Junk may fail on some servers)
+    const inboxMatches = allMatches.filter(m => m.folder === 'INBOX');
+    const snippetMap = new Map<number, string>();
+    if (inboxMatches.length > 0) {
+      let lock: { release: () => void } | null = null;
+      try {
+        lock = await client.getMailboxLock('INBOX');
+        for await (const msg of client.fetch(
+          inboxMatches.map(m => m.uid),
+          { bodyParts: ['TEXT'] } as any,
+          { uid: true },
+        )) {
+          const bp = (msg as any).bodyParts as Map<string, Buffer> | undefined;
+          const buf = bp?.get('TEXT') ?? bp?.get('text');
+          if (buf) snippetMap.set(msg.uid as number, extractSnippet(buf.toString('utf8')));
+        }
+      } catch { /* snippet is optional */ }
+      finally { lock?.release(); }
+    }
+
+    for (const info of allMatches) {
+      replies.push({
+        inReplyTo: info.inReplyTo,
+        fromEmail: info.fromEmail,
+        fromName: info.fromName,
+        subject: info.subject,
+        receivedAt: info.receivedAt,
+        snippet: snippetMap.get(info.uid) || '',
+      });
     }
   } catch (err) {
-    console.error('[imap-reader] error:', (err as Error).message);
+    console.error('[imap-reader] connection/auth error:', (err as Error).message, '| host:', account.imap_host, 'port:', account.imap_port || 993);
+    throw err; // re-throw so caller can report the error
   } finally {
     try { await client.logout(); } catch { /* ignore */ }
   }
 
   return replies;
-}
-
-function normaliseId(id: string): string {
-  return id.replace(/[<>]/g, '').toLowerCase().trim();
 }

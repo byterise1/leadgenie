@@ -199,9 +199,6 @@ export async function POST(_req: NextRequest) {
 
     for (const account of imapAccounts) {
       try {
-        // Get sent emails for this account (including orphaned ones from deleted accounts)
-        // so that if a sending account was deleted, another active IMAP account with the
-        // same credentials (re-added) can still detect the replies.
         const { data: sentEmails } = await supabaseAdmin
           .from('sent_emails')
           .select('id, message_id, lead_id, campaign_id, subject')
@@ -214,24 +211,35 @@ export async function POST(_req: NextRequest) {
 
         const messageIds = sentEmails.map((s: { message_id: string }) => s.message_id);
 
-        const replies = await fetchImapReplies(
-          {
-            imap_host: account.imap_host,
-            imap_port: account.imap_port || 993,
-            smtp_user: account.smtp_user || account.email,
-            smtp_pass: account.smtp_pass,
-            email: account.email,
-          },
-          messageIds,
-        );
+        let replies;
+        try {
+          replies = await fetchImapReplies(
+            {
+              imap_host: account.imap_host,
+              imap_port: account.imap_port || 993,
+              smtp_user: account.smtp_user || account.email,
+              smtp_pass: account.smtp_pass,
+              email: account.email,
+            },
+            messageIds,
+          );
+        } catch (imapErr: any) {
+          // Mark account as error so user sees it in the UI
+          await supabaseAdmin
+            .from('email_accounts')
+            .update({ status: 'error' })
+            .eq('id', account.id);
+          console.error(`[imap-sync] ${account.email} IMAP failed: ${imapErr.message}`);
+          continue;
+        }
 
         for (const reply of replies) {
-          // Skip system/bounce senders
           if (SYSTEM_SENDER_PATTERNS.some(p => reply.fromEmail.toLowerCase().includes(p))) continue;
 
-          // Find the matching sent email
-          const sentEmail = sentEmails.find(
-            (s: { message_id: string }) => s.message_id === reply.inReplyTo,
+          // Normalised match — strips <> so slight formatting differences don't cause misses
+          const sentEmail = sentEmails.find((s: { message_id: string }) =>
+            s.message_id.replace(/[<>]/g, '').toLowerCase() ===
+            reply.inReplyTo.replace(/[<>]/g, '').toLowerCase()
           );
           if (!sentEmail) continue;
 
@@ -251,7 +259,7 @@ export async function POST(_req: NextRequest) {
               lead_id: sentEmail.lead_id,
               account_id: account.id,
               subject: reply.subject || sentEmail.subject,
-              last_message: `Reply from ${reply.fromEmail}`,
+              last_message: reply.snippet || `Reply from ${reply.fromEmail}`,
               from_email: reply.fromEmail,
               from_name: reply.fromName,
               status: 'new',
