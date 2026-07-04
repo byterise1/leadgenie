@@ -72,6 +72,19 @@ export async function GET(request: NextRequest) {
     // Show "refreshed" if it was already a pool account, "connected" if newly promoted
     return NextResponse.redirect(existing.is_pool_account ? alreadyUrl : successUrl);
   } else {
+    // One mailbox = one identity, platform-wide — block if this Gmail is already
+    // connected under a different user's account.
+    const { data: crossUserDup } = await supabaseAdmin
+      .from('email_accounts')
+      .select('id')
+      .eq('email', info.email)
+      .neq('user_id', adminId)
+      .limit(1)
+      .maybeSingle();
+    if (crossUserDup) {
+      return NextResponse.redirect(`${siteOrigin}/admin/warmup?error=insert_failed&msg=${encodeURIComponent(`${info.email} is already connected to a user account — remove it there first.`)}`);
+    }
+
     const { error: insErr } = await supabaseAdmin.from('email_accounts').insert({
       user_id: adminId,
       type: 'gmail-oauth',

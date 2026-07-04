@@ -54,18 +54,29 @@ export async function GET(request: NextRequest) {
     await supabaseAdmin.from('email_accounts').update({
       smtp_pass: tokens.refresh_token,
       smtp_user: info.email,
-      status: 'active',
-      health_score: 85,
+      status: 'warming',
     }).eq('id', existingAccount.id);
   } else {
+    // One mailbox = one identity, platform-wide — block if this Gmail is already
+    // connected under a different account (regular or pool).
+    const { data: crossUserDup } = await supabaseAdmin
+      .from('email_accounts')
+      .select('id')
+      .eq('email', info.email)
+      .neq('user_id', state)
+      .limit(1)
+      .maybeSingle();
+    if (crossUserDup) return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?error=already_connected`);
+
     await supabaseAdmin.from('email_accounts').insert({
       user_id: state,
       type: 'gmail-oauth',
       email: info.email,
       smtp_user: info.email,
       smtp_pass: tokens.refresh_token,
-      status: 'active',
-      health_score: 85,
+      status: 'warming',
+      health_score: 50,
+      warmup_enabled: true,
     });
   }
 

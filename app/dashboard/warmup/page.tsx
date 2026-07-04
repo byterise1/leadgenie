@@ -14,6 +14,16 @@ type WarmupAccount = {
   health_score: number;
   sent_today: number;
   status: 'active' | 'warming' | 'error' | 'paused' | 'login' | string;
+  warmup_paused?: boolean;
+  warmup_pause_reason?: string | null;
+  inbox_rate?: number | null;
+  spam_rate?: number | null;
+  bounce_rate?: number | null;
+  recommended_send_limit?: number;
+  days_to_warmed?: number;
+  spf_status?: string;
+  dkim_status?: string;
+  dmarc_status?: string;
 };
 
 type HistoryRow = {
@@ -22,18 +32,11 @@ type HistoryRow = {
   day_number: number;
   emails_sent: number;
   health_score: number;
+  inbox_rate?: number | null;
+  spam_rate?: number | null;
+  bounce_rate?: number | null;
+  paused?: boolean;
 };
-
-// Safe campaign emails/day based on total warmup days accumulated
-function safeDailyLimit(day: number): { limit: number; label: string; color: string } {
-  if (day < 30)  return { limit: 0,   label: 'Not ready',  color: 'gray' };
-  if (day < 60)  return { limit: 50,  label: '50/day',     color: 'blue' };
-  if (day < 90)  return { limit: 100, label: '100/day',    color: 'emerald' };
-  if (day < 120) return { limit: 150, label: '150/day',    color: 'amber' };
-  if (day < 180) return { limit: 200, label: '200/day',    color: 'orange' };
-  if (day < 365) return { limit: 300, label: '300/day',    color: 'violet' };
-  return                { limit: 500, label: '500/day',    color: 'rose' };
-}
 
 const tabs = [
   { id: 'accounts', label: 'Accounts' },
@@ -91,6 +94,57 @@ function RampBar({ day, target = 30 }: { day: number; target?: number }) {
 function ScoreBadge({ score }: { score: number }) {
   const color = score >= 80 ? 'text-emerald-700 bg-emerald-50' : score >= 50 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50';
   return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${color}`}>{score}</span>;
+}
+
+function PausedBadge({ reason }: { reason?: string | null }) {
+  return (
+    <span title={reason || undefined} className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-700 rounded-full px-2 py-0.5 cursor-help">
+      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Paused
+    </span>
+  );
+}
+
+// Tiny inline SVG sparkline — no chart library needed for a Health trend line.
+function HealthSparkline({ points }: { points: number[] }) {
+  if (points.length < 2) return <p className="text-[11px] text-gray-400 dark:text-gray-500">Not enough history yet for a trend line.</p>;
+  const w = 260, h = 56, pad = 4;
+  const max = 100, min = 0;
+  const stepX = (w - pad * 2) / (points.length - 1);
+  const coords = points.map((p, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((p - min) / (max - min)) * (h - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const last = points[points.length - 1];
+  const color = last >= 80 ? '#10b981' : last >= 50 ? '#f59e0b' : '#ef4444';
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
+      <polyline points={coords.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {coords.map((c, i) => {
+        const [x, y] = c.split(',');
+        return i === coords.length - 1 ? <circle key={i} cx={x} cy={y} r="3" fill={color}/> : null;
+      })}
+    </svg>
+  );
+}
+
+function RateStat({ label, value, goodDirection = 'up' }: { label: string; value: number | null | undefined; goodDirection?: 'up' | 'down' }) {
+  if (value === null || value === undefined) return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">{label}</span>
+      <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
+    </div>
+  );
+  const isGood = goodDirection === 'up' ? value >= 70 : value <= 5;
+  const isBad = goodDirection === 'up' ? value < 40 : value > 15;
+  const color = isGood ? 'text-emerald-600' : isBad ? 'text-red-600' : 'text-amber-600';
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">{label}</span>
+      <span className={`text-xs font-bold ${color}`}>{value}%</span>
+    </div>
+  );
 }
 
 export default function WarmupPage() {
@@ -157,6 +211,9 @@ export default function WarmupPage() {
     : 0;
   const totalSentToday = warmingAccounts.reduce((s, a) => s + (a.sent_today || 0), 0);
   const totalWarmupSent = warmingAccounts.reduce((s, a) => s + (a.warmup_emails_sent || 0), 0);
+  const pausedAccounts = accounts.filter(a => a.warmup_paused);
+  const inboxRates = accounts.map(a => a.inbox_rate).filter((v): v is number => v !== null && v !== undefined);
+  const avgInboxRate = inboxRates.length ? Math.round(inboxRates.reduce((s, v) => s + v, 0) / inboxRates.length) : null;
 
   // Check if an account has prior history from before it was connected to this user
   const hasPriorHistory = (email: string) => {
@@ -194,15 +251,26 @@ export default function WarmupPage() {
         {[
           { label: 'Accounts warming', value: String(warmingAccounts.length) },
           { label: 'Avg health score', value: accounts.length ? `${avgScore}%` : '—' },
-          { label: 'Emails sent today', value: String(totalSentToday) },
-          { label: 'Total warmup sent', value: totalWarmupSent.toLocaleString() },
+          { label: 'Avg inbox rate', value: avgInboxRate !== null ? `${avgInboxRate}%` : '—', color: avgInboxRate !== null && avgInboxRate < 70 ? 'text-amber-600' : undefined },
+          { label: 'Paused (needs attention)', value: String(pausedAccounts.length), color: pausedAccounts.length > 0 ? 'text-rose-600' : undefined },
         ].map(s => (
           <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">{s.label}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+            <p className={`text-2xl font-bold ${s.color ?? 'text-gray-900 dark:text-white'}`}>{s.value}</p>
           </div>
         ))}
       </div>
+
+      {pausedAccounts.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {pausedAccounts.map(a => (
+            <div key={a.id} className="flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3">
+              <svg className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p className="text-xs text-rose-700"><span className="font-bold">{a.email} is paused.</span> {a.warmup_pause_reason || 'Reputation issue detected — resumes automatically once signals recover.'}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
         {tabs.map(t => (
@@ -239,15 +307,15 @@ export default function WarmupPage() {
           ) : (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
               <div className="overflow-x-auto w-full">
-                <table className="w-full min-w-[700px] border-collapse">
+                <table className="w-full min-w-[880px] border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                       <th className="px-6 py-3 text-left">Account</th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Score</th>
                       <th className="px-4 py-3 text-left">Ramp Progress</th>
-                      <th className="px-4 py-3 text-left">Health</th>
-                      <th className="px-4 py-3 text-left">Safe/day</th>
+                      <th className="px-4 py-3 text-left">Inbox / Spam</th>
+                      <th className="px-4 py-3 text-left">Recommended send limit</th>
                       <th className="px-4 py-3 text-left">Warmup</th>
                     </tr>
                   </thead>
@@ -271,7 +339,7 @@ export default function WarmupPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                             acc.status === 'active' ? 'bg-emerald-400' :
                             acc.status === 'warming' ? 'bg-amber-400 animate-pulse' :
@@ -287,6 +355,7 @@ export default function WarmupPage() {
                           ) : (
                             <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{acc.status}</span>
                           )}
+                          {acc.warmup_paused && <PausedBadge reason={acc.warmup_pause_reason}/>}
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -319,25 +388,21 @@ export default function WarmupPage() {
                         })()}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${(acc.health_score || 0) >= 80 ? 'bg-emerald-500' : (acc.health_score || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
-                              style={{ width: `${acc.health_score || 0}%` }}/>
-                          </div>
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{acc.health_score || 0}%</span>
+                        <div className="flex items-center gap-3">
+                          <RateStat label="Inbox" value={acc.inbox_rate} goodDirection="up"/>
+                          <RateStat label="Spam" value={acc.spam_rate} goodDirection="down"/>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        {(() => {
-                          const safe = safeDailyLimit(acc.warmup_day ?? 0);
-                          if (safe.limit === 0) return <span className="text-[11px] text-gray-400 dark:text-gray-500">Not ready</span>;
-                          const cls = safe.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
-                            safe.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
-                            safe.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400' :
-                            safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
-                            safe.color === 'violet' ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' : 'bg-rose-50 text-rose-700';
-                          return <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${cls}`}>{safe.label}</span>;
-                        })()}
+                        {acc.recommended_send_limit === 0 ? (
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">Not ready</span>
+                        ) : (
+                          <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${
+                            (acc.recommended_send_limit ?? 0) >= 60 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
+                            (acc.recommended_send_limit ?? 0) >= 20 ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                            'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                          }`}>{acc.recommended_send_limit ?? 0}/day</span>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <div className="relative">
@@ -477,41 +542,36 @@ export default function WarmupPage() {
             })}
           </div>
 
-          {/* Safe campaign send limits — dynamic per account */}
+          {/* Safe campaign send limits — dynamic per account, driven by real health + provider */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Safe campaign send limits</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Auto-calculated per account based on warmup age. Keep warmup running in background while sending campaigns.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Recalculated every warmup cycle from health score, inbox placement, and provider — not just a fixed schedule. Drops automatically if health falls.</p>
 
             {/* Per-account dynamic limits */}
             {accounts.length > 0 && (
               <div className="space-y-2 mb-5">
                 {accounts.map(acc => {
-                  const safe = safeDailyLimit(acc.warmup_day ?? 0);
-                  const pct = Math.min(100, ((acc.warmup_day ?? 0) / 365) * 100);
-                  const barColor = safe.color === 'blue' ? 'bg-blue-400' : safe.color === 'emerald' ? 'bg-emerald-400' :
-                    safe.color === 'amber' ? 'bg-amber-400' : safe.color === 'orange' ? 'bg-orange-400' :
-                    safe.color === 'violet' ? 'bg-violet-400' : safe.color === 'rose' ? 'bg-rose-400' : 'bg-gray-300';
+                  const limit = acc.recommended_send_limit ?? 0;
+                  const barColor = limit >= 60 ? 'bg-emerald-400' : limit >= 20 ? 'bg-blue-400' : limit > 0 ? 'bg-amber-400' : 'bg-gray-300';
                   return (
                     <div key={acc.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-800 truncate">{acc.email}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }}/>
+                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, acc.health_score ?? 0)}%` }}/>
                           </div>
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">Day {acc.warmup_day ?? 0}</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">Health {acc.health_score ?? 0}%</span>
                         </div>
                       </div>
-                      {safe.limit === 0 ? (
+                      {limit === 0 ? (
                         <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Not ready</span>
                       ) : (
                         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                          safe.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
-                          safe.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
-                          safe.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400' :
-                          safe.color === 'orange' ? 'bg-orange-50 text-orange-700' :
-                          safe.color === 'violet' ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' : 'bg-rose-50 text-rose-700'
-                        }`}>{safe.label}</span>
+                          limit >= 60 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
+                          limit >= 20 ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                          'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                        }`}>{limit}/day</span>
                       )}
                     </div>
                   );
@@ -519,8 +579,8 @@ export default function WarmupPage() {
               </div>
             )}
 
-            {/* Progression reference table */}
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Full year progression</p>
+            {/* Progression reference table — illustrative only; actual limits above are live */}
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Typical progression (reference only)</p>
             <div className="grid grid-cols-2 gap-1.5">
               {[
                 { range: 'Day 1–29',    limit: 'Not ready',  color: 'gray' },
@@ -616,6 +676,18 @@ export default function WarmupPage() {
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">History is saved each time the warmup worker runs (every 6 hours).</p>
                         </div>
                       ) : (
+                        <>
+                        <div className="px-6 py-4 flex flex-wrap items-center gap-6 border-b border-gray-100 dark:border-gray-800">
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">Health trend</p>
+                            <HealthSparkline points={rows.slice().reverse().map(r => r.health_score)}/>
+                          </div>
+                          <div className="flex gap-5">
+                            <RateStat label="Inbox rate" value={rows[0]?.inbox_rate} goodDirection="up"/>
+                            <RateStat label="Spam rate" value={rows[0]?.spam_rate} goodDirection="down"/>
+                            <RateStat label="Bounce rate" value={rows[0]?.bounce_rate} goodDirection="down"/>
+                          </div>
+                        </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs min-w-[500px]">
                             <thead>
@@ -654,6 +726,7 @@ export default function WarmupPage() {
                             </tbody>
                           </table>
                         </div>
+                        </>
                       )}
                     </div>
                   )}

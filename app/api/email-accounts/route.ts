@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET() {
   const supabase = await createClient();
@@ -76,6 +77,11 @@ export async function POST(req: NextRequest) {
 
   if (!type || !email) return NextResponse.json({ error: 'type and email required' }, { status: 400 });
 
+  const rate = await checkRateLimit(user.id, 'email_account_add');
+  if (!rate.allowed) {
+    return NextResponse.json({ error: 'Too many mailboxes added in a short time — please wait a bit and try again.' }, { status: 429 });
+  }
+
   // Ensure profile row exists
   await supabaseAdmin.from('profiles').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
 
@@ -101,6 +107,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // One mailbox = one identity, platform-wide — a real inbox's reputation can't be
+  // split across multiple accounts with independently-diverging health/warmup state.
+  const { data: crossUserDup } = await supabaseAdmin
+    .from('email_accounts')
+    .select('id')
+    .eq('email', email)
+    .neq('user_id', user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (crossUserDup) {
+    return NextResponse.json(
+      { error: `${email} is already connected to another account on this platform. Each mailbox can only be used by one account — this keeps its warmup and sender reputation accurate.` },
+      { status: 409 }
+    );
+  }
+
   const DEFAULT_DAILY_LIMITS: Record<string, number> = {
     'gmail-oauth': 50,
     'gmail-app': 50,
@@ -122,7 +145,8 @@ export async function POST(req: NextRequest) {
       imap_host: imap_host || null,
       imap_port: imap_port ? Number(imap_port) : null,
       status: 'warming',
-      health_score: 72,
+      health_score: 50,
+      warmup_enabled: true,
       daily_limit: defaultLimit,
     })
     .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')

@@ -6,16 +6,6 @@ import { Suspense } from 'react';
 
 type PoolMode = 'admin_pool' | 'user_to_user' | 'both';
 
-function safeDailyLimit(day: number): string {
-  if (day < 30)  return '—';
-  if (day < 60)  return '50/day';
-  if (day < 90)  return '100/day';
-  if (day < 120) return '150/day';
-  if (day < 180) return '200/day';
-  if (day < 365) return '300/day';
-  return '500/day';
-}
-
 type WarmupAccount = {
   id: string;
   user_id: string;
@@ -30,6 +20,15 @@ type WarmupAccount = {
   warmup_target: number;
   sent_today: number;
   warmup_pool_mode: PoolMode;
+  warmup_paused?: boolean;
+  warmup_pause_reason?: string | null;
+  inbox_rate?: number | null;
+  spam_rate?: number | null;
+  bounce_rate?: number | null;
+  recommended_send_limit?: number;
+  spf_status?: string;
+  dkim_status?: string;
+  dmarc_status?: string;
 };
 
 type PoolAccount = {
@@ -40,6 +39,8 @@ type PoolAccount = {
   warmup_day: number;
   warmup_target: number;
   sent_today: number;
+  warmup_paused?: boolean;
+  warmup_pause_reason?: string | null;
 };
 
 type Stats = {
@@ -474,12 +475,13 @@ function AdminWarmupPageInner() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Total Accounts', value: stats.total, sub: 'across all users' },
           { label: 'Warming Active', value: stats.warming + poolAccounts.filter(a => a.warmup_day > 0).length, sub: 'in pool', color: 'text-amber-600' },
           { label: 'Healthy (80+)', value: stats.healthy, sub: 'score ≥ 80', color: 'text-emerald-600' },
           { label: 'At Risk (<50)', value: stats.at_risk, sub: 'score < 50', color: 'text-red-500' },
+          { label: 'Paused', value: accounts.filter(a => a.warmup_paused).length + poolAccounts.filter(a => a.warmup_paused).length, sub: 'need attention', color: 'text-rose-600' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-1">{s.label}</p>
@@ -561,7 +563,12 @@ function AdminWarmupPageInner() {
                   <tr key={a.id} className="hover:bg-gray-50 dark:bg-gray-800">
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{a.email}</p>
-                      <p className="text-[10px] text-amber-600 font-bold">Pool account</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] text-amber-600 font-bold">Pool account</p>
+                        {a.warmup_paused && (
+                          <span title={a.warmup_pause_reason || undefined} className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3"><ScoreRing score={a.health_score}/></td>
                     <td className="px-4 py-3">
@@ -659,6 +666,9 @@ function AdminWarmupPageInner() {
                         }`}>
                           {a.status === 'login' ? 'Login Error' : a.status}
                         </span>
+                        {a.warmup_paused && (
+                          <span title={a.warmup_pause_reason || undefined} className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -670,13 +680,18 @@ function AdminWarmupPageInner() {
                       </td>
                       <td className="px-4 py-3"><span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{a.sent_today}</span></td>
                       <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">In:</span>
+                          <span className={`text-[11px] font-bold ${(a.inbox_rate ?? 100) < 70 ? 'text-amber-600' : 'text-emerald-600'}`}>{a.inbox_rate ?? '—'}{a.inbox_rate !== null && a.inbox_rate !== undefined ? '%' : ''}</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">Spam:</span>
+                          <span className={`text-[11px] font-bold ${(a.spam_rate ?? 0) > 15 ? 'text-red-600' : 'text-gray-500'}`}>{a.spam_rate ?? '—'}{a.spam_rate !== null && a.spam_rate !== undefined ? '%' : ''}</span>
+                        </div>
                         <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${
-                          (a.warmup_day ?? 0) < 30 ? 'text-gray-400' :
-                          (a.warmup_day ?? 0) < 60 ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
-                          (a.warmup_day ?? 0) < 90 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
-                          (a.warmup_day ?? 0) < 120 ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400' :
-                          (a.warmup_day ?? 0) < 365 ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400' : 'bg-rose-50 text-rose-700'
-                        }`}>{safeDailyLimit(a.warmup_day ?? 0)}</span>
+                          (a.recommended_send_limit ?? 0) === 0 ? 'text-gray-400' :
+                          (a.recommended_send_limit ?? 0) < 20 ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' :
+                          (a.recommended_send_limit ?? 0) < 60 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
+                          'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400'
+                        }`}>{(a.recommended_send_limit ?? 0) === 0 ? 'Not ready' : `${a.recommended_send_limit}/day`}</span>
                       </td>
                       <td className="px-4 py-3">
                         <select

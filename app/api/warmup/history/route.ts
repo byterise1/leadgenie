@@ -20,7 +20,7 @@ export async function GET() {
   // Fetch warmup_history for those emails (includes prior-user history — keyed by email, not user_id)
   const { data: history, error } = await supabaseAdmin
     .from('warmup_history')
-    .select('email, date, day_number, emails_sent, health_score')
+    .select('email, date, day_number, emails_sent, health_score, inbox_rate, spam_rate, bounce_rate, paused')
     .in('email', emails)
     .order('date', { ascending: false })
     .limit(1000);

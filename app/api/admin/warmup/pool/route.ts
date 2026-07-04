@@ -14,12 +14,30 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data, error } = await supabaseAdmin
-    .from('email_accounts')
-    .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today')
-    .eq('user_id', admin.id)
-    .eq('is_pool_account', true)
-    .order('created_at', { ascending: true });
+  let data: Record<string, any>[] | null;
+  let error: { message: string } | null;
+  {
+    const res = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason')
+      .eq('user_id', admin.id)
+      .eq('is_pool_account', true)
+      .order('created_at', { ascending: true });
+    data = res.data;
+    error = res.error;
+  }
+
+  // Phase 1 migration not run yet — fall back to the pre-migration column set.
+  if (error) {
+    const fallback = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today')
+      .eq('user_id', admin.id)
+      .eq('is_pool_account', true)
+      .order('created_at', { ascending: true });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
@@ -43,6 +61,20 @@ export async function POST(req: NextRequest) {
     .eq('user_id', admin.id)
     .eq('email', email)
     .maybeSingle();
+
+  // One mailbox = one identity, platform-wide
+  if (!existing) {
+    const { data: crossUserDup } = await supabaseAdmin
+      .from('email_accounts')
+      .select('id')
+      .eq('email', email)
+      .neq('user_id', admin.id)
+      .limit(1)
+      .maybeSingle();
+    if (crossUserDup) {
+      return NextResponse.json({ error: `${email} is already connected to a user account on this platform — remove it there first, or use a different inbox for the pool.` }, { status: 409 });
+    }
+  }
 
   let result;
   if (existing) {

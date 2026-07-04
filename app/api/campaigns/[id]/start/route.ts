@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { emailQueue } from '@/lib/queue';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 
 const TZ_MAP: Record<string, string> = {
   'UTC': 'UTC',
@@ -75,6 +77,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
 
+  const rate = await checkRateLimit(user.id, 'campaign_start');
+  if (!rate.allowed) {
+    return NextResponse.json({ error: 'Too many campaign starts in a short time — please wait a bit and try again.' }, { status: 429 });
+  }
+
   const { data: campaign } = await supabaseAdmin
     .from('campaigns')
     .select('*, campaign_accounts(*)')
@@ -85,6 +92,54 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
   if (!campaign.campaign_accounts?.length) {
     return NextResponse.json({ error: 'Add at least one sending account first' }, { status: 400 });
+  }
+
+  // Warmup safety gate — block launch if every linked account is currently unsafe
+  // (paused for bounce/spam issues, or health so low it would just burn the mailbox).
+  const accountIds = campaign.campaign_accounts.map((ca: any) => ca.account_id);
+  let linkedAccounts: Record<string, any>[] | null;
+  {
+    const res = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, email, type, smtp_host, health_score, warmup_day, warmup_enabled, warmup_paused, warmup_pause_reason')
+      .in('id', accountIds);
+    linkedAccounts = res.data;
+  }
+
+  // Phase 1 migration not run yet — fall back so the health/cap safety check still works
+  // even without the warmup_paused column.
+  if (!linkedAccounts) {
+    const fallback = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, email, type, smtp_host, health_score, warmup_day, warmup_enabled')
+      .in('id', accountIds);
+    linkedAccounts = fallback.data;
+  }
+
+  const accountWarnings: string[] = [];
+  const safeAccounts = (linkedAccounts || []).filter(a => {
+    if (a.warmup_paused) {
+      accountWarnings.push(`${a.email} is paused (${a.warmup_pause_reason || 'reputation issue'}) — excluded until it recovers.`);
+      return false;
+    }
+    if ((a.health_score ?? 50) < 35) {
+      accountWarnings.push(`${a.email} health is too low (${a.health_score}%) to send safely — excluded.`);
+      return false;
+    }
+    const cap = campaignDailyCap({
+      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+    });
+    if (cap === 0) {
+      accountWarnings.push(`${a.email} isn't cleared to send real campaigns yet — excluded.`);
+      return false;
+    }
+    return true;
+  });
+
+  if ((linkedAccounts?.length ?? 0) > 0 && safeAccounts.length === 0) {
+    return NextResponse.json({
+      error: `None of this campaign's sending accounts are safe to send from right now: ${accountWarnings.join(' ')}`,
+    }, { status: 400 });
   }
 
   // Verify email steps exist
@@ -269,5 +324,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: `Queue error: ${err?.message || 'Redis unavailable'}` }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, status: 'active', queued: campaignLeads.length });
+  return NextResponse.json({
+    success: true, status: 'active', queued: campaignLeads.length,
+    ...(accountWarnings.length ? { warnings: accountWarnings } : {}),
+  });
 }

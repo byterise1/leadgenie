@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -14,12 +16,30 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data: accounts, error } = await supabaseAdmin
-    .from('email_accounts')
-    .select('id, user_id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, created_at')
-    .neq('is_pool_account', true)
-    .order('warmup_enabled', { ascending: false })
-    .order('created_at', { ascending: false });
+  let accounts: Record<string, any>[] | null;
+  let error: { message: string } | null;
+  {
+    const res = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, created_at')
+      .neq('is_pool_account', true)
+      .order('warmup_enabled', { ascending: false })
+      .order('created_at', { ascending: false });
+    accounts = res.data;
+    error = res.error;
+  }
+
+  // Phase 1 migration not run yet — fall back to the pre-migration column set.
+  if (error) {
+    const fallback = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, user_id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, created_at')
+      .neq('is_pool_account', true)
+      .order('warmup_enabled', { ascending: false })
+      .order('created_at', { ascending: false });
+    accounts = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -35,11 +55,33 @@ export async function GET() {
   const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
   const emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email]));
 
-  const enriched = (accounts ?? []).map(a => ({
-    ...a,
-    user_name: profileMap.get(a.user_id) || emailMap.get(a.user_id) || 'Unknown',
-    user_email: emailMap.get(a.user_id) || '',
-  }));
+  const emails = (accounts ?? []).map(a => a.email);
+  const latestByEmail = new Map<string, { inbox_rate: number | null; spam_rate: number | null; bounce_rate: number | null }>();
+  if (emails.length) {
+    const { data: latestHistory } = await supabaseAdmin
+      .from('warmup_history')
+      .select('email, inbox_rate, spam_rate, bounce_rate, date')
+      .in('email', emails)
+      .order('date', { ascending: false });
+    for (const row of latestHistory ?? []) {
+      if (!latestByEmail.has(row.email)) latestByEmail.set(row.email, row);
+    }
+  }
+
+  const enriched: Record<string, any>[] = (accounts ?? []).map(a => {
+    const rates = latestByEmail.get(a.email);
+    return {
+      ...a,
+      user_name: profileMap.get(a.user_id) || emailMap.get(a.user_id) || 'Unknown',
+      user_email: emailMap.get(a.user_id) || '',
+      inbox_rate: rates?.inbox_rate ?? null,
+      spam_rate: rates?.spam_rate ?? null,
+      bounce_rate: rates?.bounce_rate ?? null,
+      recommended_send_limit: campaignDailyCap({
+        provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+      }),
+    };
+  });
 
   const stats = {
     total: enriched.length,
@@ -56,6 +98,11 @@ const VALID_POOL_MODES = ['admin_pool', 'user_to_user', 'both'] as const;
 export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const rate = await checkRateLimit(admin.id, 'warmup_toggle');
+  if (!rate.allowed) {
+    return NextResponse.json({ error: 'Too many warmup changes in a short time — please wait a bit and try again.' }, { status: 429 });
+  }
 
   const body = await req.json();
   const { id, warmup_enabled, warmup_pool_mode, set_all_pool_mode } = body;

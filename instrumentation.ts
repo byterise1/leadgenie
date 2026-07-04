@@ -157,7 +157,9 @@ export async function register() {
         account = accounts[accountIndex % accounts.length];
       }
 
-      // Enforce per-account daily limit across all campaigns
+      // Enforce per-account daily limit across all campaigns — capped by the adaptive
+      // warmup-aware ceiling so a still-warming or unhealthy mailbox can't be pushed
+      // to full campaign volume just because the user set a high daily_limit.
       const todayUTC = new Date();
       todayUTC.setUTCHours(0, 0, 0, 0);
       const { count: sentTodayCount } = await supabase
@@ -166,7 +168,14 @@ export async function register() {
         .eq('account_id', account.id)
         .gte('sent_at', todayUTC.toISOString());
 
-      const accountDailyLimit = account.daily_limit ?? 50;
+      const { detectProvider, campaignDailyCap } = await import('./lib/warmup-health');
+      const adaptiveCap = campaignDailyCap({
+        provider: detectProvider(account),
+        warmupDay: account.warmup_day ?? 0,
+        health: account.health_score ?? 50,
+        warmupComplete: !account.warmup_enabled,
+      });
+      const accountDailyLimit = account.warmup_paused ? 0 : Math.min(account.daily_limit ?? 50, adaptiveCap);
       if ((sentTodayCount || 0) >= accountDailyLimit) {
         if (!job.data.isRequeued) {
           // Write one notification per account per day (not per job)
@@ -451,6 +460,7 @@ export async function register() {
         // Auth failure (535 = SMTP auth failed / Gmail API config error, 401 = Gmail API unauthorized)
         if (code === 535 || code === 401 || err.code === 'EAUTH') {
           await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
+          await supabase.from('email_account_events').insert({ account_id: account.id, event_type: 'auth_error', meta: { message: err.message } });
           await supabase.from('notifications').insert({
             user_id: campaign.user_id,
             message: `Sending account ${account.email} has an error: ${err.message}`,
@@ -465,6 +475,7 @@ export async function register() {
           await Promise.all([
             supabase.from('leads').update({ status: 'bounced' }).eq('id', lead.id),
             supabase.from('campaign_leads').update({ status: 'bounced' }).eq('id', campaignLeadId),
+            supabase.from('email_account_events').insert({ account_id: account.id, event_type: 'bounce', meta: { code } }),
           ]);
           console.log(`⛔ Bounced: ${lead.email} (${code})`);
           const { count: pendingAfterBounce } = await supabase
@@ -917,19 +928,6 @@ export async function register() {
     // Reply pool — extracted from pairs so replies sound contextual, not generic
     const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.reply);
 
-    // 30-day ramp: slow start → build → maintain at 40/day
-    const WARMUP_DAILY_TARGETS = [
-      0,  2,  3,  4,  5,  6,  7,  8,  10, 12,  // days 0-9
-      14, 16, 18, 20, 22, 24, 26, 28, 30, 32,  // days 10-19
-      34, 36, 38, 40, 40, 40, 40, 40, 40, 40, 40, // days 20-30
-    ];
-
-    function warmupDailyTarget(day: number): number {
-      if (day <= 0) return 2;
-      if (day >= 30) return 40;
-      return WARMUP_DAILY_TARGETS[day] ?? 40;
-    }
-
     async function gmailModify(msgId: string, addLabels: string[], removeLabels: string[], token: string) {
       try {
         await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msgId}/modify`, {
@@ -953,6 +951,207 @@ export async function register() {
       } catch { return []; }
     }
 
+    // ── Event log helper — every signal that feeds the health formula ─────────
+    async function logAccountEvent(accountId: string, eventType: string, meta: Record<string, unknown> = {}) {
+      try {
+        await supabase.from('email_account_events').insert({ account_id: accountId, event_type: eventType, meta });
+      } catch (e: any) {
+        console.error(`[warmup-event] insert failed (${eventType}):`, e.message);
+      }
+    }
+
+    async function fetchEventCounts(accountId: string, sinceMs: number) {
+      const { data } = await supabase
+        .from('email_account_events')
+        .select('event_type')
+        .eq('account_id', accountId)
+        .gte('created_at', new Date(sinceMs).toISOString());
+      const counts = { sent7d: 0, spam7d: 0, bounce7d: 0, reply7d: 0, open7d: 0, authError7d: 0 };
+      for (const row of data || []) {
+        if (row.event_type === 'sent') counts.sent7d++;
+        else if (row.event_type === 'spam_placement') counts.spam7d++;
+        else if (row.event_type === 'bounce') counts.bounce7d++;
+        else if (row.event_type === 'reply') counts.reply7d++;
+        else if (row.event_type === 'open') counts.open7d++;
+        else if (row.event_type === 'auth_error') counts.authError7d++;
+      }
+      return counts;
+    }
+
+    // Columns that exist regardless of whether 20260705_warmup_phase1.sql has run yet.
+    const LEGACY_SAFE_ACCOUNT_KEYS = new Set([
+      'warmup_day', 'health_score', 'sent_today', 'warmup_last_run_date', 'warmup_enabled', 'status',
+    ]);
+
+    // Update an email_accounts row, degrading gracefully if the Phase 1 migration's
+    // columns don't exist yet — persists at least the legacy fields instead of losing
+    // the whole update (which would otherwise silently stall warmup_day/health_score/sent_today).
+    async function safeUpdateAccount(id: string, upd: Record<string, unknown>) {
+      const { error } = await supabase.from('email_accounts').update(upd).eq('id', id);
+      if (error) {
+        const legacyOnly: Record<string, unknown> = {};
+        for (const k of Object.keys(upd)) if (LEGACY_SAFE_ACCOUNT_KEYS.has(k)) legacyOnly[k] = upd[k];
+        if (Object.keys(legacyOnly).length > 0) {
+          await supabase.from('email_accounts').update(legacyOnly).eq('id', id);
+        }
+      }
+    }
+
+    async function safeUpsertHistory(rows: Record<string, unknown>[]) {
+      if (rows.length === 0) return;
+      const { error } = await supabase.from('warmup_history').upsert(rows, { onConflict: 'email,date' });
+      if (error) {
+        const legacyRows = rows.map(r => {
+          const { account_id, email, user_id, date, day_number, emails_sent, health_score } = r as any;
+          return { account_id, email, user_id, date, day_number, emails_sent, health_score };
+        });
+        await supabase.from('warmup_history').upsert(legacyRows, { onConflict: 'email,date' });
+      }
+    }
+
+    // Delayed per-message engagement — gives warmup a realistic "read a while later,
+    // maybe reply, maybe star/archive" pattern instead of an instant scripted reply.
+    const engageQueue = new Queue('warmup-engage', { connection });
+
+    function pickEngageDelayMs(): number {
+      const bucket = Math.random();
+      if (bucket < 0.25) return (30 + Math.random() * 90) * 1000;            // 30s–2min: quick glance
+      if (bucket < 0.65) return (2 + Math.random() * 18) * 60 * 1000;        // 2–20min: normal check
+      return (20 + Math.random() * 220) * 60 * 1000;                        // 20min–4h: busy day
+    }
+
+    new SyncWorker('warmup-engage', async (job: any) => {
+      const { fromAccountId, toAccountId, subject, chainDepth = 0 } = job.data;
+      const { sendEmail, getAccessToken } = await import('./lib/mailer');
+
+      const [{ data: toAcc }, { data: fromAcc }] = await Promise.all([
+        supabase.from('email_accounts').select('*').eq('id', toAccountId).maybeSingle(),
+        supabase.from('email_accounts').select('*').eq('id', fromAccountId).maybeSingle(),
+      ]);
+      if (!toAcc || !fromAcc || toAcc.status === 'error' || fromAcc.status === 'error') return;
+
+      let landedInSpam = false;
+      let engaged = false;
+      let replyTarget: { toEmail: string; subject: string } | null = null;
+
+      try {
+        if (toAcc.type === 'gmail-oauth') {
+          let token: string;
+          try { token = await getAccessToken({ id: toAcc.id, type: toAcc.type, email: toAcc.email, smtp_pass: toAcc.smtp_pass }); }
+          catch { return; }
+
+          const messages = await gmailSearch(`"--warmup-ping--" from:${fromAcc.email} newer_than:2d`, token);
+          for (const msg of messages.slice(0, 1)) {
+            const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
+            if (!detail) continue;
+            const inSpam = detail.labelIds?.includes('SPAM');
+            const unread = detail.labelIds?.includes('UNREAD');
+            if (inSpam) { landedInSpam = true; await gmailModify(msg.id, ['INBOX'], ['SPAM'], token); }
+            if (unread) await gmailModify(msg.id, [], ['UNREAD'], token);
+            engaged = true;
+
+            // Occasional "importance" actions — star or archive, never both
+            const importanceRoll = Math.random();
+            if (importanceRoll < 0.1) await gmailModify(msg.id, ['STARRED'], [], token);
+            else if (importanceRoll < 0.25) await gmailModify(msg.id, [], ['INBOX'], token);
+
+            if (Math.random() < 0.3 && chainDepth < 4) {
+              const subjH = detail.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || subject;
+              replyTarget = { toEmail: fromAcc.email, subject: subjH };
+            }
+          }
+        } else {
+          const imapHost = toAcc.imap_host || (toAcc.type === 'gmail-app' ? 'imap.gmail.com' : null);
+          if (imapHost) {
+            const { ImapFlow } = await import('imapflow');
+            const imapConfig: any = {
+              host: imapHost, port: toAcc.imap_port || 993, secure: true,
+              auth: { user: toAcc.smtp_user || toAcc.email, pass: toAcc.smtp_pass },
+              logger: false, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, socketTimeout: 20000,
+            };
+            if (process.env.SMTP_PROXY) imapConfig.proxy = process.env.SMTP_PROXY;
+            const client = new ImapFlow(imapConfig);
+            try {
+              await client.connect();
+
+              const spamFolders = toAcc.type === 'gmail-app' ? ['[Gmail]/Spam'] : ['Junk', 'Spam', '[Gmail]/Spam'];
+              for (const folder of spamFolders) {
+                try {
+                  const lock = await client.getMailboxLock(folder);
+                  try {
+                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), body: '--warmup-ping--' }, { uid: true }) as number[];
+                    if (uids?.length > 0) {
+                      landedInSpam = true;
+                      await client.messageMove(uids, 'INBOX', { uid: true });
+                    }
+                  } finally { lock.release(); }
+                  break;
+                } catch { /* folder not found, try next */ }
+              }
+
+              const inboxLock = await client.getMailboxLock('INBOX');
+              try {
+                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), body: '--warmup-ping--', seen: false }, { uid: true }) as number[];
+                if (uids?.length > 0) {
+                  await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true });
+                  engaged = true;
+                  if (Math.random() < 0.1) await client.messageFlagsAdd(uids.slice(0, 1), ['\\Flagged'], { uid: true });
+                  if (Math.random() < 0.3 && chainDepth < 4) {
+                    for await (const msg of client.fetch(uids.slice(0, 1), { envelope: true }, { uid: true })) {
+                      replyTarget = { toEmail: fromAcc.email, subject: msg.envelope?.subject || subject };
+                    }
+                  }
+                }
+              } finally { inboxLock.release(); }
+
+              await client.logout();
+            } catch (e: any) {
+              console.error(`[warmup-engage] IMAP ${toAcc.email}: ${e.message}`);
+              try { await client.logout(); } catch { /* already closed */ }
+            }
+          }
+        }
+      } catch (e: any) {
+        console.error(`[warmup-engage] ${toAcc.email}: ${e.message}`);
+      }
+
+      // Every signal below is credited to fromAccountId — it's fromAccountId's
+      // reputation being measured, not the recipient's.
+      if (landedInSpam) {
+        await logAccountEvent(fromAccountId, 'spam_placement', { via: toAcc.email });
+        await logAccountEvent(fromAccountId, 'rescued_from_spam', { via: toAcc.email });
+        await supabase.from('email_accounts').update({ spam_count: (fromAcc.spam_count ?? 0) + 1 }).eq('id', fromAccountId);
+      }
+      if (engaged) {
+        await logAccountEvent(fromAccountId, 'open', { via: toAcc.email });
+        await supabase.from('email_accounts').update({ open_count: (fromAcc.open_count ?? 0) + 1 }).eq('id', fromAccountId);
+      }
+
+      if (replyTarget) {
+        const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
+        try {
+          await sendEmail(
+            { id: toAcc.id, type: toAcc.type, email: toAcc.email, smtp_host: toAcc.smtp_host, smtp_port: toAcc.smtp_port, smtp_user: toAcc.smtp_user, smtp_pass: toAcc.smtp_pass },
+            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
+          );
+          await logAccountEvent(fromAccountId, 'reply', { via: toAcc.email });
+          await supabase.from('email_accounts').update({ reply_count: (fromAcc.reply_count ?? 0) + 1 }).eq('id', fromAccountId);
+
+          // Multi-step thread: reverse direction, 2-5 messages total per conversation
+          if (chainDepth < 4) {
+            await engageQueue.add('engage', {
+              fromAccountId: toAccountId, toAccountId: fromAccountId,
+              subject: replyTarget.subject, chainDepth: chainDepth + 1,
+            }, { delay: pickEngageDelayMs() });
+          }
+        } catch (e: any) {
+          console.error(`[warmup-engage] reply send failed ${toAcc.email} → ${replyTarget.toEmail}: ${e.message}`);
+        }
+      }
+    }, { connection, concurrency: 3 });
+
+    console.log('✅ Warmup engagement worker started (delayed reads/replies/star/archive)');
+
     new SyncWorker('warmup', async (job: any) => {
       const isManual = job?.data?.manual === true;
 
@@ -972,11 +1171,28 @@ export async function register() {
         .neq('status', 'error')
         .or(`warmup_last_run_date.is.null,warmup_last_run_date.lt.${todayDate}`);
 
-      const { data: allWarmupAccounts } = await supabase
+      // Phase 1 migration (20260705_warmup_phase1.sql) adds the columns below. If it hasn't
+      // been run yet, PostgREST errors on the whole select — fall back to the pre-migration
+      // column set so warmup keeps running (with the new scoring simply defaulting) instead
+      // of going dark until someone runs the SQL.
+      let allWarmupAccounts: any[] | null = null;
+      const fullSelect = await supabase
         .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count')
         .eq('warmup_enabled', true)
         .neq('status', 'error');
+
+      if (fullSelect.error) {
+        console.warn(`[warmup] Extended columns unavailable (${fullSelect.error.message}) — has supabase/migrations/20260705_warmup_phase1.sql been run? Falling back to legacy column set for this cycle.`);
+        const fallback = await supabase
+          .from('email_accounts')
+          .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date')
+          .eq('warmup_enabled', true)
+          .neq('status', 'error');
+        allWarmupAccounts = fallback.data;
+      } else {
+        allWarmupAccounts = fullSelect.data;
+      }
 
       if (!allWarmupAccounts || allWarmupAccounts.length < 2) {
         console.log(`[warmup] Skipping: only ${allWarmupAccounts?.length ?? 0} warmup-enabled account(s) in system — need ≥2 to cross-send. Add pool accounts at /dashboard/admin/warmup.`);
@@ -985,15 +1201,21 @@ export async function register() {
 
       console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts (pool: ${allWarmupAccounts.filter(a => a.is_pool_account).length}, users: ${allWarmupAccounts.filter(a => !a.is_pool_account).length})`);
 
-      const { sendEmail, getAccessToken } = await import('./lib/mailer');
+      const { sendEmail } = await import('./lib/mailer');
+      const { detectProvider, computeHealthScore, dailySendCap, shouldPause, canRecover, isWarmupComplete, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
+      const { checkDomainAuth } = await import('./lib/domain-health');
 
       // Track pairs sent this cycle — prevents A→B and B→A in the same run
       const sentPairs = new Set<string>();
 
       // Batch DB updates — collect all changes, flush at end to reduce DB round-trips
-      const accountUpdates = new Map<string, { warmup_day: number; health_score: number; sent_today: number; warmup_last_run_date?: string; warmup_enabled?: boolean }>();
+      const accountUpdates = new Map<string, Record<string, unknown>>();
+      const accountFactors = new Map<string, { inboxRate: number | null; spamRate: number | null; bounceRate: number | null }>();
       const warmupEmailRows: { from_account_id: string; to_account_id: string; subject: string; body: string; sent_at: string }[] = [];
       const errorAccountIds = new Set<string>();
+      const engageJobsToQueue: { fromAccountId: string; toAccountId: string; subject: string }[] = [];
+      const pauseNotifications: { user_id: string; message: string }[] = [];
+      const recoveryNotifications: { user_id: string; message: string }[] = [];
 
       // ── PHASE 1: SEND warmup emails (parallel batches of 10) ─────────────
       const BATCH_SIZE = 10;
@@ -1009,9 +1231,62 @@ export async function register() {
 
             const todayStr = new Date().toISOString().slice(0, 10);
             // Skip accounts that already ran today — except on manual trigger (allow re-run)
-            if (!isManual && account.warmup_last_run_date === todayStr) return;
-            const day = (account.warmup_day ?? 0) + 1;
-            const emailsToday = warmupDailyTarget(day);
+            const alreadyRanToday = !isManual && account.warmup_last_run_date === todayStr;
+
+            // ── Domain auth check — at most once every 7 days per account ──
+            const needsAuthCheck = !account.domain_checked_at
+              || (Date.now() - new Date(account.domain_checked_at).getTime()) > 7 * 86400_000;
+            let spfStatus = account.spf_status || 'unknown';
+            let dkimStatus = account.dkim_status || 'unknown';
+            let dmarcStatus = account.dmarc_status || 'unknown';
+            if (needsAuthCheck) {
+              try {
+                const auth = await checkDomainAuth(account.email);
+                spfStatus = auth.spf; dkimStatus = auth.dkim; dmarcStatus = auth.dmarc;
+              } catch { /* keep previous status on lookup failure */ }
+            }
+            const domainAuthAllPass = spfStatus === 'pass' && dkimStatus === 'pass' && dmarcStatus === 'pass';
+
+            // ── Pause / recovery check ──
+            const events7d = await fetchEventCounts(account.id, Date.now() - 7 * 86400_000);
+            let paused = !!account.warmup_paused;
+            let dayAdjustment = 0;
+
+            if (paused) {
+              const events3d = await fetchEventCounts(account.id, Date.now() - 3 * 86400_000);
+              if (canRecover({ sent: events3d.sent7d, bounce: events3d.bounce7d, spam: events3d.spam7d }, account.warmup_paused_at)) {
+                paused = false;
+                dayAdjustment = -5; // recovery mode: step back and re-ramp instead of resuming at full volume
+                recoveryNotifications.push({
+                  user_id: account.user_id,
+                  message: `${account.email} recovered — warmup resuming at reduced volume to rebuild reputation safely.`,
+                });
+              }
+            }
+
+            if (paused || alreadyRanToday) {
+              // Still compute health from existing signals so the dashboard stays live even
+              // while paused/idle, but don't advance day or send anything.
+              const health = computeHealthScore({
+                events: events7d, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
+                consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
+                hasAuthErrorNow: false,
+              });
+              accountUpdates.set(account.id, {
+                health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+                domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+                last_health_calc_at: new Date().toISOString(),
+              });
+              return;
+            }
+
+            const day = Math.max(0, (account.warmup_day ?? 0) + 1 + dayAdjustment);
+            const provider = detectProvider(account);
+            const priorHealth = account.health_score ?? 50;
+            const weekendFactor = isWeekendUTC() ? WEEKEND_MULTIPLIER : 1;
+            const emailsToday = Math.max(isWeekendUTC() ? 0 : 1, Math.round(
+              dailySendCap({ provider, warmupDay: day, health: priorHealth, domainAuthAllPass }) * weekendFactor
+            ));
 
             // Filter eligible peers based on pool mode
             let pool: typeof allWarmupAccounts;
@@ -1035,8 +1310,12 @@ export async function register() {
                 }
               }
             }
-            if (pool.length === 0) {
-              console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
+            if (pool.length === 0 || emailsToday === 0) {
+              if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
+              accountUpdates.set(account.id, {
+                spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+                domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+              });
               return;
             }
 
@@ -1044,12 +1323,15 @@ export async function register() {
             // Shuffle pool so send order is random
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
+            // Spread sends across whatever's left of today's business-hours window
+            // (07:00–21:00 UTC) instead of a fixed block, so timing looks organic.
+            const endOfWindowMs = new Date(new Date().setUTCHours(21, 0, 0, 0)).getTime();
+            const remainingWindowMs = Math.max(15 * 60 * 1000, endOfWindowMs - Date.now());
+
             for (let i = 0; i < emailsToday; i++) {
-              // Spread emails naturally across a 3h window, proportional to daily count.
-              // 2 emails → ~90 min apart; 40 emails → ~4.5 min apart. ±50% jitter.
               if (i > 0) {
-                const baseMs = (3 * 60 * 60 * 1000) / emailsToday;
-                await new Promise(r => setTimeout(r, baseMs * (0.75 + Math.random() * 0.5)));
+                const baseMs = remainingWindowMs / emailsToday;
+                await new Promise(r => setTimeout(r, baseMs * (0.5 + Math.random())));
               }
               // Pick a recipient that hasn't already received from this account
               // AND hasn't sent to this account this cycle (no connect-back)
@@ -1070,36 +1352,67 @@ export async function register() {
                 );
                 sentPairs.add(pairKey);
                 warmupEmailRows.push({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
+                engageJobsToQueue.push({ fromAccountId: account.id, toAccountId: toAccount.id, subject });
+                await logAccountEvent(account.id, 'sent', {});
                 sent++;
               } catch (e: any) {
                 console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
                 if (e.responseCode === 535 || e.code === 'EAUTH') {
                   errorAccountIds.add(account.id);
+                  await logAccountEvent(account.id, 'auth_error', { message: e.message });
                   break;
                 }
               }
             }
 
-            // Health target curve: 50→98 over days 1-14, 98→100 over days 15-30, 100 after.
-            // Use Math.max so score never decreases if already ahead.
-            const healthTarget = day <= 14
-              ? Math.round(50 + (day / 14) * 48)        // day 14 = 98%
-              : day <= 30
-                ? Math.round(98 + ((day - 14) / 16) * 2) // day 30 = 100%
-                : 100;
-            const newHealth = sent > 0 ? Math.max(account.health_score ?? 50, healthTarget) : (account.health_score ?? 50);
-            // Auto-stop when warmup_day first reaches warmup_target. If user re-enables after
-            // completion (warmup_day already >= target), keep running at maintenance 40/day.
+            const hasAuthErrorNow = errorAccountIds.has(account.id);
+            const events7dAfterSend = { ...events7d, sent7d: events7d.sent7d + sent };
+            const health = computeHealthScore({
+              events: events7dAfterSend, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
+              consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: day,
+              hasAuthErrorNow,
+            });
+
+            const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow);
+            const willPause = pauseCheck.pause;
+            if (willPause && !account.warmup_paused) {
+              pauseNotifications.push({
+                user_id: account.user_id,
+                message: `${account.email} warmup paused: ${pauseCheck.reason}`,
+              });
+            }
+
+            const newConsecutiveStable = health.score >= 80 && !willPause
+              ? (account.consecutive_stable_days ?? 0) + 1
+              : 0;
+
+            // Completion: health-and-stability based, not just "day X reached"
             const target = account.warmup_target ?? 30;
-            const justCompleted = (account.warmup_day ?? 0) < target && day >= target;
+            const recentHistory = await supabase
+              .from('warmup_history').select('health_score').eq('email', account.email)
+              .order('date', { ascending: false }).limit(5);
+            const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
+            const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
+
+            accountFactors.set(account.id, {
+              inboxRate: health.factors.inboxRate, spamRate: health.factors.spamRate, bounceRate: health.factors.bounceRate,
+            });
+
             accountUpdates.set(account.id, {
               warmup_day: day,
-              health_score: newHealth,
+              health_score: health.score,
               sent_today: sent,
               warmup_last_run_date: new Date().toISOString().slice(0, 10),
-              ...(justCompleted ? { warmup_enabled: false, status: 'active' } : {}),
+              spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+              domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+              consecutive_stable_days: newConsecutiveStable,
+              warmup_paused: willPause,
+              warmup_pause_reason: willPause ? pauseCheck.reason : null,
+              warmup_paused_at: willPause && !account.warmup_paused ? new Date().toISOString() : (willPause ? account.warmup_paused_at : null),
+              last_health_calc_at: new Date().toISOString(),
+              ...(complete ? { warmup_enabled: false, status: 'active' } : {}),
             });
-            console.log(`[warmup-send] ${account.email} day=${day}${justCompleted ? ' (COMPLETE)' : ''} sent=${sent}/${emailsToday} score=${newHealth}`);
+            console.log(`[warmup-send] ${account.email} day=${day}${complete ? ' (COMPLETE)' : ''}${willPause ? ' (PAUSED)' : ''} sent=${sent}/${emailsToday} score=${health.score} inbox=${health.factors.inboxRate ?? '—'}%`);
           } catch (e: any) {
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
@@ -1111,93 +1424,67 @@ export async function register() {
         await supabase.from('warmup_emails').insert(warmupEmailRows.slice(i, i + 100));
       }
 
+      // Schedule delayed per-message engagement (reads/replies/star/archive at realistic delays)
+      for (const j of engageJobsToQueue) {
+        await engageQueue.add('engage', { ...j, chainDepth: 0 }, { delay: pickEngageDelayMs() });
+      }
+
       // Flush account updates individually (Supabase upsert can't bulk-update different values)
       const completedAccounts = allWarmupAccounts.filter(a => {
         const upd = accountUpdates.get(a.id);
-        return upd?.warmup_enabled === false && (upd?.warmup_day ?? 0) >= (a.warmup_target ?? 30);
+        return (upd as any)?.warmup_enabled === false;
       });
 
       // Build warmup_history rows — one per account per day (upsert by email+date)
       const today = new Date().toISOString().slice(0, 10);
       const historyRows = Array.from(accountUpdates.entries())
+        .filter(([, upd]) => typeof (upd as any).warmup_day === 'number')
         .map(([id, upd]) => {
           const acc = allWarmupAccounts.find(a => a.id === id);
+          const u = upd as any;
           if (!acc) return null;
+          const factors = accountFactors.get(id);
           return {
             account_id: id,
             email: acc.email,
             user_id: acc.user_id,
             date: today,
-            day_number: upd.warmup_day,
-            emails_sent: upd.sent_today,
-            health_score: upd.health_score,
+            day_number: u.warmup_day,
+            emails_sent: u.sent_today,
+            health_score: u.health_score,
+            paused: !!u.warmup_paused,
+            inbox_rate: factors?.inboxRate ?? null,
+            spam_rate: factors?.spamRate ?? null,
+            bounce_rate: factors?.bounceRate ?? null,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
 
       await Promise.all([
-        ...Array.from(accountUpdates.entries()).map(([id, upd]) =>
-          supabase.from('email_accounts').update(upd).eq('id', id)
-        ),
+        ...Array.from(accountUpdates.entries()).map(([id, upd]) => safeUpdateAccount(id, upd)),
         ...Array.from(errorAccountIds).map(id =>
           supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', id)
         ),
         ...completedAccounts.map(a =>
           supabase.from('notifications').insert({
             user_id: a.user_id,
-            message: `${a.email} warmup complete! ${a.warmup_target ?? 30}-day program done — health is ${accountUpdates.get(a.id)?.health_score ?? 100}%. Re-enable warmup to keep the reputation warm.`,
+            message: `${a.email} warmup complete! Health has stayed 90+ for several days straight — safe to lean on for campaigns. Re-enable warmup any time to keep the reputation warm.`,
             type: 'info',
           })
         ),
+        ...pauseNotifications.map(n => supabase.from('notifications').insert({ ...n, type: 'warning' })),
+        ...recoveryNotifications.map(n => supabase.from('notifications').insert({ ...n, type: 'info' })),
         // Persist daily warmup history (upsert so re-runs don't duplicate)
-        historyRows.length > 0
-          ? supabase.from('warmup_history').upsert(historyRows, { onConflict: 'email,date' })
-          : Promise.resolve(),
+        safeUpsertHistory(historyRows),
       ]);
 
-      // ── PHASE 2: RECEIVE — rescue from spam, mark-read, auto-reply ───────
+      // ── PHASE 2: backstop spam sweep — catches anything a delayed engage job missed
+      // (e.g. a worker restart). Primary engagement now happens via warmup-engage jobs.
       for (const account of allWarmupAccounts) {
         try {
-          if (account.type === 'gmail-oauth') {
-            // Gmail API path
-            let token: string;
-            try { token = await getAccessToken({ id: account.id, type: account.type, email: account.email, smtp_pass: account.smtp_pass }); }
-            catch { continue; }
-
-            const messages = await gmailSearch('"--warmup-ping--" newer_than:2d', token);
-            for (const msg of messages) {
-              try {
-                const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
-                if (!detail) continue;
-                const isSent = detail.labelIds?.includes('SENT');
-                if (isSent) continue;
-                const inSpam = detail.labelIds?.includes('SPAM');
-                const unread = detail.labelIds?.includes('UNREAD');
-                const addLabels = inSpam ? ['INBOX'] : [];
-                const removeLabels = [...(inSpam ? ['SPAM'] : []), ...(unread ? ['UNREAD'] : [])];
-                if (addLabels.length || removeLabels.length) await gmailModify(msg.id, addLabels, removeLabels, token);
-
-                if (unread && Math.random() < 0.25) {
-                  const hdrs = detail.payload?.headers || [];
-                  const fromH = hdrs.find((h: any) => h.name === 'From')?.value || '';
-                  const subjH = hdrs.find((h: any) => h.name === 'Subject')?.value || '';
-                  const toEmail = fromH.match(/<(.+?)>/)?.at(1) || fromH.trim();
-                  if (toEmail && toEmail !== account.email) {
-                    const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
-                    await sendEmail(
-                      { id: account.id, type: account.type, email: account.email, smtp_pass: account.smtp_pass },
-                      { from: account.email, to: toEmail, subject: `Re: ${subjH}`, text: replyText, html: `<p>${replyText}</p>` }
-                    );
-                  }
-                }
-              } catch { /* skip single message error */ }
-            }
-
-          } else {
-            // IMAP path (gmail-app, smtp)
+          if (account.type !== 'gmail-oauth') {
             const imapHost = account.imap_host || (account.type === 'gmail-app' ? 'imap.gmail.com' : null);
             if (!imapHost) continue;
-
             const { ImapFlow } = await import('imapflow');
             const imapConfig: any = {
               host: imapHost, port: account.imap_port || 993, secure: true,
@@ -1205,64 +1492,31 @@ export async function register() {
               logger: false, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, socketTimeout: 20000,
             };
             if (process.env.SMTP_PROXY) imapConfig.proxy = process.env.SMTP_PROXY;
-
             const client = new ImapFlow(imapConfig);
-            let replyTarget: { toEmail: string; subject: string } | null = null;
-
             try {
               await client.connect();
-
-              // Rescue from spam
               const spamFolders = account.type === 'gmail-app' ? ['[Gmail]/Spam'] : ['Junk', 'Spam', '[Gmail]/Spam'];
               for (const folder of spamFolders) {
                 try {
-                  const spamLock = await client.getMailboxLock(folder);
+                  const lock = await client.getMailboxLock(folder);
                   try {
-                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), body: '--warmup-ping--' }, { uid: true });
-                    if (uids && (uids as number[]).length > 0) {
-                      await client.messageMove(uids as number[], 'INBOX', { uid: true });
-                      console.log(`[warmup-receive] rescued ${(uids as number[]).length} from spam: ${account.email}`);
+                    const uids = await client.search({ since: new Date(Date.now() - 5 * 86400_000), body: '--warmup-ping--' }, { uid: true }) as number[];
+                    if (uids?.length > 0) {
+                      await client.messageMove(uids, 'INBOX', { uid: true });
+                      console.log(`[warmup-backstop] rescued ${uids.length} stragglers from spam: ${account.email}`);
                     }
-                  } finally { spamLock.release(); }
+                  } finally { lock.release(); }
                   break;
                 } catch { /* folder not found, try next */ }
               }
-
-              // Mark inbox warmup emails as read + grab reply candidate
-              const inboxLock = await client.getMailboxLock('INBOX');
-              try {
-                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), body: '--warmup-ping--', seen: false }, { uid: true });
-                if (uids && (uids as number[]).length > 0) {
-                  await client.messageFlagsAdd(uids as number[], ['\\Seen'], { uid: true });
-                  if (Math.random() < 0.25) {
-                    for await (const msg of client.fetch((uids as number[]).slice(0, 1), { envelope: true }, { uid: true })) {
-                      const from = msg.envelope?.from?.[0];
-                      const fromEmail = from?.address || '';
-                      const subject = msg.envelope?.subject || '';
-                      if (fromEmail && fromEmail !== account.email) replyTarget = { toEmail: fromEmail, subject };
-                    }
-                  }
-                }
-              } finally { inboxLock.release(); }
-
               await client.logout();
             } catch (e: any) {
-              console.error(`[warmup-receive] IMAP ${account.email}: ${e.message}`);
-              try { await client.logout(); } catch { }
-            }
-
-            if (replyTarget) {
-              const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
-              try {
-                await sendEmail(
-                  { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-                  { from: account.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: replyText, html: `<p>${replyText}</p>` }
-                );
-              } catch { /* non-fatal */ }
+              console.error(`[warmup-backstop] IMAP ${account.email}: ${e.message}`);
+              try { await client.logout(); } catch { /* already closed */ }
             }
           }
         } catch (e: any) {
-          console.error(`[warmup-receive] ${account.email}: ${e.message}`);
+          console.error(`[warmup-backstop] ${account.email}: ${e.message}`);
         }
       }
 
