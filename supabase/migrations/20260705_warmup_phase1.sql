@@ -21,10 +21,12 @@ ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS last_health_calc_at   TIMEST
 ALTER TABLE email_accounts ALTER COLUMN health_score SET DEFAULT 50;
 
 -- ── email_account_events: granular signal log (feeds the health formula) ──────
+-- event_type values used by the app: sent, spam_placement, rescued_from_spam,
+-- bounce, reply, open, auth_error, star, archive, label
 CREATE TABLE IF NOT EXISTS email_account_events (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   account_id  uuid        REFERENCES email_accounts(id) ON DELETE CASCADE,
-  event_type  TEXT        NOT NULL, -- sent | spam_placement | rescued_from_spam | bounce | reply | open | auth_error | star | archive | label
+  event_type  TEXT        NOT NULL,
   meta        JSONB       DEFAULT '{}',
   created_at  timestamptz DEFAULT now()
 );
