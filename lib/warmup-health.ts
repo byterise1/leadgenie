@@ -56,10 +56,13 @@ export function computeHealthScore(opts: {
   const { events, domainAuth, consecutiveStableDays, warmupDay, hasAuthErrorNow } = opts;
   const sent = Math.max(0, events.sent7d);
 
-  const spamRate = sent > 0 ? events.spam7d / sent : null;
-  const bounceRate = sent > 0 ? events.bounce7d / sent : null;
-  const replyRate = sent > 0 ? events.reply7d / sent : null;
-  const inboxRate = sent > 0 ? Math.max(0, 1 - events.spam7d / sent) : null;
+  // Clamp to [0,1] — spam/bounce event counts can exceed the sent count in edge cases
+  // (small sample windows, admin-simulated test data), and a rate can never really mean
+  // more than "every single message had the problem."
+  const spamRate = sent > 0 ? Math.min(1, events.spam7d / sent) : null;
+  const bounceRate = sent > 0 ? Math.min(1, events.bounce7d / sent) : null;
+  const replyRate = sent > 0 ? Math.min(1, events.reply7d / sent) : null;
+  const inboxRate = sent > 0 ? Math.max(0, 1 - Math.min(1, events.spam7d / sent)) : null;
 
   // Baseline: everyone starts unproven. Small credit just for warmup age (up to +20 by ~day 13).
   let score = 30 + Math.min(20, warmupDay * 1.5);
@@ -148,16 +151,30 @@ export function campaignDailyCap(opts: {
 export function shouldPause(events: EventCounts, hasAuthErrorNow: boolean): { pause: boolean; reason: string | null } {
   if (hasAuthErrorNow) return { pause: true, reason: 'Authentication failed — mailbox credentials need attention.' };
   const sent = events.sent7d;
+
   if (sent >= 5) {
-    const bounceRate = events.bounce7d / sent;
-    const spamRate = events.spam7d / sent;
+    // Enough volume for a rate to be statistically meaningful.
+    const bounceRate = Math.min(1, events.bounce7d / sent);
+    const spamRate = Math.min(1, events.spam7d / sent);
     if (bounceRate > 0.05) {
       return { pause: true, reason: `Bounce rate hit ${Math.round(bounceRate * 100)}% over the last week — paused to protect sender reputation.` };
     }
     if (spamRate > 0.3) {
       return { pause: true, reason: `${Math.round(spamRate * 100)}% of warmup emails landed in spam this week — paused to recover reputation.` };
     }
+  } else {
+    // Low sample size (typical during the first week of warmup, sending only 1-2/day) —
+    // a rate would be statistically noisy, so gate on absolute bad-event counts instead.
+    // This is the gap that mattered most: without it, the fragile early-ramp period had
+    // no pause protection at all, no matter how bad bounce/spam signals looked.
+    if (events.bounce7d >= 2) {
+      return { pause: true, reason: `${events.bounce7d} bounces this week on a low-volume account — paused to protect sender reputation.` };
+    }
+    if (events.spam7d >= 3) {
+      return { pause: true, reason: `${events.spam7d} warmup emails landed in spam this week on a low-volume account — paused to recover reputation.` };
+    }
   }
+
   return { pause: false, reason: null };
 }
 
