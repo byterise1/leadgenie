@@ -951,6 +951,34 @@ export async function register() {
       } catch { return []; }
     }
 
+    // Gmail label IDs are per-mailbox and not fixed strings (unlike STARRED/INBOX/SPAM) —
+    // find or create a "Warmup" label once per account, cached for the process lifetime.
+    const _warmupLabelIdCache = new Map<string, string>();
+    async function getOrCreateWarmupLabelId(accountEmail: string, token: string): Promise<string | null> {
+      if (_warmupLabelIdCache.has(accountEmail)) return _warmupLabelIdCache.get(accountEmail)!;
+      try {
+        const listRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+          headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000),
+        });
+        if (listRes.ok) {
+          const list = await listRes.json();
+          const existing = (list.labels || []).find((l: any) => l.name === 'Warmup');
+          if (existing?.id) { _warmupLabelIdCache.set(accountEmail, existing.id); return existing.id; }
+        }
+        const createRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Warmup', labelListVisibility: 'labelShow', messageListVisibility: 'show' }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (createRes.ok) {
+          const created = await createRes.json();
+          if (created?.id) { _warmupLabelIdCache.set(accountEmail, created.id); return created.id; }
+        }
+      } catch { /* non-fatal — label action just gets skipped */ }
+      return null;
+    }
+
     // ── Event log helper — every signal that feeds the health formula ─────────
     async function logAccountEvent(accountId: string, eventType: string, meta: Record<string, unknown> = {}) {
       try {
@@ -1032,6 +1060,9 @@ export async function register() {
 
       let landedInSpam = false;
       let engaged = false;
+      let starred = false;
+      let archived = false;
+      let labelled = false;
       let replyTarget: { toEmail: string; subject: string } | null = null;
 
       try {
@@ -1050,10 +1081,18 @@ export async function register() {
             if (unread) await gmailModify(msg.id, [], ['UNREAD'], token);
             engaged = true;
 
-            // Occasional "importance" actions — star or archive, never both
+            // Occasional "importance" actions — star, archive, or label, never more than one
             const importanceRoll = Math.random();
-            if (importanceRoll < 0.1) await gmailModify(msg.id, ['STARRED'], [], token);
-            else if (importanceRoll < 0.25) await gmailModify(msg.id, [], ['INBOX'], token);
+            if (importanceRoll < 0.1) {
+              await gmailModify(msg.id, ['STARRED'], [], token);
+              starred = true;
+            } else if (importanceRoll < 0.25) {
+              await gmailModify(msg.id, [], ['INBOX'], token);
+              archived = true;
+            } else if (importanceRoll < 0.35) {
+              const labelId = await getOrCreateWarmupLabelId(toAcc.email, token);
+              if (labelId) { await gmailModify(msg.id, [labelId], [], token); labelled = true; }
+            }
 
             if (Math.random() < 0.3 && chainDepth < 4) {
               const subjH = detail.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || subject;
@@ -1095,7 +1134,12 @@ export async function register() {
                 if (uids?.length > 0) {
                   await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true });
                   engaged = true;
-                  if (Math.random() < 0.1) await client.messageFlagsAdd(uids.slice(0, 1), ['\\Flagged'], { uid: true });
+                  // IMAP has no universal "archive folder" or custom keyword support across
+                  // providers — only the star-equivalent (\Flagged) is reliable here.
+                  if (Math.random() < 0.1) {
+                    await client.messageFlagsAdd(uids.slice(0, 1), ['\\Flagged'], { uid: true });
+                    starred = true;
+                  }
                   if (Math.random() < 0.3 && chainDepth < 4) {
                     for await (const msg of client.fetch(uids.slice(0, 1), { envelope: true }, { uid: true })) {
                       replyTarget = { toEmail: fromAcc.email, subject: msg.envelope?.subject || subject };
@@ -1126,6 +1170,9 @@ export async function register() {
         await logAccountEvent(fromAccountId, 'open', { via: toAcc.email });
         await supabase.from('email_accounts').update({ open_count: (fromAcc.open_count ?? 0) + 1 }).eq('id', fromAccountId);
       }
+      if (starred) await logAccountEvent(fromAccountId, 'star', { via: toAcc.email });
+      if (archived) await logAccountEvent(fromAccountId, 'archive', { via: toAcc.email });
+      if (labelled) await logAccountEvent(fromAccountId, 'label', { via: toAcc.email, label: 'Warmup' });
 
       if (replyTarget) {
         const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
