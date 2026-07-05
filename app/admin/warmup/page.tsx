@@ -312,6 +312,25 @@ function Toggle({ on, onToggle, disabled }: { on: boolean; onToggle: () => void;
   );
 }
 
+// Admin-only test tool: inject synthetic bounce/spam/auth-error events to verify
+// pause/recovery logic instantly instead of waiting for a real problem to occur.
+function SimulateMenu({ onPick, busy }: { onPick: (action: string) => void; busy: boolean }) {
+  return (
+    <select
+      value=""
+      disabled={busy}
+      onChange={e => { onPick(e.target.value); e.target.value = ''; }}
+      title="Simulate a signal to test health/pause logic — for testing only"
+      className="text-[11px] border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 max-w-[90px]">
+      <option value="">🧪 Test…</option>
+      <option value="bounce">Simulate bounces</option>
+      <option value="spam_placement">Simulate spam</option>
+      <option value="auth_error">Simulate auth error</option>
+      <option value="reset">Reset test data</option>
+    </select>
+  );
+}
+
 function AdminWarmupPageInner() {
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
   const [poolAccounts, setPoolAccounts] = useState<PoolAccount[]>([]);
@@ -325,6 +344,7 @@ function AdminWarmupPageInner() {
   const [globalPoolMode, setGlobalPoolMode] = useState<PoolMode>('admin_pool');
   const [settingGlobalMode, setSettingGlobalMode] = useState(false);
   const [triggeringWarmup, setTriggeringWarmup] = useState(false);
+  const [simulatingId, setSimulatingId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
@@ -430,6 +450,44 @@ function AdminWarmupPageInner() {
       body: JSON.stringify({ id, warmup_target }),
     });
     showToast('Target updated');
+  };
+
+  const applySimResult = (id: string, account: Record<string, any>) => {
+    const patch = {
+      health_score: Number(account.health_score) || 0,
+      warmup_paused: !!account.warmup_paused,
+      warmup_pause_reason: (account.warmup_pause_reason as string | null) ?? null,
+      inbox_rate: (account.inbox_rate as number | null) ?? null,
+      spam_rate: (account.spam_rate as number | null) ?? null,
+      bounce_rate: (account.bounce_rate as number | null) ?? null,
+    };
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    setPoolAccounts(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+  };
+
+  const simulateEvent = async (id: string, action: string) => {
+    if (!action) return;
+    setSimulatingId(id);
+    if (action === 'reset') {
+      const res = await fetch('/api/admin/warmup/simulate', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: id }),
+      });
+      const d = await res.json();
+      setSimulatingId(null);
+      if (d.error) { showToast(d.error); return; }
+      if (d.account) applySimResult(id, d.account);
+      showToast('Test data cleared — recalculated from real signals');
+      return;
+    }
+    const res = await fetch('/api/admin/warmup/simulate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, event_type: action, count: action === 'bounce' ? 3 : action === 'spam_placement' ? 4 : 1 }),
+    });
+    const d = await res.json();
+    setSimulatingId(null);
+    if (d.error) { showToast(d.error); return; }
+    if (d.account) applySimResult(id, d.account);
+    showToast(d.account?.warmup_paused ? `Simulated — account is now PAUSED (${d.account.warmup_pause_reason})` : 'Simulated — health recalculated, not paused yet');
   };
 
   const filtered = accounts.filter(a => {
@@ -591,9 +649,12 @@ function AdminWarmupPageInner() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => handleDeletePool(a.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-400 rounded-lg hover:bg-red-50 transition-colors">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <SimulateMenu busy={simulatingId === a.id} onPick={action => simulateEvent(a.id, action)}/>
+                        <button onClick={() => handleDeletePool(a.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-400 rounded-lg hover:bg-red-50 transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -636,15 +697,16 @@ function AdminWarmupPageInner() {
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">Safe/day</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">Pool Mode</th>
                   <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">Warmup</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">Test</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>{Array.from({ length: 8 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-3.5 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"/></td>)}</tr>
+                    <tr key={i}>{Array.from({ length: 9 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-3.5 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"/></td>)}</tr>
                   ))
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">No accounts found.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">No accounts found.</td></tr>
                 ) : (
                   filtered.map(a => (
                     <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -705,6 +767,9 @@ function AdminWarmupPageInner() {
                       </td>
                       <td className="px-4 py-3">
                         <Toggle on={a.warmup_enabled} disabled={togglingId === a.id} onToggle={() => toggleWarmup(a.id, a.warmup_enabled)}/>
+                      </td>
+                      <td className="px-4 py-3">
+                        <SimulateMenu busy={simulatingId === a.id} onPick={action => simulateEvent(a.id, action)}/>
                       </td>
                     </tr>
                   ))
