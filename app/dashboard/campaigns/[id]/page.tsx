@@ -19,6 +19,8 @@ type Campaign = {
   from_name?: string;
   min_delay_secs?: number;
   max_delay_secs?: number;
+  followup_priority_mode?: 'auto' | 'manual';
+  followup_weight_pct?: number | null;
   total_sent: number;
   total_opened: number;
   total_replied: number;
@@ -107,6 +109,19 @@ export default function CampaignDetailPage() {
       const d = await res.json();
       if (!d.error) setCampaign(prev => prev ? { ...prev, status: next } : prev);
     } finally { setToggling(false); }
+  }
+
+  const [savingPriority, setSavingPriority] = useState(false);
+  async function updatePriority(patch: { followup_priority_mode?: 'auto' | 'manual'; followup_weight_pct?: number }) {
+    if (!campaign) return;
+    setCampaign(prev => prev ? { ...prev, ...patch } : prev);
+    setSavingPriority(true);
+    try {
+      await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+    } finally { setSavingPriority(false); }
   }
 
   if (loading) {
@@ -267,6 +282,53 @@ export default function CampaignDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Follow-up Priority */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">Follow-up Priority</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Who gets today's sending capacity first when both are waiting: leads due for a follow-up, or brand new leads.</p>
+              </div>
+              <div className="px-6 py-4 space-y-3">
+                <div className="flex gap-2">
+                  {(['auto', 'manual'] as const).map(mode => (
+                    <button key={mode} onClick={() => updatePriority(mode === 'auto' ? { followup_priority_mode: 'auto' } : { followup_priority_mode: 'manual', followup_weight_pct: campaign.followup_weight_pct ?? 90 })}
+                      className={`flex-1 text-xs font-bold rounded-xl px-3 py-2 border transition-colors ${
+                        (campaign.followup_priority_mode ?? 'auto') === mode
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}>
+                      {mode === 'auto' ? 'Auto (recommended)' : 'Manual'}
+                    </button>
+                  ))}
+                </div>
+                {(campaign.followup_priority_mode ?? 'auto') === 'auto' ? (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    The system adjusts this automatically — follow-ups get more of today's capacity when the backlog is heavy, and new leads get more when it's light. New leads are never fully blocked.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 dark:text-gray-400">Follow-ups get</span>
+                      <span className="font-bold text-gray-900 dark:text-white">{campaign.followup_weight_pct ?? 90}%</span>
+                      <span className="text-gray-500 dark:text-gray-400">of capacity</span>
+                    </div>
+                    <input
+                      type="range" min={0} max={100} step={5}
+                      value={campaign.followup_weight_pct ?? 90}
+                      onChange={e => updatePriority({ followup_priority_mode: 'manual', followup_weight_pct: Number(e.target.value) })}
+                      className="w-full accent-blue-600"
+                    />
+                    {(campaign.followup_weight_pct ?? 90) >= 95 && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                        At this level, new leads only get sent once every due follow-up is handled — they can wait days on a busy campaign.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {savingPriority && <p className="text-[10px] text-gray-400 dark:text-gray-500">Saving…</p>}
+              </div>
             </div>
 
             {/* Schedule & Limits */}

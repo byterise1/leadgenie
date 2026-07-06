@@ -1,80 +1,7 @@
-const TZ_MAP: Record<string, string> = {
-  'UTC': 'UTC',
-  'US/Eastern (EST)': 'America/New_York',
-  'US/Pacific (PST)': 'America/Los_Angeles',
-  'Europe/London (GMT)': 'Europe/London',
-  'Asia/Karachi (PKT)': 'Asia/Karachi',
-  'Asia/Dubai (GST)': 'Asia/Dubai',
-};
-
-function parseMins(s: unknown): number {
-  if (!s) return 9 * 60;
-  const str = String(s);
-  const m24 = str.match(/^(\d{1,2}):(\d{2})$/);
-  if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
-  const m12 = str.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
-  if (m12) {
-    let h = parseInt(m12[1]);
-    const mins = parseInt(m12[2]);
-    if (m12[3].toUpperCase() === 'PM' && h !== 12) h += 12;
-    if (m12[3].toUpperCase() === 'AM' && h === 12) h = 0;
-    return h * 60 + mins;
-  }
-  return 9 * 60;
-}
-
-function getLocalMinutes(ms: number, zone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: zone, hour: 'numeric', minute: 'numeric', hour12: false,
-  }).formatToParts(new Date(ms));
-  const h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0') % 24;
-  const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0');
-  return h * 60 + m;
-}
-
-function getLocalDayIdx(ms: number, zone: string): number {
-  // 0=Monday … 6=Sunday (matches active_days array)
-  const day = new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(ms));
-  const map: Record<string, number> = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
-  return map[day] ?? 0;
-}
-
-// Given a target fire time, snap it forward into the next open sending window on an active day
-function adjustToWindow(targetMs: number, campaign: any): number {
-  const zone = TZ_MAP[campaign.timezone] || 'UTC';
-  const fromMins = parseMins(campaign.from_hour);
-  const windowMins = Math.max(5, parseMins(campaign.to_hour) - fromMins);
-  const windowEndMins = fromMins + windowMins;
-  const activeDays: boolean[] = Array.isArray(campaign.active_days)
-    ? campaign.active_days
-    : [true, true, true, true, true, false, false];
-
-  let t = targetMs;
-  for (let guard = 0; guard < 8; guard++) {
-    const localMins = getLocalMinutes(t, zone);
-    const dayActive = activeDays[getLocalDayIdx(t, zone)];
-
-    if (!dayActive) {
-      // Skip to next day's window start
-      const minsUntilNext = (24 * 60 - localMins) + fromMins;
-      t += minsUntilNext * 60 * 1000;
-      continue;
-    }
-    if (localMins < fromMins) {
-      // Before window today — push to window start
-      t += (fromMins - localMins) * 60 * 1000;
-      break;
-    }
-    if (localMins < windowEndMins) {
-      // Already inside window
-      break;
-    }
-    // Past window — push to next day's window start
-    const minsUntilNext = (24 * 60 - localMins) + fromMins;
-    t += minsUntilNext * 60 * 1000;
-  }
-  return t;
-}
+// Campaign sending-window/timezone helpers moved to lib/campaign-scheduling.ts —
+// shared by the (now-simplified) campaign start route and the campaign-scheduler
+// worker below, which replaced the old "snap a pre-computed delay into the window"
+// approach with a live per-cycle window check (isWithinSendingWindow).
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
@@ -82,6 +9,7 @@ export async function register() {
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
     const { sendEmail, replaceVars } = await import('./lib/mailer');
     const crypto = await import('crypto');
+    const { DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity } = await import('./lib/campaign-scheduling');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -267,23 +195,24 @@ export async function register() {
         .eq('step_number', stepNumber);
       if ((alreadySentCount ?? 0) > 0) {
         console.log(`[idempotency] step ${stepNumber} already sent to ${lead.email} — skipping retry duplicate`);
-        // Re-queue the next step in case it was lost (e.g. Redis blip between send and queue call)
+        // Make sure the lead's DB state actually advanced past this step (e.g. a Redis
+        // blip could have lost the post-send update below) — if not, fix it here so the
+        // campaign-scheduler worker can pick up the next step on its own next cycle.
+        // No longer re-queues a delayed job directly — that model is retired.
         const _nextStep = stepNumber + 1;
         const _hasNext = campaign.email_steps.some((s: any) => s.step_number === _nextStep);
-        if (_hasNext && cl.status === 'active') {
-          const { count: _nextSent } = await supabase
-            .from('sent_emails')
-            .select('id', { count: 'exact', head: true })
-            .eq('campaign_id', campaign.id)
-            .eq('lead_id', lead.id)
-            .eq('step_number', _nextStep);
-          if ((_nextSent ?? 0) === 0) {
-            const { emailQueue: _eq } = await import('./lib/queue');
-            const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
-            const _delayMs = Math.max(0, adjustToWindow(Date.now() + (_nextStepData.delay_days || 1) * 60_000, campaign) - Date.now());
-            await _eq.add('send', { campaignLeadId, stepNumber: _nextStep, accountId: account.id }, { delay: _delayMs });
-            console.log(`[idempotency-requeue] queued step ${_nextStep} for ${lead.email}`);
-          }
+        if (cl.status === 'active' && (cl.current_step ?? 0) <= stepNumber) {
+          const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
+          const _nextSendAt = _hasNext
+            ? new Date(Date.now() + (_nextStepData.delay_days || 1) * DELAY_UNIT_MS + jitterMs()).toISOString()
+            : null;
+          await supabase.from('campaign_leads').update({
+            current_step: _nextStep,
+            status: _hasNext ? 'active' : 'completed',
+            next_send_at: _nextSendAt,
+            account_id: account.id,
+          }).eq('id', campaignLeadId);
+          console.log(`[idempotency-fix] advanced ${lead.email} to step ${_nextStep}`);
         }
         return;
       }
@@ -498,10 +427,24 @@ export async function register() {
       const nextStep = stepNumber + 1;
       const hasNextStep = campaign.email_steps.some((s: any) => s.step_number === nextStep);
 
+      // Next follow-up's due time — base delay for that step, plus jitter so it doesn't
+      // land at the exact same clock time every day. The campaign-scheduler worker picks
+      // this lead up once next_send_at arrives; nothing here re-queues a job directly.
+      let nextSendAt: string | null = null;
+      if (hasNextStep) {
+        const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
+        const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
+        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs()).toISOString();
+      }
+
       await supabase.from('campaign_leads').update({
         current_step: nextStep,
         last_sent_at: new Date().toISOString(),
         status: hasNextStep ? 'active' : 'completed',
+        next_send_at: nextSendAt,
+        // Persist the sending mailbox so every later step in this thread reuses it —
+        // the scheduler no longer has a job-to-job chain to carry this forward.
+        account_id: account.id,
       }).eq('id', campaignLeadId);
 
       // Increment campaign total_sent
@@ -529,24 +472,156 @@ export async function register() {
         }
       }
 
-      if (hasNextStep) {
-        const { emailQueue } = await import('./lib/queue');
-        const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
-        // TESTING: 1 unit = 1 minute. Change to 24*60*60*1000 before production launch.
-        const DELAY_UNIT_MS = 60 * 1000;
-        const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
-        const targetFireMs = Date.now() + rawDelayMs;
-        const adjustedFireMs = adjustToWindow(targetFireMs, campaign);
-        const delayMs = Math.max(0, adjustedFireMs - Date.now());
-        await emailQueue.add('send', { campaignLeadId, stepNumber: nextStep, accountId: account.id }, { delay: delayMs });
-      }
-
       console.log(`✓ Sent step ${stepNumber} to ${lead.email}`);
     }, { connection, concurrency: 5 }).on('failed', (job, err) => {
       console.error(`❌ Job permanently failed after all retries | campaignLeadId=${job?.data?.campaignLeadId} | ${err?.message}`);
     });
 
     console.log('✅ Email worker started');
+
+    // ── Campaign scheduler — the Smart Priority Engine (runs every 2 minutes) ──
+    // Decides, live each cycle, what actually sends for every active campaign:
+    // due follow-ups always get first claim on today's capacity (weighted Auto/
+    // Manual per campaign), whatever's left goes to new leads — new leads are
+    // never fully starved, and nothing ever exceeds a mailbox's or the campaign's
+    // real daily cap. Replaces the old "pre-schedule everything with a fixed
+    // delay at launch time" model — see start/route.ts and the removed
+    // self-chaining logic above.
+    {
+      const { Queue, Worker: SyncWorker } = await import('bullmq');
+      const { detectProvider, campaignDailyCap } = await import('./lib/warmup-health');
+      const { emailQueue: schedulerQueue } = await import('./lib/queue');
+
+      const campaignSchedulerQueue = new Queue('campaign-scheduler', { connection });
+      await campaignSchedulerQueue.upsertJobScheduler('campaign-scheduler', { every: 2 * 60_000 }, { name: 'schedule', data: {} });
+
+      new SyncWorker('campaign-scheduler', async () => {
+        const { data: activeCampaigns } = await supabase
+          .from('campaigns')
+          .select('id, name, user_id, daily_limit, from_hour, to_hour, timezone, active_days, min_delay_secs, max_delay_secs, followup_priority_mode, followup_weight_pct, campaign_accounts(account:email_accounts(*))')
+          .eq('status', 'active');
+
+        if (!activeCampaigns?.length) return;
+
+        for (const campaign of activeCampaigns as any[]) {
+          try {
+            if (!isWithinSendingWindow(campaign)) continue;
+
+            const linkedAccounts = (campaign.campaign_accounts ?? []).map((ca: any) => ca.account).filter(Boolean);
+            if (!linkedAccounts.length) continue;
+
+            const todayUTC = new Date();
+            todayUTC.setUTCHours(0, 0, 0, 0);
+
+            // Per-account real remaining capacity today — health-aware, warmup-safe,
+            // same ceiling the email-sending worker itself enforces at send time.
+            const accountRemaining = new Map<string, number>();
+            for (const acc of linkedAccounts) {
+              if (acc.warmup_paused || (acc.health_score ?? 50) < 35 || acc.status === 'error') continue;
+              const cap = campaignDailyCap({
+                provider: detectProvider(acc), warmupDay: acc.warmup_day ?? 0,
+                health: acc.health_score ?? 50, warmupComplete: !acc.warmup_enabled,
+              });
+              if (cap === 0) continue;
+              const { count: sentToday } = await supabase
+                .from('sent_emails').select('id', { count: 'exact', head: true })
+                .eq('account_id', acc.id).gte('sent_at', todayUTC.toISOString());
+              const remaining = Math.max(0, Math.min(acc.daily_limit ?? 50, cap) - (sentToday ?? 0));
+              if (remaining > 0) accountRemaining.set(acc.id, remaining);
+            }
+            if (accountRemaining.size === 0) continue;
+
+            const totalAccountCapacity = Array.from(accountRemaining.values()).reduce((s, v) => s + v, 0);
+
+            const { count: campaignSentToday } = await supabase
+              .from('sent_emails').select('id', { count: 'exact', head: true })
+              .eq('campaign_id', campaign.id).gte('sent_at', todayUTC.toISOString());
+            const campaignRemaining = Math.max(0, (campaign.daily_limit ?? 50) - (campaignSentToday ?? 0));
+
+            const remainingCapacity = Math.min(totalAccountCapacity, campaignRemaining);
+            if (remainingCapacity <= 0) continue;
+
+            // Candidate pool: eligibility (reply/bounce/unsubscribe) is baked into
+            // this query, not a later step — an ineligible lead never enters the
+            // pool that gets prioritized and sent, full stop.
+            const nowIso = new Date().toISOString();
+            const [{ data: dueFollowupsRaw }, { data: newLeadsRaw }] = await Promise.all([
+              supabase.from('campaign_leads')
+                .select('id, current_step, account_id, lead:leads(status)')
+                .eq('campaign_id', campaign.id).eq('status', 'active')
+                .or(`next_send_at.is.null,next_send_at.lte.${nowIso}`),
+              supabase.from('campaign_leads')
+                .select('id, lead:leads(status)')
+                .eq('campaign_id', campaign.id).eq('status', 'pending'),
+            ]);
+
+            const stillEligible = (rows: any[] | null) =>
+              (rows ?? []).filter(r => r.lead?.status !== 'unsubscribed' && r.lead?.status !== 'bounced');
+            const followupsDue = stillEligible(dueFollowupsRaw);
+            const newLeads = stillEligible(newLeadsRaw);
+            if (followupsDue.length === 0 && newLeads.length === 0) continue;
+
+            const weightPct = computeFollowupWeightPct({
+              mode: (campaign.followup_priority_mode as 'auto' | 'manual') ?? 'auto',
+              manualWeightPct: campaign.followup_weight_pct,
+              dueFollowupCount: followupsDue.length,
+              remainingCapacity,
+            });
+            const { followupsToSend, newToSend } = allocateCapacity({
+              followupsDue, newLeads, remainingCapacity, followupWeightPct: weightPct,
+            });
+            if (followupsToSend.length === 0 && newToSend.length === 0) continue;
+
+            // Stagger sends across the next few minutes with the campaign's own
+            // configured gap — same "don't blast simultaneously" behavior as before.
+            const minDelayMs = Math.max(10_000, (campaign.min_delay_secs || 60) * 1000);
+            const maxDelayMs = Math.max(minDelayMs + 1000, (campaign.max_delay_secs || 300) * 1000);
+            let cursorMs = 0;
+            const jobs: { name: string; data: Record<string, unknown>; opts: Record<string, unknown> }[] = [];
+
+            for (const cl of followupsToSend as any[]) {
+              // Locked mailbox for this thread. Falls back to whichever account
+              // currently has the most room only in the edge case where a lead
+              // somehow reached a follow-up without a persisted account_id.
+              const fallback = [...accountRemaining.entries()].sort((a, b) => b[1] - a[1])[0];
+              const accId: string | undefined = (cl.account_id && accountRemaining.has(cl.account_id)) ? cl.account_id : fallback?.[0];
+              const room = accId ? accountRemaining.get(accId) : undefined;
+              if (!accId || !room || room <= 0) continue;
+              accountRemaining.set(accId, room - 1);
+              jobs.push({
+                name: 'send',
+                data: { campaignLeadId: cl.id, stepNumber: cl.current_step, accountId: accId },
+                opts: { delay: cursorMs, attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
+              });
+              cursorMs += minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+            }
+
+            for (const cl of newToSend as any[]) {
+              // Least-loaded eligible mailbox gets the new lead — avoids the old
+              // random assignment's chance of overbooking a mailbox past its cap.
+              const [accId, room] = [...accountRemaining.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+              if (!accId || !room || room <= 0) continue;
+              accountRemaining.set(accId, room - 1);
+              jobs.push({
+                name: 'send',
+                data: { campaignLeadId: cl.id, stepNumber: 0, accountId: accId },
+                opts: { delay: cursorMs, attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
+              });
+              cursorMs += minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+            }
+
+            if (jobs.length) {
+              await schedulerQueue.addBulk(jobs as any);
+              console.log(`[campaign-scheduler] "${campaign.name ?? campaign.id}": ${followupsToSend.length} followup(s) + ${newToSend.length} new queued (weight=${weightPct}%, capacity=${remainingCapacity})`);
+            }
+          } catch (e: any) {
+            console.error(`[campaign-scheduler] campaign ${campaign.id} error:`, e.message);
+          }
+        }
+      }, { connection, concurrency: 1 });
+
+      console.log('✅ Campaign scheduler worker started (every 2 min)');
+    }
 
     // ── Server-side inbox sync (runs every 90s on Railway, no browser needed) ──
     const { Queue, Worker: SyncWorker } = await import('bullmq');
