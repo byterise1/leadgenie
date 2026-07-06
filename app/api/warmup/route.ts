@@ -14,7 +14,7 @@ export async function GET() {
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days')
+      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
     accounts = res.data;
@@ -26,7 +26,7 @@ export async function GET() {
   if (accountsErr) {
     const fallback = await supabaseAdmin
       .from('email_accounts')
-      .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today')
+      .select('id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
     accounts = fallback.data;
@@ -64,12 +64,43 @@ export async function GET() {
     }
   }
 
+  // Last time each account sent OR received a warmup ping — lets the dashboard tell
+  // "actively sending" apart from "enabled but silently stuck" (a real incident that
+  // was otherwise invisible without reading server logs).
+  const accountIds = (accounts ?? []).map(a => a.id);
+  const lastActivityMap = new Map<string, string>();
+  if (accountIds.length) {
+    const idList = accountIds.join(',');
+    const { data: recentActivity } = await supabaseAdmin
+      .from('warmup_emails')
+      .select('from_account_id, to_account_id, sent_at')
+      .or(`from_account_id.in.(${idList}),to_account_id.in.(${idList})`)
+      .order('sent_at', { ascending: false })
+      .limit(500);
+    for (const row of recentActivity ?? []) {
+      if (accountIds.includes(row.from_account_id) && !lastActivityMap.has(row.from_account_id)) lastActivityMap.set(row.from_account_id, row.sent_at);
+      if (accountIds.includes(row.to_account_id) && !lastActivityMap.has(row.to_account_id)) lastActivityMap.set(row.to_account_id, row.sent_at);
+    }
+  }
+
   const enriched = (accounts ?? []).map(a => {
     const rates = latestByEmail.get(a.email);
     const recommendedSendLimit = campaignDailyCap({
       provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
     });
     const daysToWarmed = a.warmup_enabled ? Math.max(0, Math.min(14, a.warmup_target ?? 14) - (a.warmup_day ?? 0)) : 0;
+
+    const lastActivityAt = lastActivityMap.get(a.id) ?? null;
+    const accountAgeHours = a.created_at ? (Date.now() - new Date(a.created_at).getTime()) / 3_600_000 : 999;
+    const hoursSinceActivity = lastActivityAt ? (Date.now() - new Date(lastActivityAt).getTime()) / 3_600_000 : null;
+    // Fresh: just connected, hasn't had time for its first 6h cycle yet — not a problem.
+    const isFresh = accountAgeHours < 6 && !lastActivityAt;
+    // Stale: enabled, not paused, not erroring, old enough to have sent by now, but
+    // nothing has gone in or out in over 20h (worker runs every 6h — 3+ missed cycles).
+    const isStale = !!a.warmup_enabled && !a.warmup_paused && a.status !== 'error'
+      && accountAgeHours >= 6
+      && (hoursSinceActivity === null || hoursSinceActivity > 20);
+
     return {
       ...a,
       warmup_emails_sent: statsMap.get(a.id) ?? 0,
@@ -78,6 +109,9 @@ export async function GET() {
       bounce_rate: rates?.bounce_rate ?? null,
       recommended_send_limit: recommendedSendLimit,
       days_to_warmed: daysToWarmed,
+      last_activity_at: lastActivityAt,
+      is_fresh: isFresh,
+      is_stale: isStale,
     };
   });
 

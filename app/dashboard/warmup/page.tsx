@@ -24,7 +24,20 @@ type WarmupAccount = {
   spf_status?: string;
   dkim_status?: string;
   dmarc_status?: string;
+  last_activity_at?: string | null;
+  is_fresh?: boolean;
+  is_stale?: boolean;
 };
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
 
 type HistoryRow = {
   email: string;
@@ -212,6 +225,7 @@ export default function WarmupPage() {
   const totalSentToday = warmingAccounts.reduce((s, a) => s + (a.sent_today || 0), 0);
   const totalWarmupSent = warmingAccounts.reduce((s, a) => s + (a.warmup_emails_sent || 0), 0);
   const pausedAccounts = accounts.filter(a => a.warmup_paused);
+  const staleAccounts = accounts.filter(a => a.is_stale);
   const inboxRates = accounts.map(a => a.inbox_rate).filter((v): v is number => v !== null && v !== undefined);
   const avgInboxRate = inboxRates.length ? Math.round(inboxRates.reduce((s, v) => s + v, 0) / inboxRates.length) : null;
 
@@ -252,7 +266,7 @@ export default function WarmupPage() {
           { label: 'Accounts warming', value: String(warmingAccounts.length) },
           { label: 'Avg health score', value: accounts.length ? `${avgScore}%` : '—' },
           { label: 'Avg inbox rate', value: avgInboxRate !== null ? `${avgInboxRate}%` : '—', color: avgInboxRate !== null && avgInboxRate < 70 ? 'text-amber-600' : undefined },
-          { label: 'Paused (needs attention)', value: String(pausedAccounts.length), color: pausedAccounts.length > 0 ? 'text-rose-600' : undefined },
+          { label: 'Needs attention', value: String(pausedAccounts.length + staleAccounts.length), color: (pausedAccounts.length + staleAccounts.length) > 0 ? 'text-rose-600' : undefined },
         ].map(s => (
           <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">{s.label}</p>
@@ -261,12 +275,18 @@ export default function WarmupPage() {
         ))}
       </div>
 
-      {pausedAccounts.length > 0 && (
+      {(pausedAccounts.length > 0 || staleAccounts.length > 0) && (
         <div className="flex flex-col gap-2">
           {pausedAccounts.map(a => (
             <div key={a.id} className="flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3">
               <svg className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <p className="text-xs text-rose-700"><span className="font-bold">{a.email} is paused.</span> {a.warmup_pause_reason || 'Reputation issue detected — resumes automatically once signals recover.'}</p>
+            </div>
+          ))}
+          {staleAccounts.map(a => (
+            <div key={a.id} className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <p className="text-xs text-amber-700"><span className="font-bold">{a.email} isn't sending.</span> Warmup is on, but nothing has gone in or out{a.last_activity_at ? ` in ${timeAgo(a.last_activity_at)}` : ''}. This usually clears on its own within a cycle — if it doesn't, reconnect the account.</p>
             </div>
           ))}
         </div>
@@ -357,6 +377,17 @@ export default function WarmupPage() {
                           )}
                           {acc.warmup_paused && <PausedBadge reason={acc.warmup_pause_reason}/>}
                         </div>
+                        {acc.warmup_enabled && !acc.warmup_paused && acc.status !== 'error' && (
+                          acc.is_fresh ? (
+                            <p className="text-[10px] text-blue-500 mt-1">Just connected — first send within 6h</p>
+                          ) : acc.is_stale ? (
+                            <p className="text-[10px] text-rose-600 font-semibold mt-1" title="Warmup is enabled but hasn't sent or received anything in over 20 hours — worth checking.">
+                              ⚠ Not sending — no activity{acc.last_activity_at ? ` in ${timeAgo(acc.last_activity_at)}` : ' yet'}
+                            </p>
+                          ) : acc.last_activity_at ? (
+                            <p className="text-[10px] text-emerald-600 mt-1">● Active — last sent/received {timeAgo(acc.last_activity_at)}</p>
+                          ) : null
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <ScoreRing score={acc.health_score || 0}/>
@@ -654,6 +685,15 @@ export default function WarmupPage() {
                           <span className="text-[11px] text-gray-400 dark:text-gray-500">{totalSent.toLocaleString()} total warmup emails</span>
                           <span className="text-[11px] text-gray-400 dark:text-gray-500">·</span>
                           <span className="text-[11px] text-gray-400 dark:text-gray-500">{rows.length} days recorded</span>
+                          {acc.warmup_enabled && !acc.warmup_paused && acc.status !== 'error' && (
+                            acc.is_stale ? (
+                              <span className="text-[10px] font-bold text-rose-600">⚠ Not sending</span>
+                            ) : acc.is_fresh ? (
+                              <span className="text-[10px] font-bold text-blue-500">Starting soon</span>
+                            ) : acc.last_activity_at ? (
+                              <span className="text-[10px] font-bold text-emerald-600">● Active</span>
+                            ) : null
+                          )}
                         </div>
                       </div>
                     </div>
@@ -673,7 +713,13 @@ export default function WarmupPage() {
                       {rows.length === 0 ? (
                         <div className="px-6 py-8 text-center">
                           <p className="text-sm text-gray-400 dark:text-gray-500">No history recorded yet.</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">History is saved each time the warmup worker runs (every 6 hours).</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {acc.is_fresh
+                              ? 'Just connected — the first warmup cycle runs within 6 hours, and this page updates automatically once it does.'
+                              : acc.is_stale
+                                ? "This account hasn't sent or received anything in a while, even though warmup is on — worth checking if it's still connected properly."
+                                : 'History is saved each time the warmup worker runs (every 6 hours).'}
+                          </p>
                         </div>
                       ) : (
                         <>
