@@ -1254,17 +1254,14 @@ export async function register() {
 
       // Track pairs sent this cycle — prevents A→B and B→A in the same run
       const sentPairs = new Set<string>();
-
-      // Batch DB updates — collect all changes, flush at end to reduce DB round-trips
-      const accountUpdates = new Map<string, Record<string, unknown>>();
-      const accountFactors = new Map<string, { inboxRate: number | null; spamRate: number | null; bounceRate: number | null }>();
-      const warmupEmailRows: { from_account_id: string; to_account_id: string; subject: string; body: string; sent_at: string }[] = [];
-      const errorAccountIds = new Set<string>();
-      const engageJobsToQueue: { fromAccountId: string; toAccountId: string; subject: string }[] = [];
-      const pauseNotifications: { user_id: string; message: string }[] = [];
-      const recoveryNotifications: { user_id: string; message: string }[] = [];
+      const today = new Date().toISOString().slice(0, 10);
 
       // ── PHASE 1: SEND warmup emails (parallel batches of 10) ─────────────
+      // Each account's result (email row, day/health update, history row) is written
+      // to the DB immediately after that account finishes — not batched up and flushed
+      // once at the end of the whole cycle. A worker restart/redeploy mid-cycle (which
+      // happens routinely on deploy) would otherwise lose already-sent accounts' results
+      // even though the emails had actually gone out.
       const BATCH_SIZE = 10;
       for (let b = 0; b < allWarmupAccounts.length; b += BATCH_SIZE) {
         const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
@@ -1304,9 +1301,10 @@ export async function register() {
               if (canRecover({ sent: events3d.sent7d, bounce: events3d.bounce7d, spam: events3d.spam7d }, account.warmup_paused_at)) {
                 paused = false;
                 dayAdjustment = -5; // recovery mode: step back and re-ramp instead of resuming at full volume
-                recoveryNotifications.push({
+                await supabase.from('notifications').insert({
                   user_id: account.user_id,
                   message: `${account.email} recovered — warmup resuming at reduced volume to rebuild reputation safely.`,
+                  type: 'info',
                 });
               }
             }
@@ -1319,7 +1317,7 @@ export async function register() {
                 consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
                 hasAuthErrorNow: false,
               });
-              accountUpdates.set(account.id, {
+              await safeUpdateAccount(account.id, {
                 health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
                 last_health_calc_at: new Date().toISOString(),
@@ -1359,7 +1357,7 @@ export async function register() {
             }
             if (pool.length === 0 || emailsToday === 0) {
               if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
-              accountUpdates.set(account.id, {
+              await safeUpdateAccount(account.id, {
                 spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               });
@@ -1367,6 +1365,7 @@ export async function register() {
             }
 
             let sent = 0;
+            let hasAuthErrorNow = false;
             // Shuffle pool so send order is random
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
@@ -1398,21 +1397,22 @@ export async function register() {
                   { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
                 );
                 sentPairs.add(pairKey);
-                warmupEmailRows.push({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
-                engageJobsToQueue.push({ fromAccountId: account.id, toAccountId: toAccount.id, subject });
+                // Written immediately so a mid-cycle crash can't lose an email that
+                // actually went out (previously batched to a single flush at cycle end).
+                await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
+                await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0 }, { delay: pickEngageDelayMs() });
                 await logAccountEvent(account.id, 'sent', {});
                 sent++;
               } catch (e: any) {
                 console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
                 if (e.responseCode === 535 || e.code === 'EAUTH') {
-                  errorAccountIds.add(account.id);
+                  hasAuthErrorNow = true;
                   await logAccountEvent(account.id, 'auth_error', { message: e.message });
                   break;
                 }
               }
             }
 
-            const hasAuthErrorNow = errorAccountIds.has(account.id);
             const events7dAfterSend = { ...events7d, sent7d: events7d.sent7d + sent };
             const health = computeHealthScore({
               events: events7dAfterSend, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
@@ -1423,9 +1423,10 @@ export async function register() {
             const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow);
             const willPause = pauseCheck.pause;
             if (willPause && !account.warmup_paused) {
-              pauseNotifications.push({
+              await supabase.from('notifications').insert({
                 user_id: account.user_id,
                 message: `${account.email} warmup paused: ${pauseCheck.reason}`,
+                type: 'warning',
               });
             }
 
@@ -1441,11 +1442,9 @@ export async function register() {
             const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
             const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
 
-            accountFactors.set(account.id, {
-              inboxRate: health.factors.inboxRate, spamRate: health.factors.spamRate, bounceRate: health.factors.bounceRate,
-            });
-
-            accountUpdates.set(account.id, {
+            // Write this account's result now — immediately after it finishes, not
+            // deferred to a batch flush after every other account in the cycle is done.
+            await safeUpdateAccount(account.id, {
               warmup_day: day,
               health_score: health.score,
               sent_today: sent,
@@ -1459,71 +1458,38 @@ export async function register() {
               last_health_calc_at: new Date().toISOString(),
               ...(complete ? { warmup_enabled: false, status: 'active' } : {}),
             });
+            if (hasAuthErrorNow) {
+              await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', account.id);
+            }
+            if (complete) {
+              await supabase.from('notifications').insert({
+                user_id: account.user_id,
+                message: `${account.email} warmup complete! Health has stayed 90+ for several days straight — safe to lean on for campaigns. Re-enable warmup any time to keep the reputation warm.`,
+                type: 'info',
+              });
+            }
+
+            // Persist today's history row immediately too (upsert so re-runs don't duplicate)
+            await safeUpsertHistory([{
+              account_id: account.id,
+              email: account.email,
+              user_id: account.user_id,
+              date: today,
+              day_number: day,
+              emails_sent: sent,
+              health_score: health.score,
+              paused: willPause,
+              inbox_rate: health.factors.inboxRate,
+              spam_rate: health.factors.spamRate,
+              bounce_rate: health.factors.bounceRate,
+            }]);
+
             console.log(`[warmup-send] ${account.email} day=${day}${complete ? ' (COMPLETE)' : ''}${willPause ? ' (PAUSED)' : ''} sent=${sent}/${emailsToday} score=${health.score} inbox=${health.factors.inboxRate ?? '—'}%`);
           } catch (e: any) {
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
         }));
       }
-
-      // Flush batched warmup_emails inserts (chunks of 100)
-      for (let i = 0; i < warmupEmailRows.length; i += 100) {
-        await supabase.from('warmup_emails').insert(warmupEmailRows.slice(i, i + 100));
-      }
-
-      // Schedule delayed per-message engagement (reads/replies/star/archive at realistic delays)
-      for (const j of engageJobsToQueue) {
-        await engageQueue.add('engage', { ...j, chainDepth: 0 }, { delay: pickEngageDelayMs() });
-      }
-
-      // Flush account updates individually (Supabase upsert can't bulk-update different values)
-      const completedAccounts = allWarmupAccounts.filter(a => {
-        const upd = accountUpdates.get(a.id);
-        return (upd as any)?.warmup_enabled === false;
-      });
-
-      // Build warmup_history rows — one per account per day (upsert by email+date)
-      const today = new Date().toISOString().slice(0, 10);
-      const historyRows = Array.from(accountUpdates.entries())
-        .filter(([, upd]) => typeof (upd as any).warmup_day === 'number')
-        .map(([id, upd]) => {
-          const acc = allWarmupAccounts.find(a => a.id === id);
-          const u = upd as any;
-          if (!acc) return null;
-          const factors = accountFactors.get(id);
-          return {
-            account_id: id,
-            email: acc.email,
-            user_id: acc.user_id,
-            date: today,
-            day_number: u.warmup_day,
-            emails_sent: u.sent_today,
-            health_score: u.health_score,
-            paused: !!u.warmup_paused,
-            inbox_rate: factors?.inboxRate ?? null,
-            spam_rate: factors?.spamRate ?? null,
-            bounce_rate: factors?.bounceRate ?? null,
-          };
-        })
-        .filter((r): r is NonNullable<typeof r> => r !== null);
-
-      await Promise.all([
-        ...Array.from(accountUpdates.entries()).map(([id, upd]) => safeUpdateAccount(id, upd)),
-        ...Array.from(errorAccountIds).map(id =>
-          supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', id)
-        ),
-        ...completedAccounts.map(a =>
-          supabase.from('notifications').insert({
-            user_id: a.user_id,
-            message: `${a.email} warmup complete! Health has stayed 90+ for several days straight — safe to lean on for campaigns. Re-enable warmup any time to keep the reputation warm.`,
-            type: 'info',
-          })
-        ),
-        ...pauseNotifications.map(n => supabase.from('notifications').insert({ ...n, type: 'warning' })),
-        ...recoveryNotifications.map(n => supabase.from('notifications').insert({ ...n, type: 'info' })),
-        // Persist daily warmup history (upsert so re-runs don't duplicate)
-        safeUpsertHistory(historyRows),
-      ]);
 
       // ── PHASE 2: backstop spam sweep — catches anything a delayed engage job missed
       // (e.g. a worker restart). Primary engagement now happens via warmup-engage jobs.

@@ -507,7 +507,7 @@ export default function WarmupPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">{acc.type} · Day {acc.warmup_day ?? 0} of 14</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">{acc.type} · Day {acc.warmup_day ?? 0} of {target}</p>
                       {isRecommended && (
                         <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">Recommended</span>
                       )}
@@ -701,12 +701,13 @@ export default function WarmupPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                               {rows.map(row => {
-                                const pct = Math.min(100, Math.round((Math.min(row.day_number, 14) / 14) * 100));
+                                const rampTarget = acc.warmup_target ?? 30;
+                                const pct = Math.min(100, Math.round((Math.min(row.day_number, rampTarget) / rampTarget) * 100));
                                 return (
                                   <tr key={row.date} className="hover:bg-gray-50/60 dark:hover:bg-gray-800 transition-colors">
                                     <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">{row.date}</td>
                                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300 dark:text-gray-300">
-                                      {row.day_number <= 14 ? `Day ${row.day_number}` : `Day 14+ (${row.day_number})`}
+                                      Day {row.day_number}
                                     </td>
                                     <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{row.emails_sent}</td>
                                     <td className="px-4 py-3">

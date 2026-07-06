@@ -530,6 +530,12 @@ export default function EmailAccountsPage() {
     } else if (err === 'oauth_failed') {
       setToast('Google OAuth failed. Try Gmail App Password instead.');
       router.replace('/dashboard/email-accounts');
+    } else if (err === 'already_connected') {
+      setToast('That Google account is already connected elsewhere on this platform. If it’s yours, remove it from the other place first — or pick a different Google account when connecting.');
+      router.replace('/dashboard/email-accounts');
+    } else if (err) {
+      setToast('Could not connect that account. Please try again.');
+      router.replace('/dashboard/email-accounts');
     }
   }, [router]);
 
