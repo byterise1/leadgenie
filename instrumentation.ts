@@ -205,7 +205,7 @@ export async function register() {
           const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
           const _rawDelayMs = (_nextStepData?.delay_days || 1) * DELAY_UNIT_MS;
           const _nextSendAt = _hasNext
-            ? new Date(Date.now() + _rawDelayMs + jitterMs(_rawDelayMs)).toISOString()
+            ? new Date(Date.now() + _rawDelayMs + jitterMs()).toISOString()
             : null;
           await supabase.from('campaign_leads').update({
             current_step: _nextStep,
@@ -439,7 +439,7 @@ export async function register() {
       if (hasNextStep) {
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
         const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
-        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs(rawDelayMs)).toISOString();
+        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs()).toISOString();
       }
 
       await supabase.from('campaign_leads').update({

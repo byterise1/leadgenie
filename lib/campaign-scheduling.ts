@@ -131,21 +131,23 @@ export function allocateCapacity<F, N>(opts: {
   return { followupsToSend, newToSend };
 }
 
-// Jitter so a lead's follow-ups don't land at the exact same clock time
-// every day — scaled to the actual delay being jittered (~2-6% of it,
-// capped at 90 real minutes either way), not a fixed real-world constant.
-// A fixed 30-90 *minute* jitter would completely swamp DELAY_UNIT_MS's
-// test-mode "1 day = 1 minute" delays (this was a real bug: it made a
-// 3-minute test delay fire almost immediately about half the time,
-// whenever the random jitter came out negative and larger than the delay).
-export function jitterMs(baseDelayMs: number): number {
-  const sign = Math.random() < 0.5 ? -1 : 1;
-  const pct = 0.02 + Math.random() * 0.04; // 2%-6% of the delay
-  const cap = 90 * 60 * 1000; // never more than 90 real minutes either way
-  return sign * Math.min(pct * baseDelayMs, cap);
-}
+// 1 unit = 1 real day. Shared by the start route (backfilling next_send_at
+// on resume) and the campaign-scheduler worker (computing the next
+// follow-up's due time). Set to 60*1000 (1 minute) during testing to
+// accelerate multi-day sequences — see git history if that's needed again.
+export const DELAY_UNIT_MS = 24 * 60 * 60 * 1000;
 
-// TESTING: 1 unit = 1 minute. Change to 24*60*60*1000 before production launch.
-// Shared by the start route (backfilling next_send_at on resume) and the
-// campaign-scheduler worker (computing the next follow-up's due time).
-export const DELAY_UNIT_MS = 60 * 1_000;
+// Jitter so a lead's follow-up lands at roughly the same time each day, but
+// not the EXACT same minute — shifted by ~60-90 minutes either direction, to
+// look like a person hit send around the same time, not a script hitting it
+// at literally the same second every day. Expressed relative to DELAY_UNIT_MS
+// (one "day") rather than the full multi-day delay, so a 5-day follow-up
+// doesn't get 5x the variance of a 1-day one — the daily send-time wobble is
+// the same regardless of how many days apart two steps are.
+export function jitterMs(): number {
+  const sign = Math.random() < 0.5 ? -1 : 1;
+  const REAL_DAY_MS = 24 * 60 * 60 * 1000;
+  const dayScale = DELAY_UNIT_MS / REAL_DAY_MS; // 1 at real scale, tiny during accelerated testing
+  const minutes = 60 + Math.random() * 30; // 60-90 real minutes
+  return sign * minutes * 60 * 1000 * dayScale;
+}
