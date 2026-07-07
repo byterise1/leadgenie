@@ -27,11 +27,25 @@
 
 **Migrations — all run, none pending, as of 2026-07-07:** full migration list is in `[memory] project-admin-panel.md` under "DB Migrations" (or just check `supabase/migrations/*.sql` directly) — all have been executed against production, including the two most recent (`20260705_warmup_phase1.sql`, `20260707_smart_priority_engine.sql`), both confirmed live via direct database query, not just assumed run. If a future session adds a new migration file, it must be run manually in the Supabase SQL Editor — there is no automated runner, and Claude cannot execute DDL directly against this database (no direct Postgres connection available, only the Supabase JS client).
 
-**Known deferred (not bugs, deliberately not built yet):** automatic mailbox failover when a lead's locked mailbox goes bad long-term (manual "retry with a different mailbox" exists instead), a pre-launch send-volume forecast, per-lead timezone-aware send time, Warmup Phase 2 (AI-generated conversations, bigger cross-user pool, custom profiles) and Phase 3 (seed inbox monitoring, blacklist checks) — Phase 2 starts only when explicitly told to.
+### Remaining Work & Roadmap — living checklist, update whenever priorities shift
 
-**Not-yet-cleaned-up data (cosmetic, doesn't affect function):** a handful of duplicate mailbox rows in `email_accounts` from pre-one-mailbox-one-identity test signups, under different `user_id`s than the active account — new duplicates are blocked now, old ones were left alone since they're not the active user's data.
+**Production-readiness (things blocking a real launch):**
+- [x] TEST MODE flip — `DELAY_UNIT_MS` changed from 1 minute to 24 real hours (2026-07-07). Follow-ups now wait real days.
+- [ ] SPF/DKIM/DMARC DNS records for byterisellc.com (Titan dashboard) — guide given to user 2026-07-07, needs to be added on Titan's side. Note: our checker (`lib/domain-health.ts`) only recognizes DKIM under common selector names (google/default/selector1/selector2/k1/s1/dkim/mail) — if Titan uses a different selector, DKIM will show "unknown" (not "fail") even once correctly configured. Tell Claude Titan's exact selector once known and it can be added to the recognized list.
+- [ ] Stripe billing integration — currently a manual `billing_events` table only, no real payment processing.
+- [ ] Review/clean up duplicate & error `email_accounts` rows left over from pre-one-mailbox-one-identity test data (not the active user's data, harmless but untidy).
 
-**Outstanding production checklist** (see full detail in `[memory] project-admin-panel.md`): Stripe not implemented (manual `billing_events` table only); SPF/DKIM DNS for byterisellc.com still needs setting up in Titan's dashboard; a few pre-existing duplicate/error mailbox rows should be reviewed before go-live.
+**Campaign engine — deferred features (not bugs, just not built):**
+- [ ] Automatic mailbox failover when a lead's locked mailbox goes bad long-term (manual "retry with a different mailbox" exists today).
+- [ ] Pre-launch send-volume forecast panel ("X will send today, everyone reached by day Y").
+- [ ] Per-lead timezone-aware send time (currently one shared campaign-wide window).
+
+**Warmup roadmap:**
+- [x] Phase 1 — dynamic health score, adaptive caps, pause/recovery, one-mailbox-one-identity, rate limiting. DONE 2026-07-05, migrated, verified live.
+- [ ] Phase 2 — bigger cross-user pool, AI-generated warmup conversations, timezone/language/industry matching, custom warmup profiles (Conservative/Balanced/Aggressive), holiday awareness, auto-restart after inactivity. **NOT STARTED — only begin when explicitly told to.**
+- [ ] Phase 3 — seed inbox monitoring, blacklist checks, inbox-placement prediction, reputation benchmarking, automatic issue diagnosis, AI recommendations. **NOT STARTED**, needs a cost/infra decision first (no free option for seed inboxes). Explicitly rejected: multi-device/IP simulation.
+
+**A note on testing now that timing is real:** with `DELAY_UNIT_MS` at 24h, a multi-step campaign's follow-ups genuinely take days to test end-to-end. For quick verification of steps beyond the first, use the "retry" action on a specific lead (or set that step's delay to 1 day and be patient) rather than waiting on a full multi-day sequence.
 
 ---
 
