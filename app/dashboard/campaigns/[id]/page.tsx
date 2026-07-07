@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 type Campaign = {
@@ -25,7 +25,7 @@ type Campaign = {
   total_opened: number;
   total_replied: number;
   total_clicked: number;
-  email_steps: { id: string; subject: string; delay_days?: number; delay?: number; step_order?: number }[];
+  email_steps: { id: string; subject: string; delay_days?: number; delay?: number; step_number?: number }[];
   campaign_accounts: { account: { id: string; email: string; type: string } }[];
 };
 
@@ -84,7 +84,7 @@ export default function CampaignDetailPage() {
   const [toggling, setToggling] = useState(false);
   const [tab, setTab] = useState<'overview' | 'leads'>('overview');
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     fetch(`/api/campaigns/${id}`)
       .then(r => r.json())
       .then(d => { if (d.error) setError(d.error); else setCampaign(d); })
@@ -96,6 +96,15 @@ export default function CampaignDetailPage() {
       .catch(() => {})
       .finally(() => setLeadsLoading(false));
   }, [id]);
+
+  // Stats/lead progress keep changing while a campaign is running (sends, opens,
+  // replies) — poll so this page stays live instead of needing a manual reload,
+  // same pattern already used on the email accounts page.
+  useEffect(() => {
+    refresh();
+    const pollId = setInterval(refresh, 10000);
+    return () => clearInterval(pollId);
+  }, [refresh]);
 
   async function toggleStatus() {
     if (!campaign || toggling) return;
@@ -238,7 +247,7 @@ export default function CampaignDetailPage() {
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {[...(campaign.email_steps ?? [])]
-                  .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
+                  .sort((a, b) => (a.step_number ?? 0) - (b.step_number ?? 0))
                   .map((step, i) => (
                     <div key={step.id} className="flex items-center gap-4 px-6 py-4">
                       <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
