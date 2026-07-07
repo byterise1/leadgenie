@@ -770,11 +770,11 @@ export default function LeadsPage() {
                         {(!l.status || l.status === 'active') ? (
                           <span className="text-xs text-gray-400 dark:text-gray-500">Active</span>
                         ) : l.status === 'bounced' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100 rounded-full px-2 py-0.5">
+                          <span title="This email address rejected delivery — it will never be emailed again in any campaign." className="inline-flex items-center gap-1 text-[10px] font-bold bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-100 rounded-full px-2 py-0.5 cursor-help">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 inline-block"/>Bounced
                           </span>
                         ) : l.status === 'unsubscribed' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-100 rounded-full px-2 py-0.5">
+                          <span title="This person unsubscribed — they will never be emailed again in any campaign." className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-100 rounded-full px-2 py-0.5 cursor-help">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 inline-block"/>Opted out
                           </span>
                         ) : (

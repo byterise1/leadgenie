@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id, from_name } = body;
+  const { name, goal, daily_limit, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id, from_name, followup_priority_mode, followup_weight_pct } = body;
 
   if (!name || !steps?.length) {
     return NextResponse.json({ error: 'name and steps required' }, { status: 400 });
@@ -114,6 +114,8 @@ export async function POST(req: NextRequest) {
       min_delay_secs: min_delay_secs || 60,
       max_delay_secs: max_delay_secs || 300,
       list_id: list_id || null,
+      followup_priority_mode: followup_priority_mode === 'manual' ? 'manual' : 'auto',
+      followup_weight_pct: followup_priority_mode === 'manual' ? (followup_weight_pct ?? 90) : null,
       status: 'draft',
     })
     .select()

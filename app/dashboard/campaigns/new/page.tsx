@@ -92,6 +92,8 @@ export default function NewCampaignPage() {
   const [dailyLimitStr, setDailyLimitStr] = useState('50');
   const [selectedListId, setSelectedListId] = useState('');
   const dailyLimit = Math.max(1, parseInt(dailyLimitStr) || 1);
+  const [followupPriorityMode, setFollowupPriorityMode] = useState<'auto' | 'manual'>('auto');
+  const [followupWeightPct, setFollowupWeightPct] = useState(90);
 
   // Step 1
   const [emails, setEmails] = useState<EmailStep[]>([{ ...DEFAULT_EMAIL }]);
@@ -476,6 +478,40 @@ export default function NewCampaignPage() {
                 <span className="text-sm text-gray-400 dark:text-gray-500">emails / day</span>
               </div>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Recommended: 50–200/day per account to protect deliverability.</p>
+            </div>
+
+            {/* Follow-up Priority */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Follow-up Priority</label>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Can be changed later from the campaign page</span>
+              </div>
+              <div className="flex gap-2">
+                {(['auto', 'manual'] as const).map(mode => (
+                  <button key={mode} type="button" onClick={() => setFollowupPriorityMode(mode)}
+                    className={`flex-1 text-xs font-bold rounded-xl px-3 py-2.5 border transition-colors ${
+                      followupPriorityMode === mode
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}>
+                    {mode === 'auto' ? 'Auto (recommended)' : 'Manual'}
+                  </button>
+                ))}
+              </div>
+              {followupPriorityMode === 'auto' ? (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Follow-ups always get priority, but new leads are never fully blocked — the split adjusts automatically to how busy the campaign is.</p>
+              ) : (
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 dark:text-gray-400">Follow-ups get</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{followupWeightPct}%</span>
+                    <span className="text-gray-500 dark:text-gray-400">of capacity</span>
+                  </div>
+                  <input type="range" min={0} max={100} step={5} value={followupWeightPct}
+                    onChange={e => setFollowupWeightPct(Number(e.target.value))}
+                    className="w-full accent-blue-600"/>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -927,6 +963,8 @@ export default function NewCampaignPage() {
                       timezone,
                       start_date: startDate || null,
                       list_id: selectedListId || null,
+                      followup_priority_mode: followupPriorityMode,
+                      followup_weight_pct: followupPriorityMode === 'manual' ? followupWeightPct : null,
                       steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId, threadMode: e.threadMode, abVariants: e.abEnabled && e.abVariants[0]?.body?.trim() ? e.abVariants : [] })),
                       account_ids: accountIds,
                     }),

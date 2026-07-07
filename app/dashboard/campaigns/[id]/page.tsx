@@ -462,7 +462,7 @@ export default function CampaignDetailPage() {
                       <td className="px-4 py-3 min-w-[140px]">
                         {l.status === 'pending' ? (
                           <span className="text-xs text-gray-400 dark:text-gray-500">Not started</span>
-                        ) : l.status === 'completed' || l.status === 'replied' || l.status === 'bounced' || l.status === 'opted_out' ? (
+                        ) : l.status === 'completed' ? (
                           <div className="flex items-center gap-1.5">
                             <div className="flex gap-0.5">
                               {Array.from({ length: totalSteps }).map((_, i) => (
@@ -470,6 +470,21 @@ export default function CampaignDetailPage() {
                               ))}
                             </div>
                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{totalSteps}/{totalSteps} done</span>
+                          </div>
+                        ) : l.status === 'replied' || l.status === 'bounced' || l.status === 'unsubscribed' ? (
+                          // Sequence stopped early on purpose (reply/bounce/unsubscribe) — show
+                          // how many actually went out, not a fake "all done". A lead who
+                          // replied after 1 of 2 emails should never look identical to one who
+                          // received the full sequence.
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: totalSteps }).map((_, i) => (
+                                <div key={i} className={`w-4 h-1.5 rounded-full ${i < stepsSent ? 'bg-blue-500 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}/>
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold whitespace-nowrap">
+                              {stepsSent}/{totalSteps} sent · stopped ({l.status})
+                            </span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">

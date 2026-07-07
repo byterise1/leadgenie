@@ -131,11 +131,18 @@ export function allocateCapacity<F, N>(opts: {
   return { followupsToSend, newToSend };
 }
 
-// ±30–90 minutes of jitter so a lead's follow-ups don't land at the exact
-// same clock time every day.
-export function jitterMs(): number {
+// Jitter so a lead's follow-ups don't land at the exact same clock time
+// every day — scaled to the actual delay being jittered (~2-6% of it,
+// capped at 90 real minutes either way), not a fixed real-world constant.
+// A fixed 30-90 *minute* jitter would completely swamp DELAY_UNIT_MS's
+// test-mode "1 day = 1 minute" delays (this was a real bug: it made a
+// 3-minute test delay fire almost immediately about half the time,
+// whenever the random jitter came out negative and larger than the delay).
+export function jitterMs(baseDelayMs: number): number {
   const sign = Math.random() < 0.5 ? -1 : 1;
-  return sign * (30 + Math.random() * 60) * 60 * 1000;
+  const pct = 0.02 + Math.random() * 0.04; // 2%-6% of the delay
+  const cap = 90 * 60 * 1000; // never more than 90 real minutes either way
+  return sign * Math.min(pct * baseDelayMs, cap);
 }
 
 // TESTING: 1 unit = 1 minute. Change to 24*60*60*1000 before production launch.

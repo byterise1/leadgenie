@@ -203,8 +203,9 @@ export async function register() {
         const _hasNext = campaign.email_steps.some((s: any) => s.step_number === _nextStep);
         if (cl.status === 'active' && (cl.current_step ?? 0) <= stepNumber) {
           const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
+          const _rawDelayMs = (_nextStepData?.delay_days || 1) * DELAY_UNIT_MS;
           const _nextSendAt = _hasNext
-            ? new Date(Date.now() + (_nextStepData.delay_days || 1) * DELAY_UNIT_MS + jitterMs()).toISOString()
+            ? new Date(Date.now() + _rawDelayMs + jitterMs(_rawDelayMs)).toISOString()
             : null;
           await supabase.from('campaign_leads').update({
             current_step: _nextStep,
@@ -434,7 +435,7 @@ export async function register() {
       if (hasNextStep) {
         const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
         const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
-        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs()).toISOString();
+        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs(rawDelayMs)).toISOString();
       }
 
       await supabase.from('campaign_leads').update({
@@ -572,14 +573,23 @@ export async function register() {
             });
             if (followupsToSend.length === 0 && newToSend.length === 0) continue;
 
-            // Stagger sends across the next few minutes with the campaign's own
-            // configured gap — same "don't blast simultaneously" behavior as before.
+            // Stagger sends across the next stretch of this cycle with the campaign's
+            // own configured gap — same "don't blast simultaneously" behavior as before.
+            // Capped well under the 2-minute cycle interval: this scheduler tick runs
+            // again in 2 minutes regardless, so anything that wouldn't fit in a safe
+            // window is simply left for the next tick to pick up (still eligible, not
+            // lost, not skipped) rather than let its stagger delay run past the point
+            // where the NEXT cycle's own near-zero-delay jobs would collide with it in
+            // real time — that collision is what caused two different leads to fire
+            // just 7 seconds apart in production despite a 60s minimum gap configured.
             const minDelayMs = Math.max(10_000, (campaign.min_delay_secs || 60) * 1000);
             const maxDelayMs = Math.max(minDelayMs + 1000, (campaign.max_delay_secs || 300) * 1000);
+            const SAFE_CYCLE_SPAN_MS = 100_000; // cycle is 120s; leaves a 20s buffer
             let cursorMs = 0;
             const jobs: { name: string; data: Record<string, unknown>; opts: Record<string, unknown> }[] = [];
 
             for (const cl of followupsToSend as any[]) {
+              if (cursorMs > SAFE_CYCLE_SPAN_MS) break;
               // Locked mailbox for this thread. Falls back to whichever account
               // currently has the most room only in the edge case where a lead
               // somehow reached a follow-up without a persisted account_id.
@@ -597,6 +607,7 @@ export async function register() {
             }
 
             for (const cl of newToSend as any[]) {
+              if (cursorMs > SAFE_CYCLE_SPAN_MS) break;
               // Least-loaded eligible mailbox gets the new lead — avoids the old
               // random assignment's chance of overbooking a mailbox past its cap.
               const [accId, room] = [...accountRemaining.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
@@ -1397,6 +1408,18 @@ export async function register() {
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
                 last_health_calc_at: new Date().toISOString(),
               });
+              // Keep today's already-written history row in sync with the live score.
+              // Without this, only the FIRST cycle of the day ever writes warmup_history,
+              // so later cycles keep recalculating a higher live health_score while the
+              // dashboard's Stats tab stays frozen at the morning's number — a real
+              // inconsistency users can actually see (Accounts tab vs Stats tab disagreeing
+              // on the same account, same day). No-ops harmlessly if today has no row yet.
+              await supabase.from('warmup_history').update({
+                health_score: health.score,
+                inbox_rate: health.factors.inboxRate,
+                spam_rate: health.factors.spamRate,
+                bounce_rate: health.factors.bounceRate,
+              }).eq('email', account.email).eq('date', today);
               return;
             }
 
