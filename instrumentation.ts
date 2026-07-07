@@ -354,11 +354,12 @@ export async function register() {
       try {
         const fromName = campaign.from_name?.trim();
         const fromHeader = fromName ? `"${fromName}" <${account.email}>` : account.email;
-        // Generate a stable Message-ID for step 0 so we control what's stored
-        // and can reliably reference it in follow-up In-Reply-To headers
-        const explicitMessageId = stepNumber === 0
-          ? `<${crypto.randomUUID().replace(/-/g, '')}@leadgenie.app>`
-          : undefined;
+        // Generate a stable Message-ID for EVERY step, not just step 0 — a reply to
+        // a follow-up has to be matchable too. Previously only step 0 got one, which
+        // meant a reply to a follow-up (a different message than step 0) could never
+        // be matched via In-Reply-To during inbox sync, since the follow-up's own ID
+        // was never captured or stored — a real, silent "reply not counted" bug.
+        const explicitMessageId = `<${crypto.randomUUID().replace(/-/g, '')}@leadgenie.app>`;
 
         const { threadId } = await sendEmail(account, {
           from: fromHeader,
@@ -366,18 +367,21 @@ export async function register() {
           subject,
           text: body,
           html: fullHtml,
-          ...(explicitMessageId ? { messageId: explicitMessageId } : {}),
+          messageId: explicitMessageId,
           ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
           ...(gmailThreadId ? { gmailThreadId, inReplyTo: gmailThreadId, references: gmailThreadId } : {}),
         });
 
         // What to store in message_id:
-        // - Step 0 SMTP: our explicit Message-ID (used as In-Reply-To by follow-ups)
-        // - Step 0 Gmail OAuth: threadId from API (used as gmailThreadId by follow-ups)
-        // - Follow-up steps: don't overwrite step 0's stored value
-        const storeMessageId = stepNumber === 0
-          ? (account.type === 'gmail-oauth' ? threadId : explicitMessageId)
-          : null;
+        // - Gmail OAuth: threadId from the API for step 0 only (used as gmailThreadId
+        //   by follow-ups). Later steps don't need their own stored ID — Gmail's
+        //   inbox-sync path checks the whole THREAD for new messages, not a specific
+        //   message-id, so it already catches a reply to any message in the thread.
+        // - SMTP/IMAP/Gmail App Password: every step's own explicit ID, so a reply to
+        //   ANY step — not just step 0 — can be matched during inbox sync.
+        const storeMessageId = account.type === 'gmail-oauth'
+          ? (stepNumber === 0 ? threadId : null)
+          : explicitMessageId;
 
         if (sentEmail?.id && storeMessageId) {
           await supabase.from('sent_emails').update({ message_id: storeMessageId }).eq('id', sentEmail.id);
