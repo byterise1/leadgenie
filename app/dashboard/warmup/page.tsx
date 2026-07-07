@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { SkeletonRow } from '@/components/Skeleton';
+import ConfirmModal from '@/components/ConfirmModal';
 
 type WarmupAccount = {
   id: string;
@@ -207,6 +208,31 @@ export default function WarmupPage() {
     const data = await res.json();
     if (!data.error) showToast(enabled ? 'Warmup enabled — ramp starts next cycle' : 'Warmup disabled');
     setSavingId(null);
+  };
+
+  const [resetTarget, setResetTarget] = useState<WarmupAccount | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const confirmReset = async () => {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      const res = await fetch('/api/warmup', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_id: resetTarget.id, resetWarmup: true }),
+      });
+      const data = await res.json();
+      if (!data.error) {
+        setAccounts(prev => prev.map(a => a.id === resetTarget.id ? { ...a, ...data, warmup_emails_sent: 0 } : a));
+        setHistory(prev => { const next = { ...prev }; delete next[resetTarget.email]; return next; });
+        showToast(`${resetTarget.email} reset to Day 0 — starting fresh`);
+      } else {
+        showToast(data.error);
+      }
+    } finally {
+      setResetting(false);
+      setResetTarget(null);
+    }
   };
 
   const updateTarget = async (id: string, warmup_target: number) => {
@@ -436,17 +462,25 @@ export default function WarmupPage() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="relative">
-                          {savingId === acc.id && (
-                            <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            {savingId === acc.id && (
+                              <svg className="animate-spin w-4 h-4 text-blue-500 absolute -left-6 top-0.5" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                              </svg>
+                            )}
+                            <Toggle
+                              on={acc.warmup_enabled || acc.status === 'warming'}
+                              onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
+                            />
+                          </div>
+                          <button onClick={() => setResetTarget(acc)} title="Reset warmup — wipes history, starts over from Day 0"
+                            className="text-gray-300 dark:text-gray-600 hover:text-rose-600 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
-                          )}
-                          <Toggle
-                            on={acc.warmup_enabled || acc.status === 'warming'}
-                            onToggle={() => toggleWarmup(acc.id, acc.warmup_enabled || acc.status === 'warming')}
-                          />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -805,6 +839,16 @@ export default function WarmupPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {resetTarget && (
+        <ConfirmModal
+          title={`Reset ${resetTarget.email}?`}
+          message="This wipes all warmup history and progress for this account — health score back to 50, ramp back to Day 0, all recorded warmup emails and history cleared. It starts warming up again from scratch. This can't be undone."
+          confirmLabel={resetting ? 'Resetting…' : 'Reset to Day 0'}
+          onConfirm={confirmReset}
+          onCancel={() => setResetTarget(null)}
+        />
       )}
     </main>
   );

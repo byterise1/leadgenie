@@ -129,9 +129,48 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { account_id, enabled, warmup_target } = body;
+  const { account_id, enabled, warmup_target, resetWarmup } = body;
 
   if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 });
+
+  // Full reset: wipe all warmup history/progress for this account and start over
+  // from Day 0 / health 50, as if freshly connected. Scoped to accounts the
+  // caller owns (checked below) — irreversible, confirmed client-side first.
+  if (resetWarmup === true) {
+    const { data: account, error: fetchErr } = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, email, warmup_enabled')
+      .eq('id', account_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+
+    await Promise.all([
+      supabaseAdmin.from('email_account_events').delete().eq('account_id', account_id),
+      supabaseAdmin.from('warmup_history').delete().eq('email', account.email),
+      supabaseAdmin.from('warmup_emails').delete().eq('from_account_id', account_id),
+      supabaseAdmin.from('warmup_emails').delete().eq('to_account_id', account_id),
+    ]);
+
+    const { data, error } = await supabaseAdmin
+      .from('email_accounts')
+      .update({
+        warmup_day: 0, health_score: 50, sent_today: 0, consecutive_stable_days: 0,
+        warmup_paused: false, warmup_pause_reason: null, warmup_paused_at: null,
+        spf_status: 'unknown', dkim_status: 'unknown', dmarc_status: 'unknown',
+        domain_checked_at: null, warmup_last_run_date: null, last_health_calc_at: null,
+        bounce_count: 0, spam_count: 0, reply_count: 0, open_count: 0, auth_error_count: 0,
+        status: account.warmup_enabled ? 'warming' : 'active',
+      })
+      .eq('id', account_id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
 
   const updates: Record<string, unknown> = {};
   if (typeof enabled === 'boolean') {
