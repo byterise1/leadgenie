@@ -9,7 +9,7 @@ export async function register() {
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
     const { sendEmail, replaceVars } = await import('./lib/mailer');
     const crypto = await import('crypto');
-    const { DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity } = await import('./lib/campaign-scheduling');
+    const { DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity, checkCampaignAutoComplete } = await import('./lib/campaign-scheduling');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -231,6 +231,7 @@ export async function register() {
         if ((replyCount ?? 0) > 0) {
           await supabase.from('campaign_leads').update({ status: 'replied' }).eq('id', campaignLeadId);
           console.log(`[skip-followup] ${lead.email} already replied — cancelling step ${stepNumber}`);
+          await checkCampaignAutoComplete(campaign.id);
           return;
         }
       }
@@ -412,16 +413,7 @@ export async function register() {
             supabase.from('email_account_events').insert({ account_id: account.id, event_type: 'bounce', meta: { code } }),
           ]);
           console.log(`⛔ Bounced: ${lead.email} (${code})`);
-          const { count: pendingAfterBounce } = await supabase
-            .from('campaign_leads')
-            .select('id', { count: 'exact', head: true })
-            .eq('campaign_id', campaign.id)
-            .in('status', ['pending', 'active']);
-          if (pendingAfterBounce === 0) {
-            await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
-            await notifyIfEnabled(supabase, campaign.user_id, 'notif_campaign_complete',
-              `Campaign "${campaign.name}" has completed sending.`, 'info', `/dashboard/campaigns/${campaign.id}`);
-          }
+          await checkCampaignAutoComplete(campaign.id);
           return;
         }
 
@@ -464,17 +456,7 @@ export async function register() {
 
       // Auto-complete campaign when all leads are in a terminal state
       if (!hasNextStep) {
-        const { count: pendingCount } = await supabase
-          .from('campaign_leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('campaign_id', campaign.id)
-          .in('status', ['pending', 'active']);
-        if (pendingCount === 0) {
-          await supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaign.id);
-          console.log(`✅ Campaign "${campaign.name}" auto-completed`);
-          await notifyIfEnabled(supabase, campaign.user_id, 'notif_campaign_complete',
-            `Campaign "${campaign.name}" has completed sending.`, 'info', `/dashboard/campaigns/${campaign.id}`);
-        }
+        await checkCampaignAutoComplete(campaign.id);
       }
 
       console.log(`✓ Sent step ${stepNumber} to ${lead.email}`);
@@ -726,6 +708,7 @@ export async function register() {
               if (sent.lead_id && sent.campaign_id) {
                 await supabase.from('campaign_leads').update({ status: 'replied' })
                   .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
+                await checkCampaignAutoComplete(sent.campaign_id);
               }
               console.log(`[inbox-sync] ✓ Reply recorded from ${fromEmail} → campaign ${sent.campaign_id}`);
             }
@@ -888,6 +871,7 @@ export async function register() {
               if (sent.lead_id && sent.campaign_id) {
                 await supabase.from('campaign_leads').update({ status: 'replied' })
                   .eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id);
+                await checkCampaignAutoComplete(sent.campaign_id);
               }
             }
           }

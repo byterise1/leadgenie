@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createNotification } from '@/lib/notifications';
+import { checkCampaignAutoComplete } from '@/lib/campaign-scheduling';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,6 +45,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         .eq('campaign_id', sentEmail.campaign_id)
         .eq('lead_id', sentEmail.lead_id),
     ]);
+
+    // If this was the last pending/active lead in the campaign, mark it
+    // completed — previously only the email-sending worker's own success
+    // path did this, so a campaign whose final lead unsubscribed instead of
+    // finishing normally would sit at "active" forever with nothing left to send.
+    if (sentEmail.campaign_id) await checkCampaignAutoComplete(sentEmail.campaign_id);
 
     // Notify the campaign owner (if they have unsubscribe notifications enabled)
     const { data: campaign } = await supabaseAdmin

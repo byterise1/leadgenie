@@ -2,6 +2,47 @@
 // Used by both the campaign start route (account/window validation) and the
 // recurring campaign-scheduler worker (instrumentation.ts).
 
+import { supabaseAdmin } from '@/lib/supabase/admin';
+
+// Call whenever a lead reaches a terminal state (step sequence completed,
+// bounced, unsubscribed, or replied) from ANY code path — the email-sending
+// worker, the inbox-sync reply detector, or an API route like unsubscribe.
+// A campaign should auto-complete the moment its LAST lead finishes, no
+// matter which of those reasons caused it. This used to be duplicated
+// inline in a couple of places in the worker and missing entirely from
+// others (notably the reply-detection paths and the unsubscribe route) —
+// a campaign whose final lead finished via a reply or an unsubscribe click,
+// rather than a normal step completion, would sit at "active" forever with
+// nothing left to send.
+export async function checkCampaignAutoComplete(campaignId: string): Promise<void> {
+  const { count: pendingCount } = await supabaseAdmin
+    .from('campaign_leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_id', campaignId)
+    .in('status', ['pending', 'active']);
+  if (pendingCount !== 0) return;
+
+  const { data: camp } = await supabaseAdmin
+    .from('campaigns')
+    .select('user_id, name, status')
+    .eq('id', campaignId)
+    .maybeSingle();
+  if (!camp || camp.status === 'completed') return;
+
+  await supabaseAdmin.from('campaigns').update({ status: 'completed' }).eq('id', campaignId);
+
+  const { data: prof } = await supabaseAdmin
+    .from('profiles').select('notif_campaign_complete').eq('id', camp.user_id).maybeSingle();
+  if ((prof as Record<string, unknown> | null)?.notif_campaign_complete === false) return;
+
+  await supabaseAdmin.from('notifications').insert({
+    user_id: camp.user_id,
+    message: `Campaign "${camp.name}" has completed sending.`,
+    type: 'info',
+    link: `/dashboard/campaigns/${campaignId}`,
+  });
+}
+
 export const TZ_MAP: Record<string, string> = {
   'UTC': 'UTC',
   'US/Eastern (EST)': 'America/New_York',
