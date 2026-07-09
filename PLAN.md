@@ -31,7 +31,8 @@
 
 **Production-readiness (things blocking a real launch):**
 - [x] TEST MODE flip — `DELAY_UNIT_MS` changed from 1 minute to 24 real hours (2026-07-07). Follow-ups now wait real days.
-- [ ] SPF/DKIM/DMARC DNS records for byterisellc.com (Titan dashboard) — guide given to user 2026-07-07, needs to be added on Titan's side. Note: our checker (`lib/domain-health.ts`) only recognizes DKIM under common selector names (google/default/selector1/selector2/k1/s1/dkim/mail) — if Titan uses a different selector, DKIM will show "unknown" (not "fail") even once correctly configured. Tell Claude Titan's exact selector once known and it can be added to the recognized list.
+- [x] **Domain migration to leadsgenie.site — fully DONE 2026-07-09.** Real domain purchased, placeholder `leadgenie.io`/`leadsgenie.io` text replaced in code (commit `f26912b`), Railway custom domain added + DNS verified (ALIAS `@`→Railway target + TXT verify record), `SITE_URL` env var set to `https://leadsgenie.site`, Google OAuth redirect URIs added (old Railway/Vercel ones kept alongside, not removed). Confirmed live: `https://leadsgenie.site` returns 200 with valid SSL. Full detail: `[memory] project-domain-migration.md`.
+- [ ] SPF/DKIM/DMARC for **byterisellc.com** — user has now designated this as the dedicated cold-pitch sending domain (`info@byterisellc.com`), kept deliberately separate from their real company domain `byterise.com` to protect its reputation. **Explicitly on hold — user said "don't touch, it's pending" (2026-07-09). Do not set up DNS/Titan for this domain until user says go.**
 - [ ] Stripe billing integration — currently a manual `billing_events` table only, no real payment processing.
 - [ ] Review/clean up duplicate & error `email_accounts` rows left over from pre-one-mailbox-one-identity test data (not the active user's data, harmless but untidy).
 
