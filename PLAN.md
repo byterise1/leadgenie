@@ -25,7 +25,7 @@
 
 **TEST MODE is still on — flip before a real production launch:** `DELAY_UNIT_MS = 60 * 1000` (1 minute stands in for 1 "day") — defined in `lib/campaign-scheduling.ts`, used by `instrumentation.ts` and the campaign start route. Change to `24*60*60*1000`, and update the campaign UI's delay labels from "minutes" to "days".
 
-**Migrations — all run, none pending, as of 2026-07-07:** full migration list is in `[memory] project-admin-panel.md` under "DB Migrations" (or just check `supabase/migrations/*.sql` directly) — all have been executed against production, including the two most recent (`20260705_warmup_phase1.sql`, `20260707_smart_priority_engine.sql`), both confirmed live via direct database query, not just assumed run. If a future session adds a new migration file, it must be run manually in the Supabase SQL Editor — there is no automated runner, and Claude cannot execute DDL directly against this database (no direct Postgres connection available, only the Supabase JS client).
+**Migrations — all run, none pending, as of 2026-07-09:** full migration list is in `[memory] project-admin-panel.md` under "DB Migrations" (or just check `supabase/migrations/*.sql` directly) — all have been executed against production, including the three most recent (`20260705_warmup_phase1.sql`, `20260707_smart_priority_engine.sql`, `20260709_step_id_tracking.sql`), all confirmed live via direct database query, not just assumed run. If a future session adds a new migration file, it must be run manually in the Supabase SQL Editor — there is no automated runner, and Claude cannot execute DDL directly against this database (no direct Postgres connection available, only the Supabase JS client).
 
 ### Remaining Work & Roadmap — living checklist, update whenever priorities shift
 
@@ -37,6 +37,7 @@
 - [ ] Review/clean up duplicate & error `email_accounts` rows left over from pre-one-mailbox-one-identity test data (not the active user's data, harmless but untidy).
 
 **Campaign engine — deferred features (not bugs, just not built):**
+- [x] Edit follow-up steps (add/remove/reorder/edit content) on a paused or draft campaign — DONE 2026-07-09, migrated (`current_step_id` on `campaign_leads`), verified live via real HTTP requests against a test campaign. Active/completed campaigns still reject edits. Full detail: `[memory] project-step-editing.md`.
 - [ ] Automatic mailbox failover when a lead's locked mailbox goes bad long-term (manual "retry with a different mailbox" exists today).
 - [ ] Pre-launch send-volume forecast panel ("X will send today, everyone reached by day Y").
 - [ ] Per-lead timezone-aware send time (currently one shared campaign-wide window).
