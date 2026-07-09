@@ -11,9 +11,9 @@ type Campaign = {
   created_at: string;
   goal?: string;
   daily_limit?: number;
-  from_hour?: number;
-  to_hour?: number;
-  active_days?: string[];
+  from_hour?: string | number;
+  to_hour?: string | number;
+  active_days?: boolean[] | string[];
   timezone?: string;
   start_date?: string | null;
   from_name?: string;
@@ -202,6 +202,95 @@ export default function CampaignDetailPage() {
     } finally { setStepBusy(false); }
   }
 
+  // ── Drag-and-drop reordering — reuses the same moveStep() the ↑/↓
+  // buttons called, just triggered by a drag gesture instead of a click.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  function onStepDrop(targetIndex: number, orderedSteps: { id: string }[]) {
+    if (dragIndex !== null && dragIndex !== targetIndex) {
+      moveStep(orderedSteps[dragIndex].id, targetIndex);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }
+
+  // ── Schedule & Limits editing ──
+  function normalizeTime(v: string | number | null | undefined, fallback: string): string {
+    if (v == null) return fallback;
+    const s = String(v);
+    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+    const n = Number(s);
+    if (!Number.isNaN(n)) return `${String(n).padStart(2, '0')}:00`;
+    return fallback;
+  }
+  function normalizeActiveDays(days: Campaign['active_days']): boolean[] {
+    if (!days || !days.length) return [true, true, true, true, true, false, false];
+    if (typeof days[0] === 'boolean') return days as boolean[];
+    const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const set = new Set((days as string[]).map(d => String(d).slice(0, 3)));
+    return names.map(n => set.has(n));
+  }
+
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleForm, setScheduleForm] = useState({
+    daily_limit: 50, from_hour: '08:00', to_hour: '18:00', timezone: 'UTC',
+    active_days: [true, true, true, true, true, false, false] as boolean[],
+    start_date: '', min_delay_mins: 2, max_delay_mins: 6,
+  });
+
+  function startEditSchedule() {
+    if (!campaign) return;
+    setScheduleError('');
+    setScheduleForm({
+      daily_limit: campaign.daily_limit ?? 50,
+      from_hour: normalizeTime(campaign.from_hour, '08:00'),
+      to_hour: normalizeTime(campaign.to_hour, '18:00'),
+      timezone: campaign.timezone || 'UTC',
+      active_days: normalizeActiveDays(campaign.active_days),
+      start_date: campaign.start_date ? campaign.start_date.slice(0, 10) : '',
+      min_delay_mins: campaign.min_delay_secs != null ? Math.round(campaign.min_delay_secs / 60) : 2,
+      max_delay_mins: campaign.max_delay_secs != null ? Math.round(campaign.max_delay_secs / 60) : 6,
+    });
+    setEditingSchedule(true);
+  }
+
+  function toggleScheduleDay(i: number) {
+    setScheduleForm(f => ({ ...f, active_days: f.active_days.map((v, idx) => idx === i ? !v : v) }));
+  }
+
+  async function saveSchedule() {
+    if (scheduleForm.from_hour >= scheduleForm.to_hour) {
+      setScheduleError('"From" time must be earlier than "To" time'); return;
+    }
+    if (scheduleForm.min_delay_mins >= scheduleForm.max_delay_mins) {
+      setScheduleError('Min delay must be less than max delay'); return;
+    }
+    setScheduleBusy(true); setScheduleError('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          daily_limit: scheduleForm.daily_limit,
+          from_hour: scheduleForm.from_hour,
+          to_hour: scheduleForm.to_hour,
+          timezone: scheduleForm.timezone,
+          active_days: scheduleForm.active_days,
+          start_date: scheduleForm.start_date || null,
+          min_delay_secs: scheduleForm.min_delay_mins * 60,
+          max_delay_secs: scheduleForm.max_delay_mins * 60,
+        }),
+      });
+      const d = await res.json();
+      if (d.error) { setScheduleError(d.error); return; }
+      setEditingSchedule(false);
+      refresh();
+    } finally { setScheduleBusy(false); }
+  }
+
   if (loading) {
     return (
       <main className="flex-1 p-6 space-y-6">
@@ -331,8 +420,20 @@ export default function CampaignDetailPage() {
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {sortedSteps.map((step, i) => (
-                  <div key={step.id} className="px-6 py-4">
-                    <div className="flex items-center gap-4">
+                  <div key={step.id}
+                    draggable={canEditSteps && !stepBusy}
+                    onDragStart={() => setDragIndex(i)}
+                    onDragOver={e => { e.preventDefault(); if (dragOverIndex !== i) setDragOverIndex(i); }}
+                    onDragLeave={() => setDragOverIndex(prev => (prev === i ? null : prev))}
+                    onDrop={e => { e.preventDefault(); onStepDrop(i, sortedSteps); }}
+                    onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                    className={`px-6 py-4 transition-colors ${dragIndex === i ? 'opacity-40' : ''} ${dragOverIndex === i && dragIndex !== null && dragIndex !== i ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
+                    <div className="flex items-center gap-3">
+                      {canEditSteps && (
+                        <span className="text-gray-300 dark:text-gray-600 cursor-grab active:cursor-grabbing shrink-0 select-none" title="Drag to reorder">
+                          <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                        </span>
+                      )}
                       <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
@@ -346,38 +447,42 @@ export default function CampaignDetailPage() {
                       </div>
                       {canEditSteps && (
                         <div className="flex items-center gap-1 shrink-0">
-                          <button disabled={stepBusy || i === 0} onClick={() => moveStep(step.id, i - 1)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-xs font-bold">↑</button>
-                          <button disabled={stepBusy || i === sortedSteps.length - 1} onClick={() => moveStep(step.id, i + 1)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-xs font-bold">↓</button>
                           <button disabled={stepBusy} onClick={() => startEditStep(step)}
-                            className="text-xs font-bold px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Edit</button>
                           <button disabled={stepBusy} onClick={() => deleteStep(step.id)}
-                            className="text-xs font-bold px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">Remove</button>
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">Remove</button>
                         </div>
                       )}
                     </div>
 
                     {editingStepId === step.id && (
-                      <div className="mt-3 ml-11 space-y-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-                        <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                          placeholder="Subject" className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                        <textarea value={editForm.body} onChange={e => setEditForm(f => ({ ...f, body: e.target.value }))}
-                          placeholder="Body" rows={4} className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                      <div className="mt-3 ml-11 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Subject line</label>
+                          <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                            className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Email body</label>
+                          <textarea value={editForm.body} onChange={e => setEditForm(f => ({ ...f, body: e.target.value }))}
+                            rows={5} className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                        </div>
                         {i > 0 && (
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                            Wait
-                            <input type="number" min={1} value={editForm.delay_days}
-                              onChange={e => setEditForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
-                              className="w-16 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                            day(s) after the previous step
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Wait before sending</label>
+                            <div className="flex items-center gap-2">
+                              <input type="number" min={1} value={editForm.delay_days}
+                                onChange={e => setEditForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                                className="w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                              <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step</span>
+                            </div>
                           </div>
                         )}
                         <div className="flex gap-2 pt-1">
                           <button disabled={stepBusy} onClick={() => saveEditStep(step.id)}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Save</button>
+                            className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">Save changes</button>
                           <button disabled={stepBusy} onClick={() => setEditingStepId(null)}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
+                            className="text-xs font-bold px-4 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                         </div>
                       </div>
                     )}
@@ -387,20 +492,30 @@ export default function CampaignDetailPage() {
             )}
 
             {addingStep && (
-              <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 space-y-2 bg-gray-50 dark:bg-gray-800/50">
-                <input value={newStepForm.subject} onChange={e => setNewStepForm(f => ({ ...f, subject: e.target.value }))}
-                  placeholder="Subject" className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                <textarea value={newStepForm.body} onChange={e => setNewStepForm(f => ({ ...f, body: e.target.value }))}
-                  placeholder="Body" rows={4} className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  Wait
-                  <input type="number" min={1} value={newStepForm.delay_days}
-                    onChange={e => setNewStepForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
-                    className="w-16 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                  day(s) after the previous step (ignored if this becomes the first step)
+              <div className="px-6 py-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Subject line</label>
+                  <input value={newStepForm.subject} onChange={e => setNewStepForm(f => ({ ...f, subject: e.target.value }))}
+                    placeholder="e.g. Quick question about {{company}}"
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Email body</label>
+                  <textarea value={newStepForm.body} onChange={e => setNewStepForm(f => ({ ...f, body: e.target.value }))}
+                    rows={5} placeholder="Write the email..."
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Wait before sending</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" min={1} value={newStepForm.delay_days}
+                      onChange={e => setNewStepForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                      className="w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step (ignored if added as the first step)</span>
+                  </div>
                 </div>
                 <button disabled={stepBusy} onClick={addStep}
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Add Step</button>
+                  className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">Add Step</button>
               </div>
             )}
           </div>
@@ -480,82 +595,162 @@ export default function CampaignDetailPage() {
 
             {/* Schedule & Limits */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white">Schedule & Limits</h2>
+                {!editingSchedule && (
+                  <button onClick={startEditSchedule}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors">
+                    Edit
+                  </button>
+                )}
               </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {[
-                  {
-                    label: 'Daily limit',
-                    value: `${campaign.daily_limit ?? 50} emails/day`,
-                  },
-                  {
-                    label: 'Send window',
-                    value: campaign.from_hour != null && campaign.to_hour != null
-                      ? `${String(campaign.from_hour).padStart(2,'0')}:00 – ${String(campaign.to_hour).padStart(2,'0')}:00`
-                      : 'Any time',
-                  },
-                  {
-                    label: 'Timezone',
-                    value: campaign.timezone || 'UTC',
-                  },
-                  {
-                    label: 'Active days',
-                    value: (() => {
-                      const days = campaign.active_days;
-                      if (!days || !days.length) return 'Mon – Fri';
-                      const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-                      // boolean[] format: [true,true,...] stored by worker
-                      if (typeof days[0] === 'boolean') {
-                        return (days as unknown as boolean[]).map((on, i) => on ? names[i] : null).filter(Boolean).join(', ') || 'Mon – Fri';
-                      }
-                      // string[] format: ['Monday','Tuesday',...]
-                      return (days as string[]).map(d => String(d).slice(0, 3)).join(', ');
-                    })(),
-                  },
-                  {
-                    label: 'Start date',
-                    value: campaign.start_date ? formatDate(campaign.start_date) : 'Immediately',
-                  },
-                  {
-                    label: 'Delay between emails',
-                    value: campaign.min_delay_secs != null && campaign.max_delay_secs != null
-                      ? `${Math.round(campaign.min_delay_secs / 60)}–${Math.round(campaign.max_delay_secs / 60)} min`
-                      : '—',
-                  },
-                  {
-                    label: 'Leads total',
-                    value: `${leads.length} leads${sent > 0 ? ` · ${sent} sent` : ''}`,
-                  },
-                  ...(campaign.daily_limit && leads.length > 0 ? [{
-                    label: 'Est. completion',
-                    value: (() => {
-                      const steps = campaign.email_steps ?? [];
-                      const totalSteps = steps.length;
-                      const dailyLimit = campaign.daily_limit ?? 50;
-                      // Total emails still to send across all leads × remaining steps
-                      const totalEmailsLeft = leads.reduce((acc, l) => {
-                        const done = l.current_step ?? 0;
-                        return acc + Math.max(0, totalSteps - done);
-                      }, 0);
-                      if (totalEmailsLeft === 0) return 'Complete';
-                      // Processing days = how many days at daily_limit to send all remaining emails
-                      const processingDays = Math.ceil(totalEmailsLeft / dailyLimit);
-                      // Step delay days = mandatory waits between steps (sum delay_days for steps 1+)
-                      const stepDelayDays = steps.slice(1).reduce((acc, s) => acc + (s.delay_days ?? s.delay ?? 1), 0);
-                      const totalDays = processingDays + stepDelayDays;
-                      const end = new Date();
-                      end.setDate(end.getDate() + totalDays);
-                      return `~${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (${totalDays}d)`;
-                    })(),
-                  }] : []),
-                ].map(row => (
-                  <div key={row.label} className="flex items-center justify-between px-6 py-3">
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{row.label}</span>
-                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-right max-w-[60%]">{row.value}</span>
+
+              {editingSchedule ? (
+                <div className="p-6 space-y-5">
+                  {scheduleError && (
+                    <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 rounded-xl px-3.5 py-2.5">{scheduleError}</div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Daily limit</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" min={1} value={scheduleForm.daily_limit}
+                        onChange={e => setScheduleForm(f => ({ ...f, daily_limit: Number(e.target.value) || 1 }))}
+                        className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">emails/day</span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Send window</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="time" value={scheduleForm.from_hour}
+                        onChange={e => setScheduleForm(f => ({ ...f, from_hour: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                      <input type="time" value={scheduleForm.to_hour}
+                        onChange={e => setScheduleForm(f => ({ ...f, to_hour: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Timezone</label>
+                    <select value={scheduleForm.timezone} onChange={e => setScheduleForm(f => ({ ...f, timezone: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition">
+                      {['UTC', 'US/Eastern (EST)', 'US/Pacific (PST)', 'Europe/London (GMT)', 'Asia/Karachi (PKT)', 'Asia/Dubai (GST)'].map(tz => <option key={tz}>{tz}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Active days</label>
+                    <div className="flex gap-1.5">
+                      {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d, i) => (
+                        <button key={d} type="button" onClick={() => toggleScheduleDay(i)}
+                          className={`w-9 h-9 rounded-xl text-xs font-bold transition-colors ${scheduleForm.active_days[i] ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Start date <span className="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="date" value={scheduleForm.start_date}
+                      onChange={e => setScheduleForm(f => ({ ...f, start_date: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Delay between emails</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Min (mins)</p>
+                        <input type="number" min={1} value={scheduleForm.min_delay_mins}
+                          onChange={e => setScheduleForm(f => ({ ...f, min_delay_mins: Number(e.target.value) || 1 }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Max (mins)</p>
+                        <input type="number" min={1} value={scheduleForm.max_delay_mins}
+                          onChange={e => setScheduleForm(f => ({ ...f, max_delay_mins: Number(e.target.value) || 1 }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button disabled={scheduleBusy} onClick={saveSchedule}
+                      className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                      {scheduleBusy ? 'Saving...' : 'Save changes'}
+                    </button>
+                    <button disabled={scheduleBusy} onClick={() => setEditingSchedule(false)}
+                      className="text-xs font-bold px-4 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {[
+                    {
+                      label: 'Daily limit',
+                      value: `${campaign.daily_limit ?? 50} emails/day`,
+                    },
+                    {
+                      label: 'Send window',
+                      value: campaign.from_hour != null && campaign.to_hour != null
+                        ? `${normalizeTime(campaign.from_hour, '08:00')} – ${normalizeTime(campaign.to_hour, '18:00')}`
+                        : 'Any time',
+                    },
+                    {
+                      label: 'Timezone',
+                      value: campaign.timezone || 'UTC',
+                    },
+                    {
+                      label: 'Active days',
+                      value: (() => {
+                        const names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                        const on = normalizeActiveDays(campaign.active_days);
+                        return on.map((v, i) => v ? names[i] : null).filter(Boolean).join(', ') || 'None selected';
+                      })(),
+                    },
+                    {
+                      label: 'Start date',
+                      value: campaign.start_date ? formatDate(campaign.start_date) : 'Immediately',
+                    },
+                    {
+                      label: 'Delay between emails',
+                      value: campaign.min_delay_secs != null && campaign.max_delay_secs != null
+                        ? `${Math.round(campaign.min_delay_secs / 60)}–${Math.round(campaign.max_delay_secs / 60)} min`
+                        : '—',
+                    },
+                    {
+                      label: 'Leads total',
+                      value: `${leads.length} leads${sent > 0 ? ` · ${sent} sent` : ''}`,
+                    },
+                    ...(campaign.daily_limit && leads.length > 0 ? [{
+                      label: 'Est. completion',
+                      value: (() => {
+                        const steps = campaign.email_steps ?? [];
+                        const totalSteps = steps.length;
+                        const dailyLimit = campaign.daily_limit ?? 50;
+                        // Total emails still to send across all leads × remaining steps
+                        const totalEmailsLeft = leads.reduce((acc, l) => {
+                          const done = l.current_step ?? 0;
+                          return acc + Math.max(0, totalSteps - done);
+                        }, 0);
+                        if (totalEmailsLeft === 0) return 'Complete';
+                        // Processing days = how many days at daily_limit to send all remaining emails
+                        const processingDays = Math.ceil(totalEmailsLeft / dailyLimit);
+                        // Step delay days = mandatory waits between steps (sum delay_days for steps 1+)
+                        const stepDelayDays = steps.slice(1).reduce((acc, s) => acc + (s.delay_days ?? s.delay ?? 1), 0);
+                        const totalDays = processingDays + stepDelayDays;
+                        const end = new Date();
+                        end.setDate(end.getDate() + totalDays);
+                        return `~${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (${totalDays}d)`;
+                      })(),
+                    }] : []),
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between px-6 py-3">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{row.label}</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-right max-w-[60%]">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
