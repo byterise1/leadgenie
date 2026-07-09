@@ -64,11 +64,20 @@ export function computeHealthScore(opts: {
   const replyRate = sent > 0 ? Math.min(1, events.reply7d / sent) : null;
   const inboxRate = sent > 0 ? Math.max(0, 1 - Math.min(1, events.spam7d / sent)) : null;
 
-  // Baseline: everyone starts unproven. Small credit just for warmup age (up to +20 by ~day 13).
-  let score = 30 + Math.min(20, warmupDay * 1.5);
+  // Baseline: everyone starts unproven. Small credit just for warmup age (up to +10 by ~day 13) -
+  // kept low deliberately, since "day count" alone isn't evidence of good deliverability.
+  let score = 10 + Math.min(10, warmupDay * 0.75);
 
-  // Inbox placement — the single biggest factor (up to +30).
-  score += inboxRate !== null ? inboxRate * 30 : 10;
+  // Inbox placement — the single biggest factor (up to +30), but only earned in proportion
+  // to how much real data backs it up. A single clean send out of 1 total isn't proof the
+  // mailbox is trusted - it's the same "100% clean" ratio a mailbox with 50 clean sends would
+  // show, but far less certain. Full confidence needs INBOX_CONFIDENCE_SENT sends in the
+  // 7-day window; below that, credit scales down linearly. Matches how competitors (Instantly)
+  // treat a low score during the first days of warmup as normal/expected, not a bug -
+  // score should rise as evidence accumulates, not front-load trust on day one.
+  const INBOX_CONFIDENCE_SENT = 10;
+  const inboxConfidence = sent > 0 ? Math.min(1, sent / INBOX_CONFIDENCE_SENT) : 0;
+  score += inboxRate !== null ? inboxRate * 30 * inboxConfidence : 0;
 
   // Bounce rate — heaviest penalty (up to -40). This is what makes the score able to fall.
   if (bounceRate !== null) score -= Math.min(40, bounceRate * 400);
