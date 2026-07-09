@@ -12,8 +12,8 @@ const aboutFaqs = [
   { q: 'Who built Leads Genie?', a: 'Leads Genie was built by a team of outbound sales practitioners who were frustrated with tools that promised deliverability but underdelivered. We built the platform we always wanted and opened it to the world.' },
   { q: 'When was Leads Genie founded?', a: 'Founded in 2022, Leads Genie has grown to serve thousands of sales teams, agencies, and founders across the globe.' },
   { q: 'Is Leads Genie compliant with email regulations?', a: 'Yes. We enforce CAN-SPAM and GDPR compliance on every account with mandatory unsubscribe links, opt-out tracking, and suppression lists.' },
-  { q: 'Do you have a partner or affiliate program?', a: 'Yes — reach out to partners@leadsgenie.io to learn about our referral and reseller programs.' },
-  { q: 'How do I get support?', a: 'Use the Help Center inside your dashboard for the fastest response. You can also email help@leadsgenie.io for account-specific queries.' },
+  { q: 'Do you have a partner or affiliate program?', a: 'Yes — reach out to partners@leadsgenie.site to learn about our referral and reseller programs.' },
+  { q: 'How do I get support?', a: 'Use the Help Center inside your dashboard for the fastest response. You can also email help@leadsgenie.site for account-specific queries.' },
 ];
 
 export default function AboutPage() {

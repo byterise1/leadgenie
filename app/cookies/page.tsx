@@ -137,7 +137,7 @@ export default function CookiesPage() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Contact</h2>
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                 If you have questions about our use of cookies, contact us at{' '}
-                <a href="mailto:privacy@leadsgenie.io" className="text-blue-600 hover:underline">privacy@leadsgenie.io</a>.
+                <a href="mailto:privacy@leadsgenie.site" className="text-blue-600 hover:underline">privacy@leadsgenie.site</a>.
               </p>
             </div>
 

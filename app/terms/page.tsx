@@ -53,7 +53,7 @@ We reserve the right to modify, suspend, or discontinue any part of the service 
 
 â€¢ Maintaining the confidentiality of your account credentials
 â€¢ All activity that occurs under your account
-â€¢ Notifying us immediately at security@leadsgenie.io of any unauthorised access
+â€¢ Notifying us immediately at security@leadsgenie.site of any unauthorised access
 
 You must be at least 18 years old to create an account. Accounts are non-transferable without our written consent.`,
                 },
@@ -93,7 +93,7 @@ Refund policy:
 â€¢ Annual plans: Refunds available within 14 days of purchase if you have not sent more than 1,000 emails
 â€¢ All sales are final after the refund window
 
-To request a refund or for billing disputes, contact billing@leadsgenie.io.`,
+To request a refund or for billing disputes, contact billing@leadsgenie.site.`,
                 },
                 {
                   title: '7. Intellectual Property',
@@ -141,8 +141,8 @@ For users in the European Union, nothing in these Terms affects your statutory c
                   content: `For questions about these Terms, contact:
 
 Leads Genie, Inc.
-Email: legal@leadsgenie.io
-Support: help@leadsgenie.io`,
+Email: legal@leadsgenie.site
+Support: help@leadsgenie.site`,
                 },
               ].map(section => (
                 <div key={section.title}>

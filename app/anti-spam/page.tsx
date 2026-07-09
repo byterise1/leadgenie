@@ -39,7 +39,7 @@ export default function AntiSpamPage() {
 
 All emails sent through Leads Genie must include a clear, functional unsubscribe mechanism. Opt-out requests must be honoured within 10 business days.` },
               { title: 'Our Enforcement', content: 'We actively monitor for spam-related activity including high bounce rates, spam complaint rates, and unsubscribe patterns. Accounts that exceed our thresholds are automatically flagged and reviewed. Accounts in violation of this policy are suspended without refund.' },
-              { title: 'Reporting Spam', content: 'If you believe a Leads Genie customer is sending spam, please report it to abuse@leadsgenie.io with a copy of the email including full headers. We investigate all reports and take swift action against violators.' },
+              { title: 'Reporting Spam', content: 'If you believe a Leads Genie customer is sending spam, please report it to abuse@leadsgenie.site with a copy of the email including full headers. We investigate all reports and take swift action against violators.' },
               { title: 'Legal Compliance', content: 'Users are solely responsible for ensuring their campaigns comply with all applicable laws, including CAN-SPAM (US), CASL (Canada), GDPR (EU/UK), and any other jurisdiction-specific regulations. When in doubt, consult legal counsel before launching a campaign.' },
             ].map(s => (
               <div key={s.title}>
@@ -51,7 +51,7 @@ All emails sent through Leads Genie must include a clear, functional unsubscribe
               <p className="text-sm font-semibold text-blue-900 mb-2">Questions about compliance?</p>
               <p className="text-sm text-blue-700 leading-relaxed">
                 Our team is happy to review your use case and confirm it meets our policies.{' '}
-                <Link href="/contact" className="underline font-semibold">Contact us</Link> or email compliance@leadsgenie.io.
+                <Link href="/contact" className="underline font-semibold">Contact us</Link> or email compliance@leadsgenie.site.
               </p>
             </div>
           </div>

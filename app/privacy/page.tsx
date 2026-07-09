@@ -82,7 +82,7 @@ We never sell personal data to advertisers or data brokers.`,
 â€¢ We conduct regular security audits and penetration testing
 â€¢ Two-factor authentication (2FA) is available and recommended for all accounts
 
-Despite these measures, no system is 100% secure. If you suspect unauthorised access to your account, contact security@leadsgenie.io immediately.`,
+Despite these measures, no system is 100% secure. If you suspect unauthorised access to your account, contact security@leadsgenie.site immediately.`,
                 },
                 {
                   title: '6. Your Rights',
@@ -95,7 +95,7 @@ Despite these measures, no system is 100% secure. If you suspect unauthorised ac
 â€¢ Objection: Object to processing of your data for certain purposes
 â€¢ Restriction: Request that we limit how we process your data
 
-To exercise any of these rights, email privacy@leadsgenie.io. We will respond within 30 days. EU/UK residents may also lodge a complaint with their local data protection authority.`,
+To exercise any of these rights, email privacy@leadsgenie.site. We will respond within 30 days. EU/UK residents may also lodge a complaint with their local data protection authority.`,
                 },
                 {
                   title: '7. Cookies',
@@ -105,7 +105,7 @@ To exercise any of these rights, email privacy@leadsgenie.io. We will respond wi
                   title: '8. Data Retention',
                   content: `We retain your account data for as long as your account is active. If you cancel your subscription, we retain your data for 90 days to allow for reactivation, after which it is permanently deleted. Billing records are retained for 7 years as required by law.
 
-You may request immediate deletion of your account and associated data at any time by emailing privacy@leadsgenie.io.`,
+You may request immediate deletion of your account and associated data at any time by emailing privacy@leadsgenie.site.`,
                 },
                 {
                   title: '9. International Transfers',
@@ -120,11 +120,11 @@ You may request immediate deletion of your account and associated data at any ti
                   content: `If you have questions about this Privacy Policy or how we handle your data, please contact:
 
 Leads Genie, Inc.
-Email: privacy@leadsgenie.io
-Support: help@leadsgenie.io
+Email: privacy@leadsgenie.site
+Support: help@leadsgenie.site
 
 For EU/UK data protection enquiries:
-Data Protection Officer: dpo@leadsgenie.io`,
+Data Protection Officer: dpo@leadsgenie.site`,
                 },
               ].map(section => (
                 <div key={section.title}>

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: 'Leads Genie — Cold Email Outreach That Books Meetings',
   description:
     'Leads Genie is the #1 cold email outreach platform. Send unlimited emails, auto-warm your domains, and book more meetings with AI-personalised sequences. Trusted by 8,500+ sales teams.',
-  metadataBase: new URL('https://leadgenie.io'),
+  metadataBase: new URL('https://leadsgenie.site'),
   openGraph: {
     title: 'Leads Genie — Cold Email Outreach That Books Meetings',
     description:
