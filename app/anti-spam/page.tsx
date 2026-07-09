@@ -1,5 +1,6 @@
 ﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { LegalContent } from '@/components/LegalContent';
 import Link from 'next/link';
 
 export default function AntiSpamPage() {
@@ -44,7 +45,7 @@ All emails sent through Leads Genie must include a clear, functional unsubscribe
             ].map(s => (
               <div key={s.title}>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{s.title}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{s.content}</p>
+                <LegalContent content={s.content} />
               </div>
             ))}
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6">

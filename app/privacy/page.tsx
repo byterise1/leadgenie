@@ -1,5 +1,6 @@
 ﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { LegalContent } from '@/components/LegalContent';
 
 export default function PrivacyPage() {
   return (
@@ -129,7 +130,7 @@ Data Protection Officer: dpo@leadsgenie.site`,
               ].map(section => (
                 <div key={section.title}>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{section.title}</h2>
-                  <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{section.content}</div>
+                  <LegalContent content={section.content} />
                 </div>
               ))}
             </div>

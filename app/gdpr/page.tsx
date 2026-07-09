@@ -1,5 +1,6 @@
 ﻿import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { LegalContent } from '@/components/LegalContent';
 
 export default function GDPRPage() {
   return (
@@ -29,7 +30,7 @@ export default function GDPRPage() {
             ].map(s => (
               <div key={s.title}>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{s.title}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">{s.content}</p>
+                <LegalContent content={s.content} />
               </div>
             ))}
           </div>
