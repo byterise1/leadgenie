@@ -41,6 +41,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   await supabaseAdmin.from('inbox_threads').delete().eq('account_id', id);
   await supabaseAdmin.from('campaign_accounts').delete().eq('account_id', id);
   await supabaseAdmin.from('sent_emails').update({ account_id: null }).eq('account_id', id);
+  // campaign_leads.account_id (added later by the Smart Priority Engine
+  // migration to lock a lead to its sending mailbox) has no ON DELETE
+  // handling of its own - without this, deleting an account still mid-way
+  // through a campaign fails with a foreign key violation instead of
+  // actually deleting anything.
+  await supabaseAdmin.from('campaign_leads').update({ account_id: null }).eq('account_id', id);
 
   const { error } = await supabaseAdmin
     .from('email_accounts')
