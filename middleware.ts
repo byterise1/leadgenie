@@ -2,6 +2,24 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Railway terminates TLS at its edge and forwards internally over plain
+  // http, so request.nextUrl.protocol is always "http" here - check the
+  // forwarded header instead. Redirects any http:// visitor to https://
+  // before anything else runs (auth, OAuth routes, etc.).
+  if (
+    process.env.NODE_ENV === 'production' &&
+    request.headers.get('x-forwarded-proto') === 'http'
+  ) {
+    const url = request.nextUrl.clone();
+    url.protocol = 'https:';
+    return NextResponse.redirect(url, 308);
+  }
+
+  const path = request.nextUrl.pathname;
+  const needsAuthCheck =
+    path.startsWith('/dashboard') || path.startsWith('/admin') || path === '/login' || path === '/signup';
+  if (!needsAuthCheck) return NextResponse.next();
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -24,7 +42,6 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
 
   // Protect dashboard routes
   if (path.startsWith('/dashboard') && !user) {
@@ -60,5 +77,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/login', '/signup'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
