@@ -25,7 +25,7 @@ type Campaign = {
   total_opened: number;
   total_replied: number;
   total_clicked: number;
-  email_steps: { id: string; subject: string; delay_days?: number; delay?: number; step_number?: number }[];
+  email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean }[];
   campaign_accounts: { account: { id: string; email: string; type: string } }[];
 };
 
@@ -133,6 +133,75 @@ export default function CampaignDetailPage() {
     } finally { setSavingPriority(false); }
   }
 
+  // ── Step editing (only ever allowed on a paused/draft campaign — see
+  // requireEditableCampaign in the API routes, which enforces this too) ──
+  const [stepBusy, setStepBusy] = useState(false);
+  const [stepError, setStepError] = useState('');
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ subject: '', body: '', delay_days: 1 });
+  const [addingStep, setAddingStep] = useState(false);
+  const [newStepForm, setNewStepForm] = useState({ subject: '', body: '', delay_days: 1 });
+
+  function startEditStep(step: { id: string; subject: string; body?: string; delay_days?: number; delay?: number }) {
+    setStepError('');
+    setEditingStepId(step.id);
+    setEditForm({ subject: step.subject || '', body: step.body || '', delay_days: step.delay_days ?? step.delay ?? 1 });
+  }
+
+  async function saveEditStep(stepId: string) {
+    setStepBusy(true); setStepError('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const d = await res.json();
+      if (d.error) { setStepError(d.error); return; }
+      setEditingStepId(null);
+      refresh();
+    } finally { setStepBusy(false); }
+  }
+
+  async function deleteStep(stepId: string) {
+    if (!confirm('Remove this step? Any lead currently on it will move to whatever comes next in the sequence.')) return;
+    setStepBusy(true); setStepError('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, { method: 'DELETE' });
+      const d = await res.json();
+      if (d.error) { setStepError(d.error); return; }
+      refresh();
+    } finally { setStepBusy(false); }
+  }
+
+  async function moveStep(stepId: string, newPosition: number) {
+    setStepBusy(true); setStepError('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPosition }),
+      });
+      const d = await res.json();
+      if (d.error) { setStepError(d.error); return; }
+      refresh();
+    } finally { setStepBusy(false); }
+  }
+
+  async function addStep() {
+    if (!newStepForm.subject.trim() || !newStepForm.body.trim()) { setStepError('Subject and body are required'); return; }
+    setStepBusy(true); setStepError('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/steps`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStepForm),
+      });
+      const d = await res.json();
+      if (d.error) { setStepError(d.error); return; }
+      setAddingStep(false);
+      setNewStepForm({ subject: '', body: '', delay_days: 1 });
+      refresh();
+    } finally { setStepBusy(false); }
+  }
+
   if (loading) {
     return (
       <main className="flex-1 p-6 space-y-6">
@@ -169,6 +238,8 @@ export default function CampaignDetailPage() {
 
   const isActive = campaign.status === 'active';
   const canToggle = campaign.status === 'active' || campaign.status === 'paused';
+  const canEditSteps = campaign.status === 'paused' || campaign.status === 'draft';
+  const sortedSteps = [...(campaign.email_steps ?? [])].sort((a, b) => (a.step_number ?? 0) - (b.step_number ?? 0));
 
   return (
     <main className="flex-1 p-6 space-y-6 min-w-0">
@@ -239,17 +310,29 @@ export default function CampaignDetailPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Email Steps */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">Email Sequence</h2>
+              {canEditSteps ? (
+                <button onClick={() => { setAddingStep(v => !v); setStepError(''); }}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors">
+                  {addingStep ? 'Cancel' : '+ Add Step'}
+                </button>
+              ) : (
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">Pause to edit steps</span>
+              )}
             </div>
-            {(campaign.email_steps ?? []).length === 0 ? (
+
+            {stepError && (
+              <div className="px-6 py-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-b border-red-100 dark:border-red-900">{stepError}</div>
+            )}
+
+            {sortedSteps.length === 0 ? (
               <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No email steps configured.</div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {[...(campaign.email_steps ?? [])]
-                  .sort((a, b) => (a.step_number ?? 0) - (b.step_number ?? 0))
-                  .map((step, i) => (
-                    <div key={step.id} className="flex items-center gap-4 px-6 py-4">
+                {sortedSteps.map((step, i) => (
+                  <div key={step.id} className="px-6 py-4">
+                    <div className="flex items-center gap-4">
                       <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
@@ -261,8 +344,63 @@ export default function CampaignDetailPage() {
                           {i === 0 ? 'Sent immediately' : (() => { const d = step.delay_days ?? step.delay ?? 1; return `+${d} day${d !== 1 ? 's' : ''} after previous`; })()}
                         </p>
                       </div>
+                      {canEditSteps && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button disabled={stepBusy || i === 0} onClick={() => moveStep(step.id, i - 1)}
+                            className="w-7 h-7 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-xs font-bold">↑</button>
+                          <button disabled={stepBusy || i === sortedSteps.length - 1} onClick={() => moveStep(step.id, i + 1)}
+                            className="w-7 h-7 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent text-xs font-bold">↓</button>
+                          <button disabled={stepBusy} onClick={() => startEditStep(step)}
+                            className="text-xs font-bold px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
+                          <button disabled={stepBusy} onClick={() => deleteStep(step.id)}
+                            className="text-xs font-bold px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">Remove</button>
+                        </div>
+                      )}
                     </div>
-                  ))}
+
+                    {editingStepId === step.id && (
+                      <div className="mt-3 ml-11 space-y-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                        <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                          placeholder="Subject" className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                        <textarea value={editForm.body} onChange={e => setEditForm(f => ({ ...f, body: e.target.value }))}
+                          placeholder="Body" rows={4} className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                        {i > 0 && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            Wait
+                            <input type="number" min={1} value={editForm.delay_days}
+                              onChange={e => setEditForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                              className="w-16 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                            day(s) after the previous step
+                          </div>
+                        )}
+                        <div className="flex gap-2 pt-1">
+                          <button disabled={stepBusy} onClick={() => saveEditStep(step.id)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Save</button>
+                          <button disabled={stepBusy} onClick={() => setEditingStepId(null)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addingStep && (
+              <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 space-y-2 bg-gray-50 dark:bg-gray-800/50">
+                <input value={newStepForm.subject} onChange={e => setNewStepForm(f => ({ ...f, subject: e.target.value }))}
+                  placeholder="Subject" className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                <textarea value={newStepForm.body} onChange={e => setNewStepForm(f => ({ ...f, body: e.target.value }))}
+                  placeholder="Body" rows={4} className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  Wait
+                  <input type="number" min={1} value={newStepForm.delay_days}
+                    onChange={e => setNewStepForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                    className="w-16 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                  day(s) after the previous step (ignored if this becomes the first step)
+                </div>
+                <button disabled={stepBusy} onClick={addStep}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Add Step</button>
               </div>
             )}
           </div>

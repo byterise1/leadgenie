@@ -192,3 +192,132 @@ export function jitterMs(): number {
   const minutes = 60 + Math.random() * 30; // 60-90 real minutes
   return sign * minutes * 60 * 1000 * dayScale;
 }
+
+// ── Step editing on paused/draft campaigns ─────────────────────────────────
+// A lead's true position in the sequence is tracked by campaign_leads.
+// current_step_id (a stable email_steps.id), not the plain step_number
+// integer - step_number is just a display/ordering value that can shift
+// whenever steps are added/removed/reordered. These helpers keep the two in
+// sync so editing a paused campaign's steps can never leave an in-progress
+// lead pointing at a step_number that no longer means what it used to.
+
+// Self-heal: any eligible lead that never got current_step_id set (e.g.
+// enrolled before this column existed, or before its first send) gets it
+// backfilled by matching its current_step number against the CURRENT step
+// list - must run before any add/remove/reorder shifts step_numbers around,
+// or the match would be against numbers that no longer reflect their steps.
+async function ensureLeadStepIds(campaignId: string): Promise<void> {
+  const { data: steps } = await supabaseAdmin
+    .from('email_steps').select('id, step_number').eq('campaign_id', campaignId);
+  const byNumber = new Map((steps ?? []).map(s => [s.step_number, s.id]));
+
+  const { data: leads } = await supabaseAdmin
+    .from('campaign_leads')
+    .select('id, current_step')
+    .eq('campaign_id', campaignId)
+    .in('status', ['pending', 'active'])
+    .is('current_step_id', null);
+
+  for (const lead of leads ?? []) {
+    const stepId = byNumber.get(lead.current_step ?? 0);
+    if (stepId) await supabaseAdmin.from('campaign_leads').update({ current_step_id: stepId }).eq('id', lead.id);
+  }
+}
+
+// Reassign step_number sequentially (0..n-1) by each step's current relative
+// order - call after any insert/delete/reorder so display order stays
+// gap-free and predictable. Never changes a step's id, so it never breaks
+// which step a lead is actually pointing at.
+async function renumberSteps(campaignId: string): Promise<void> {
+  const { data: steps } = await supabaseAdmin
+    .from('email_steps').select('id, step_number').eq('campaign_id', campaignId)
+    .order('step_number', { ascending: true });
+  for (let i = 0; i < (steps ?? []).length; i++) {
+    if (steps![i].step_number !== i) {
+      await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', steps![i].id);
+    }
+  }
+}
+
+// After steps have been renumbered, refresh every eligible lead's
+// current_step (integer) to match whatever step_number its current_step_id
+// now carries - this is what keeps the existing send-worker code (which
+// still matches on step_number) correct after an edit, without changing
+// that worker code at all.
+async function refreshLeadStepNumbers(campaignId: string): Promise<void> {
+  const { data: steps } = await supabaseAdmin
+    .from('email_steps').select('id, step_number').eq('campaign_id', campaignId);
+  const byId = new Map((steps ?? []).map(s => [s.id, s.step_number]));
+
+  const { data: leads } = await supabaseAdmin
+    .from('campaign_leads')
+    .select('id, current_step, current_step_id')
+    .eq('campaign_id', campaignId)
+    .in('status', ['pending', 'active']);
+
+  for (const lead of leads ?? []) {
+    if (!lead.current_step_id) continue;
+    const newNumber = byId.get(lead.current_step_id);
+    if (newNumber !== undefined && newNumber !== lead.current_step) {
+      await supabaseAdmin.from('campaign_leads').update({ current_step: newNumber }).eq('id', lead.id);
+    }
+  }
+}
+
+// Call after adding a new step or reordering existing ones (nothing was
+// deleted, so no lead ever needs to move to a different step - just keep
+// the display numbers and each lead's current_step integer consistent).
+export async function resyncStepsAfterAddOrReorder(campaignId: string): Promise<void> {
+  await ensureLeadStepIds(campaignId);
+  await renumberSteps(campaignId);
+  await refreshLeadStepNumbers(campaignId);
+}
+
+// Call to safely delete a step: figures out which leads were about to
+// receive exactly this step, moves them to whichever step now comes next
+// (skip-to-next-remaining policy), marks a lead 'completed' if the deleted
+// step was its last one, then renumbers and resyncs everyone else.
+export async function deleteStepAndResync(campaignId: string, stepId: string): Promise<{ error?: string }> {
+  await ensureLeadStepIds(campaignId);
+
+  const { data: stepToDelete } = await supabaseAdmin
+    .from('email_steps').select('id, step_number').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
+  if (!stepToDelete) return { error: 'Step not found' };
+
+  const { data: remainingSteps } = await supabaseAdmin
+    .from('email_steps').select('id, step_number, delay_days')
+    .eq('campaign_id', campaignId).neq('id', stepId)
+    .order('step_number', { ascending: true });
+  const nextRemaining = (remainingSteps ?? []).find(s => s.step_number > stepToDelete.step_number) ?? null;
+
+  // Re-point every lead referencing this step BEFORE deleting it -
+  // current_step_id is a foreign key into email_steps, so the delete below
+  // is rejected by Postgres for as long as any row still points at it.
+  const { data: affectedLeads } = await supabaseAdmin
+    .from('campaign_leads').select('id, last_sent_at')
+    .eq('campaign_id', campaignId).eq('current_step_id', stepId);
+
+  let anyCompleted = false;
+  for (const lead of affectedLeads ?? []) {
+    if (nextRemaining) {
+      const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
+      const nextSendAt = new Date(lastSentMs + (nextRemaining.delay_days || 1) * DELAY_UNIT_MS + jitterMs()).toISOString();
+      await supabaseAdmin.from('campaign_leads').update({
+        current_step_id: nextRemaining.id, status: 'active', next_send_at: nextSendAt,
+      }).eq('id', lead.id);
+    } else {
+      await supabaseAdmin.from('campaign_leads').update({
+        current_step_id: null, status: 'completed', next_send_at: null,
+      }).eq('id', lead.id);
+      anyCompleted = true;
+    }
+  }
+
+  const { error: deleteErr } = await supabaseAdmin.from('email_steps').delete().eq('id', stepId);
+  if (deleteErr) return { error: deleteErr.message };
+
+  await renumberSteps(campaignId);
+  await refreshLeadStepNumbers(campaignId);
+  if (anyCompleted) await checkCampaignAutoComplete(campaignId);
+  return {};
+}

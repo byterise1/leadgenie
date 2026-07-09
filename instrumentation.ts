@@ -209,6 +209,10 @@ export async function register() {
             : null;
           await supabase.from('campaign_leads').update({
             current_step: _nextStep,
+            // Kept in sync with current_step on every write so a step edit later
+            // (add/remove/reorder) can resolve this lead's true position by stable
+            // ID instead of a step_number that may have shifted.
+            current_step_id: _hasNext ? (_nextStepData?.id ?? null) : null,
             status: _hasNext ? 'active' : 'completed',
             next_send_at: _nextSendAt,
             account_id: account.id,
@@ -428,14 +432,19 @@ export async function register() {
       // land at the exact same clock time every day. The campaign-scheduler worker picks
       // this lead up once next_send_at arrives; nothing here re-queues a job directly.
       let nextSendAt: string | null = null;
+      let nextStepData: any = null;
       if (hasNextStep) {
-        const nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
+        nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
         const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
         nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs()).toISOString();
       }
 
       await supabase.from('campaign_leads').update({
         current_step: nextStep,
+        // Kept in sync with current_step on every write so a step edit later
+        // (add/remove/reorder) can resolve this lead's true position by stable
+        // ID instead of a step_number that may have shifted.
+        current_step_id: hasNextStep ? (nextStepData?.id ?? null) : null,
         last_sent_at: new Date().toISOString(),
         status: hasNextStep ? 'active' : 'completed',
         next_send_at: nextSendAt,
