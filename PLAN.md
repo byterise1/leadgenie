@@ -1,6 +1,6 @@
 # Lead Genie — Living Project Plan
 > **Rule**: Update this file after EVERY change. One edit to data/style/copy here means update every place it appears across all pages.
-> **Last updated**: 2026-07-07
+> **Last updated**: 2026-07-09
 
 ---
 
@@ -35,15 +35,18 @@
 - [ ] SPF/DKIM/DMARC for **byterisellc.com** — user has now designated this as the dedicated cold-pitch sending domain (`info@byterisellc.com`), kept deliberately separate from their real company domain `byterise.com` to protect its reputation. **Explicitly on hold — user said "don't touch, it's pending" (2026-07-09). Do not set up DNS/Titan for this domain until user says go.**
 - [ ] Stripe billing integration — currently a manual `billing_events` table only, no real payment processing.
 - [ ] Review/clean up duplicate & error `email_accounts` rows left over from pre-one-mailbox-one-identity test data (not the active user's data, harmless but untidy).
+- [x] Logo/images not loading in production — DONE 2026-07-09. Root cause was Next.js's built-in image optimizer failing its internal self-fetch when self-hosted behind Railway's reverse proxy (`received null` in Railway's own logs), not a `sharp` issue as first assumed. Fixed via `images: { unoptimized: true }` in `next.config.mjs`. Full detail: `[memory] project-image-optimizer-fix.md`.
+- [x] FK violation deleting an email account mid-campaign — DONE 2026-07-09, commit `29b8d67`. `campaign_leads.account_id` (added 2026-07-07) had no delete handling in the account-delete route. Verified live. Full detail: `[memory] project-step-editing.md`.
 
 **Campaign engine — deferred features (not bugs, just not built):**
-- [x] Edit follow-up steps (add/remove/reorder/edit content) on a paused or draft campaign — DONE 2026-07-09, migrated (`current_step_id` on `campaign_leads`), verified live via real HTTP requests against a test campaign. Active/completed campaigns still reject edits. Full detail: `[memory] project-step-editing.md`.
+- [x] Edit follow-up steps (add/remove/reorder/edit content) on a paused or draft campaign — DONE 2026-07-09, migrated (`current_step_id` on `campaign_leads`), verified live via real HTTP requests against a test campaign. Active/completed campaigns still reject edits. Follow-up UI pass same day: drag-and-drop reordering, more polished edit forms, and an actual editing UI for Schedule & Limits (daily limit/send window/timezone/active days/start date/delay — backend already supported this anytime, just had no UI). Full detail: `[memory] project-step-editing.md`.
 - [ ] Automatic mailbox failover when a lead's locked mailbox goes bad long-term (manual "retry with a different mailbox" exists today).
 - [ ] Pre-launch send-volume forecast panel ("X will send today, everyone reached by day Y").
 - [ ] Per-lead timezone-aware send time (currently one shared campaign-wide window).
 
 **Warmup roadmap:**
 - [x] Phase 1 — dynamic health score, adaptive caps, pause/recovery, one-mailbox-one-identity, rate limiting. DONE 2026-07-05, migrated, verified live.
+- [x] Health score sample-size fix — DONE 2026-07-09, commit `f2f136f`. Score no longer front-loads trust on 1-3 emails sent (was hitting 72-90); now ramps gradually, matching Instantly's documented "low score in early days is normal" behavior. Full detail: `[memory] project-warmup-overhaul.md`.
 - [ ] Phase 2 — bigger cross-user pool, AI-generated warmup conversations, timezone/language/industry matching, custom warmup profiles (Conservative/Balanced/Aggressive), holiday awareness, auto-restart after inactivity. **NOT STARTED — only begin when explicitly told to.**
 - [ ] Phase 3 — seed inbox monitoring, blacklist checks, inbox-placement prediction, reputation benchmarking, automatic issue diagnosis, AI recommendations. **NOT STARTED**, needs a cost/infra decision first (no free option for seed inboxes). Explicitly rejected: multi-device/IP simulation.
 
