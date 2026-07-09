@@ -11,12 +11,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data, error } = await supabaseAdmin
     .from('campaigns')
-    .select('*, email_steps(*), campaign_accounts(account:email_accounts(id,email,type))')
+    .select('*, email_steps(*), campaign_accounts(account:email_accounts(id,email,type,status,health_score,warmup_day,warmup_enabled,warmup_paused,smtp_host,daily_limit))')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+  const { count: sentTodayCount } = await supabaseAdmin
+    .from('sent_emails').select('id', { count: 'exact', head: true })
+    .eq('campaign_id', id).gte('sent_at', todayUTC.toISOString());
 
   // Counts matching competitor behaviour (Instantly/Smartlead):
   // - Sent   = total emails delivered across all steps
@@ -35,7 +41,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const totalReplied = repliedRes.error ? data.total_replied : (repliedRes.count ?? 0);
   const totalClicked = new Set((clickedRows.data || []).map((r: any) => r.lead_id)).size;
 
-  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked });
+  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked, sent_today: sentTodayCount ?? 0 });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

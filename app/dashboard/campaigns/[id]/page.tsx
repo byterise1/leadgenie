@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 
 type Campaign = {
   id: string;
@@ -11,6 +12,8 @@ type Campaign = {
   created_at: string;
   goal?: string;
   daily_limit?: number;
+  daily_limit_mode?: 'auto' | 'manual';
+  sent_today?: number;
   from_hour?: string | number;
   to_hour?: string | number;
   active_days?: boolean[] | string[];
@@ -26,7 +29,11 @@ type Campaign = {
   total_replied: number;
   total_clicked: number;
   email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean }[];
-  campaign_accounts: { account: { id: string; email: string; type: string } }[];
+  campaign_accounts: { account: {
+    id: string; email: string; type: string; status?: string;
+    health_score?: number; warmup_day?: number; warmup_enabled?: boolean;
+    warmup_paused?: boolean; smtp_host?: string | null; daily_limit?: number;
+  } }[];
 };
 
 type LeadRow = {
@@ -106,17 +113,34 @@ export default function CampaignDetailPage() {
     return () => clearInterval(pollId);
   }, [refresh]);
 
-  async function toggleStatus() {
+  const [resumeOptionsOpen, setResumeOptionsOpen] = useState(false);
+  const [spreadDaysInput, setSpreadDaysInput] = useState('3');
+
+  // Pause goes through the plain PATCH (no backlog concerns). Resume goes
+  // through POST /start — same route the campaigns-list page's Resume button
+  // already uses correctly — since only /start backfills next_send_at for
+  // leads that fell out of schedule while paused. A bare status PATCH used to
+  // skip that backfill entirely, leaving resumed leads stuck.
+  async function toggleStatus(resumeMode: 'auto' | 'fast' | 'spread' = 'auto', spreadDays?: number) {
     if (!campaign || toggling) return;
-    const next = campaign.status === 'active' ? 'paused' : 'active';
+    setResumeOptionsOpen(false);
     setToggling(true);
     try {
-      const res = await fetch(`/api/campaigns/${id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next }),
-      });
-      const d = await res.json();
-      if (!d.error) setCampaign(prev => prev ? { ...prev, status: next } : prev);
+      if (campaign.status === 'active') {
+        const res = await fetch(`/api/campaigns/${id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'paused' }),
+        });
+        const d = await res.json();
+        if (!d.error) setCampaign(prev => prev ? { ...prev, status: 'paused' } : prev);
+      } else {
+        const res = await fetch(`/api/campaigns/${id}/start`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resumeMode, spreadDays }),
+        });
+        const d = await res.json();
+        if (!d.error) { setCampaign(prev => prev ? { ...prev, status: 'active' } : prev); refresh(); }
+      }
     } finally { setToggling(false); }
   }
 
@@ -237,16 +261,29 @@ export default function CampaignDetailPage() {
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleForm, setScheduleForm] = useState({
-    daily_limit: 50, from_hour: '08:00', to_hour: '18:00', timezone: 'UTC',
+    daily_limit: 50, daily_limit_mode: 'auto' as 'auto' | 'manual',
+    from_hour: '08:00', to_hour: '18:00', timezone: 'UTC',
     active_days: [true, true, true, true, true, false, false] as boolean[],
     start_date: '', min_delay_mins: 2, max_delay_mins: 6,
   });
+
+  // Live sum of connected accounts' warmup-aware per-account caps — same
+  // formula the scheduler itself enforces, so this always matches reality
+  // instead of a stored number that can drift as accounts/health change.
+  const mailboxCapacityToday = (campaign?.campaign_accounts ?? [])
+    .map(ca => ca.account).filter(Boolean)
+    .filter(a => !a.warmup_paused && (a.health_score ?? 50) >= 35 && a.status !== 'error')
+    .reduce((sum, a) => sum + campaignDailyCap({
+      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0,
+      health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+    }), 0);
 
   function startEditSchedule() {
     if (!campaign) return;
     setScheduleError('');
     setScheduleForm({
       daily_limit: campaign.daily_limit ?? 50,
+      daily_limit_mode: campaign.daily_limit_mode === 'manual' ? 'manual' : 'auto',
       from_hour: normalizeTime(campaign.from_hour, '08:00'),
       to_hour: normalizeTime(campaign.to_hour, '18:00'),
       timezone: campaign.timezone || 'UTC',
@@ -275,6 +312,7 @@ export default function CampaignDetailPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           daily_limit: scheduleForm.daily_limit,
+          daily_limit_mode: scheduleForm.daily_limit_mode,
           from_hour: scheduleForm.from_hour,
           to_hour: scheduleForm.to_hour,
           timezone: scheduleForm.timezone,
@@ -354,14 +392,47 @@ export default function CampaignDetailPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {canToggle && (
-            <button onClick={toggleStatus} disabled={toggling}
-              className={`text-sm font-bold px-4 py-2 rounded-xl transition-colors ${
-                isActive
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/60'
-                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
-              }`}>
-              {toggling ? '...' : isActive ? 'Pause' : 'Resume'}
-            </button>
+            <div className="relative flex">
+              <button onClick={() => toggleStatus()} disabled={toggling}
+                className={`text-sm font-bold px-4 py-2 rounded-xl transition-colors ${isActive ? 'rounded-r-none' : campaign.status === 'paused' ? 'rounded-r-none' : ''} ${
+                  isActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/60'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                }`}>
+                {toggling ? '...' : isActive ? 'Pause' : 'Resume'}
+              </button>
+              {campaign.status === 'paused' && (
+                <>
+                  <button onClick={() => setResumeOptionsOpen(v => !v)} disabled={toggling}
+                    className="text-sm font-bold px-2 py-2 rounded-xl rounded-l-none border border-l-0 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                  {resumeOptionsOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 p-2 space-y-1">
+                      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-2 pt-1 pb-0.5">Resume options</p>
+                      <button onClick={() => toggleStatus('auto')} className="w-full text-left px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <p className="text-xs font-bold text-gray-800 dark:text-gray-100">Auto (recommended)</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">Spread only if the overdue backlog is bigger than a normal day can send</p>
+                      </button>
+                      <button onClick={() => toggleStatus('fast')} className="w-full text-left px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <p className="text-xs font-bold text-gray-800 dark:text-gray-100">Fast</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">Send the full overdue backlog as soon as capacity allows</p>
+                      </button>
+                      <div className="px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <p className="text-xs font-bold text-gray-800 dark:text-gray-100 mb-1">Spread over N days</p>
+                        <div className="flex items-center gap-2">
+                          <input type="number" min={1} max={14} value={spreadDaysInput}
+                            onChange={e => setSpreadDaysInput(e.target.value)}
+                            className="w-16 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-blue-500"/>
+                          <button onClick={() => toggleStatus('spread', Math.max(1, Math.min(14, parseInt(spreadDaysInput) || 3)))}
+                            className="text-xs font-bold text-blue-600 hover:underline">Apply</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
           <a href={`/api/campaigns/${id}/export`} download
             className="text-sm font-bold px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
@@ -612,12 +683,31 @@ export default function CampaignDetailPage() {
                   )}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Daily limit</label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" min={1} value={scheduleForm.daily_limit}
-                        onChange={e => setScheduleForm(f => ({ ...f, daily_limit: Number(e.target.value) || 1 }))}
-                        className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">emails/day</span>
+                    <div className="flex gap-2 mb-2">
+                      {(['auto', 'manual'] as const).map(mode => (
+                        <button key={mode} type="button" onClick={() => {
+                          if (mode === 'manual') setScheduleForm(f => ({ ...f, daily_limit: mailboxCapacityToday || f.daily_limit, daily_limit_mode: mode }));
+                          else setScheduleForm(f => ({ ...f, daily_limit_mode: mode }));
+                        }}
+                          className={`flex-1 text-xs font-bold rounded-xl px-3 py-2 border transition-colors ${
+                            scheduleForm.daily_limit_mode === mode
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}>
+                          {mode === 'auto' ? 'Auto (recommended)' : 'Manual'}
+                        </button>
+                      ))}
                     </div>
+                    {scheduleForm.daily_limit_mode === 'auto' ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">~<span className="font-bold text-gray-900 dark:text-white">{mailboxCapacityToday}</span>/day — the live sum of connected mailboxes' warmup-aware capacity.</p>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={1} value={scheduleForm.daily_limit}
+                          onChange={e => setScheduleForm(f => ({ ...f, daily_limit: Number(e.target.value) || 1 }))}
+                          className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">emails/day</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Send window</label>
@@ -687,7 +777,9 @@ export default function CampaignDetailPage() {
                   {[
                     {
                       label: 'Daily limit',
-                      value: `${campaign.daily_limit ?? 50} emails/day`,
+                      value: campaign.daily_limit_mode === 'manual'
+                        ? `${campaign.daily_limit ?? 50} emails/day (Manual)`
+                        : `~${mailboxCapacityToday} emails/day (Auto)`,
                     },
                     {
                       label: 'Send window',
@@ -721,12 +813,12 @@ export default function CampaignDetailPage() {
                       label: 'Leads total',
                       value: `${leads.length} leads${sent > 0 ? ` · ${sent} sent` : ''}`,
                     },
-                    ...(campaign.daily_limit && leads.length > 0 ? [{
+                    ...(leads.length > 0 ? [{
                       label: 'Est. completion',
                       value: (() => {
                         const steps = campaign.email_steps ?? [];
                         const totalSteps = steps.length;
-                        const dailyLimit = campaign.daily_limit ?? 50;
+                        const dailyLimit = Math.max(1, campaign.daily_limit_mode === 'manual' ? (campaign.daily_limit ?? 50) : mailboxCapacityToday);
                         // Total emails still to send across all leads × remaining steps
                         const totalEmailsLeft = leads.reduce((acc, l) => {
                           const done = l.current_step ?? 0;
@@ -749,6 +841,33 @@ export default function CampaignDetailPage() {
                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-right max-w-[60%]">{row.value}</span>
                     </div>
                   ))}
+                  {(() => {
+                    const campaignLimit = campaign.daily_limit_mode === 'manual' ? (campaign.daily_limit ?? 50) : mailboxCapacityToday;
+                    const effective = Math.min(mailboxCapacityToday, campaignLimit);
+                    const usedPct = effective > 0 ? Math.min(100, Math.round(((campaign.sent_today ?? 0) / effective) * 100)) : 0;
+                    return (
+                      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/40">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Capacity today</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Mailbox Capacity</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{mailboxCapacityToday}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Campaign Limit</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                              {campaign.daily_limit_mode === 'manual' ? campaignLimit : `Auto (${campaignLimit})`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Effective Sending</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{effective}</p>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">{campaign.sent_today ?? 0} / {effective} sent today ({usedPct}%)</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

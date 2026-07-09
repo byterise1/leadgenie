@@ -31,7 +31,7 @@ export async function GET() {
     const cm2: Record<string, number> = {}; (sr2 || []).forEach((s: { account_id: string }) => { cm2[s.account_id] = (cm2[s.account_id] || 0) + 1; });
     return NextResponse.json(safe2.map((acc: Record<string, unknown>) => {
       const sent = cm2[acc.id as string] || 0; const limit = (acc.daily_limit as number) || 50;
-      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, remaining_today: Math.max(0, limit - sent) };
+      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false, smtp_host: acc.smtp_host ?? null, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, remaining_today: Math.max(0, limit - sent) };
     }));
   }
 
@@ -59,6 +59,8 @@ export async function GET() {
       return {
         id: acc.id, email: acc.email, type: acc.type, status: acc.status,
         health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false,
+        warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false,
+        smtp_host: acc.smtp_host ?? null,
         sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at,
         sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal),
       };

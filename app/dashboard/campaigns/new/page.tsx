@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { bodyToHtml } from '@/lib/body-to-html';
+import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 
 const steps = ['Details', 'Sequence', 'Schedule', 'Review'];
 
@@ -16,6 +17,10 @@ type RealAccount = {
   daily_limit?: number;
   remaining_today?: number;
   sent_today_real?: number;
+  warmup_day?: number;
+  warmup_paused?: boolean;
+  warmup_enabled?: boolean;
+  smtp_host?: string | null;
 };
 
 type LeadList = { id: string; name: string; count: number };
@@ -90,8 +95,8 @@ export default function NewCampaignPage() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [allAccounts, setAllAccounts] = useState(false);
   const [dailyLimitStr, setDailyLimitStr] = useState('50');
+  const [dailyLimitMode, setDailyLimitMode] = useState<'auto' | 'manual'>('auto');
   const [selectedListId, setSelectedListId] = useState('');
-  const dailyLimit = Math.max(1, parseInt(dailyLimitStr) || 1);
   const [followupPriorityMode, setFollowupPriorityMode] = useState<'auto' | 'manual'>('auto');
   const [followupWeightPct, setFollowupWeightPct] = useState(90);
 
@@ -123,6 +128,17 @@ export default function NewCampaignPage() {
   const parsedMaxDelay = Math.max(parsedMinDelay + 1, parseInt(maxDelayStr) || 5);
   const delayOrderValid = (parseInt(minDelayStr) || 1) < (parseInt(maxDelayStr) || 5);
 
+  // Daily limit — needed by capacity helpers below
+  const dailyLimitAccountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
+  const dailyLimitAccountData = realAccounts.filter(a => dailyLimitAccountIds.includes(a.id));
+  // Live warmup-aware ceiling — same formula the scheduler itself enforces
+  // per account, summed across whichever accounts are currently selected.
+  const autoDailyLimit = Math.max(1, dailyLimitAccountData.reduce((sum, a) => sum + campaignDailyCap({
+    provider: detectProvider(a), warmupDay: a.warmup_day ?? 0,
+    health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+  }), 0));
+  const dailyLimit = dailyLimitMode === 'manual' ? Math.max(1, parseInt(dailyLimitStr) || 1) : autoDailyLimit;
+
   // Schedule capacity helpers
   const schedWindowMins = (() => {
     if (instantStart) return 24 * 60;
@@ -137,6 +153,24 @@ export default function NewCampaignPage() {
   const emailsPerDay = Math.min(dailyLimit, emailsPerWindowPerAccount * Math.max(1, numSelectedAccounts));
   const activeDayCount = activeDays.filter(Boolean).length;
   const daysToComplete = emailsPerDay > 0 && listLeadCount > 0 ? Math.ceil(listLeadCount / emailsPerDay) : null;
+
+  // Rough new-lead vs follow-up split for the forecast breakdown. No real
+  // campaign exists yet at this point, so there's no real due-followup count
+  // to weight against — Manual mode uses the user's own chosen weight; Auto
+  // mode assumes a light/typical backlog (matches the scheduler's own
+  // light-load default), clearly labelled as an estimate either way.
+  const followupSharePct = followupPriorityMode === 'manual' ? followupWeightPct : 40;
+  const followupsPerDayEst = Math.round(emailsPerDay * followupSharePct / 100);
+  const newLeadsPerDayEst = Math.max(0, emailsPerDay - followupsPerDayEst);
+
+  // Side-by-side "what if" comparison — same math, with a couple more
+  // mailboxes added, so the user can see the real payoff of connecting more
+  // accounts before committing to today's setup.
+  const EXTRA_MAILBOXES_SUGGESTED = 2;
+  const avgCapPerAccount = numSelectedAccounts > 0 ? autoDailyLimit / numSelectedAccounts : 0;
+  const withExtraDailyLimit = dailyLimitMode === 'manual' ? dailyLimit : Math.round(autoDailyLimit + EXTRA_MAILBOXES_SUGGESTED * avgCapPerAccount);
+  const withExtraEmailsPerDay = Math.min(withExtraDailyLimit, emailsPerWindowPerAccount * Math.max(1, numSelectedAccounts + EXTRA_MAILBOXES_SUGGESTED));
+  const withExtraDaysToComplete = withExtraEmailsPerDay > 0 && listLeadCount > 0 ? Math.ceil(listLeadCount / withExtraEmailsPerDay) : null;
 
   const validateStep = (s: number): string[] => {
     const errs: string[] = [];
@@ -193,6 +227,7 @@ export default function NewCampaignPage() {
             if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
             if (d.selectedListId) setSelectedListId(d.selectedListId);
             if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
+            if (d.dailyLimitMode === 'manual' || d.dailyLimitMode === 'auto') setDailyLimitMode(d.dailyLimitMode);
             if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
             if (d.fromTime) setFromTime(d.fromTime);
             if (d.toTime) setToTime(d.toTime);
@@ -248,7 +283,7 @@ export default function NewCampaignPage() {
 
   // Keep formRef in sync so the unmount cleanup can read latest state
   useEffect(() => {
-    formRef.current = { name, goal, fromName, emails, selectedAccounts, allAccounts, selectedListId, dailyLimitStr, activeDays, fromTime, toTime, timezone, startDate, minDelayStr, maxDelayStr, instantStart };
+    formRef.current = { name, goal, fromName, emails, selectedAccounts, allAccounts, selectedListId, dailyLimitStr, dailyLimitMode, activeDays, fromTime, toTime, timezone, startDate, minDelayStr, maxDelayStr, instantStart };
   });
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
@@ -275,9 +310,8 @@ export default function NewCampaignPage() {
   const okAccounts = realAccounts.filter(a => a.status !== 'error');
   const activeAccountCount = allAccounts ? okAccounts.length : selectedAccounts.filter(id => okAccounts.some(a => a.id === id)).length;
 
-  // Capacity calculation for review step
-  const activeAccountIds = allAccounts ? realAccounts.map(a => a.id) : selectedAccounts;
-  const selectedAccountData = realAccounts.filter(a => activeAccountIds.includes(a.id));
+  // Capacity calculation for review step (same account set as dailyLimitAccountData above)
+  const selectedAccountData = dailyLimitAccountData;
   const totalRemainingToday = selectedAccountData.reduce((sum, a) => sum + (a.remaining_today ?? a.daily_limit ?? 50), 0);
 
   return (
@@ -468,16 +502,39 @@ export default function NewCampaignPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Daily Email Limit</label>
-                <span className="text-xs text-gray-400 dark:text-gray-500">Across all selected accounts</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Can be changed later from the campaign page</span>
               </div>
-              <div className="flex items-center gap-3">
-                <input type="number" value={dailyLimitStr}
-                  onChange={e => setDailyLimitStr(e.target.value)}
-                  onBlur={() => setDailyLimitStr(String(Math.max(1, parseInt(dailyLimitStr) || 1)))}
-                  className="w-36 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
-                <span className="text-sm text-gray-400 dark:text-gray-500">emails / day</span>
+              <div className="flex gap-2 mb-2">
+                {(['auto', 'manual'] as const).map(mode => (
+                  <button key={mode} type="button" onClick={() => {
+                    if (mode === 'manual') setDailyLimitStr(String(autoDailyLimit));
+                    setDailyLimitMode(mode);
+                  }}
+                    className={`flex-1 text-xs font-bold rounded-xl px-3 py-2.5 border transition-colors ${
+                      dailyLimitMode === mode
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}>
+                    {mode === 'auto' ? 'Auto (recommended)' : 'Manual'}
+                  </button>
+                ))}
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Recommended: 50–200/day per account to protect deliverability.</p>
+              {dailyLimitMode === 'auto' ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  ~<span className="font-bold text-gray-900 dark:text-white">{autoDailyLimit}</span>/day based on {selectedAccountData.length || 0} connected account{selectedAccountData.length !== 1 ? 's' : ''} — always matches each mailbox's live warmup-aware capacity, no manual upkeep needed.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <input type="number" value={dailyLimitStr}
+                      onChange={e => setDailyLimitStr(e.target.value)}
+                      onBlur={() => setDailyLimitStr(String(Math.max(1, parseInt(dailyLimitStr) || 1)))}
+                      className="w-36 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+                    <span className="text-sm text-gray-400 dark:text-gray-500">emails / day</span>
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Still capped by each mailbox's real warmup-aware capacity — this is a ceiling, not a guarantee.</p>
+                </>
+              )}
             </div>
 
             {/* Follow-up Priority */}
@@ -842,7 +899,7 @@ export default function NewCampaignPage() {
                   { label: 'Goal', value: goal },
                   { label: 'Lead List', value: selectedListData ? `${selectedListData.name} (${listLeadCount} leads)` : '⚠️ No list selected' },
                   { label: 'Sending Accounts', value: activeAccountCount > 0 ? `${activeAccountCount} account${activeAccountCount > 1 ? 's' : ''}` : '⚠️ None selected' },
-                  { label: 'Daily Limit', value: `${dailyLimit} emails/day` },
+                  { label: 'Daily Limit', value: `${dailyLimit} emails/day${dailyLimitMode === 'auto' ? ' (Auto)' : ''}` },
                   { label: 'Sending Window', value: `${fromTime} – ${toTime}` },
                   { label: 'Email Delay', value: `${minDelayStr}–${maxDelayStr} min (randomised)` },
                   { label: 'Email Steps', value: `${emails.length} email${emails.length > 1 ? 's' : ''} in sequence` },
@@ -863,7 +920,7 @@ export default function NewCampaignPage() {
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                  <span className="text-sm font-bold text-blue-800">Campaign Capacity Estimate</span>
+                  <span className="text-sm font-bold text-blue-800">Campaign Forecast</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
@@ -881,7 +938,7 @@ export default function NewCampaignPage() {
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Per Day</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerDay} emails</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × limit {dailyLimit}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × warmup-aware limit {dailyLimit}</p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Completes In</p>
@@ -897,6 +954,39 @@ export default function NewCampaignPage() {
                     Will take ~{daysToComplete} days. Increase daily limit or shorten delay to complete sooner.
                   </p>
                 )}
+
+                <div className="pt-2 border-t border-blue-200">
+                  <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-1">Estimated breakdown (once running)</p>
+                  <div className="flex items-center justify-between text-xs text-blue-800">
+                    <span>New leads/day</span><span className="font-bold">~{newLeadsPerDayEst}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-blue-800">
+                    <span>Follow-ups/day</span><span className="font-bold">~{followupsPerDayEst}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-blue-900 font-bold pt-0.5 border-t border-blue-100 mt-0.5">
+                    <span>Total effective/day</span><span>~{emailsPerDay}</span>
+                  </div>
+                  <p className="text-[10px] text-blue-400 mt-0.5">
+                    {followupPriorityMode === 'manual' ? 'Based on your manual Follow-up Priority weight.' : 'Rough estimate for a light backlog — Auto priority adjusts this live once leads are enrolled.'}
+                  </p>
+                </div>
+
+                {numSelectedAccounts > 0 && listLeadCount > 0 && withExtraDaysToComplete !== null && daysToComplete !== null && withExtraDaysToComplete < daysToComplete && (
+                  <div className="pt-2 border-t border-blue-200">
+                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-1.5">With {EXTRA_MAILBOXES_SUGGESTED} more mailboxes</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Current setup</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">completes ~{daysToComplete}d</p>
+                      </div>
+                      <div className="bg-white rounded-lg px-3 py-2 border border-emerald-200">
+                        <p className="text-[10px] text-emerald-600 uppercase tracking-wide">+{EXTRA_MAILBOXES_SUGGESTED} mailboxes</p>
+                        <p className="text-sm font-bold text-emerald-700 mt-0.5">completes ~{withExtraDaysToComplete}d</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-blue-200 space-y-1">
                   <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Today</p>
                   {selectedAccountData.map(acc => (
@@ -954,6 +1044,7 @@ export default function NewCampaignPage() {
                       goal,
                       from_name: fromName.trim() || null,
                       daily_limit: dailyLimit,
+                      daily_limit_mode: dailyLimitMode,
                       from_hour: instantStart ? '00:00' : fromTime,
                       to_hour: instantStart ? '23:59' : toTime,
                       min_delay_secs: Math.max(1, parseInt(minDelayStr) || 1) * 60,

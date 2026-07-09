@@ -138,7 +138,10 @@ export async function register() {
       }
 
       // Enforce campaign daily limit across ALL steps (not just step 0)
-      const campaignDailyLimit = campaign.daily_limit ?? 50;
+      // Auto mode: no separate campaign-level ceiling — bounded solely by the
+      // per-account daily-limit check above (already warmup/health-aware).
+      // Manual mode: today's behavior, a stored hard ceiling.
+      const campaignDailyLimit = campaign.daily_limit_mode === 'manual' ? (campaign.daily_limit ?? 50) : Infinity;
       const { count: campaignSentToday } = await supabase
         .from('sent_emails')
         .select('id', { count: 'exact', head: true })
@@ -400,10 +403,27 @@ export async function register() {
         if (code === 535 || code === 401 || err.code === 'EAUTH') {
           await supabase.from('email_accounts').update({ status: 'error' }).eq('id', account.id);
           await supabase.from('email_account_events').insert({ account_id: account.id, event_type: 'auth_error', meta: { message: err.message } });
+
+          // Name the specific healthy sibling mailbox absorbing this campaign's
+          // sends, rather than a vague "other mailboxes will pick up" — same
+          // selection logic the scheduler/retry route use, so the name is
+          // actually accurate to what happens next.
+          const others = accounts.filter((a: any) => a.id !== account.id);
+          const { computeAccountRemaining } = await import('./lib/campaign-scheduling');
+          const remaining = others.length ? await computeAccountRemaining(others) : new Map();
+          const takeoverId = [...remaining.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+          const takeoverAccount = takeoverId ? others.find((a: any) => a.id === takeoverId) : null;
+          const routingMsg = takeoverAccount
+            ? ` Sends are automatically rerouting to ${takeoverAccount.email}.`
+            : others.length
+              ? ` No other healthy sending account is currently available — sends are paused until this is resolved.`
+              : ` This is the only sending account on this campaign — sends are paused until this is resolved.`;
+
           await supabase.from('notifications').insert({
             user_id: campaign.user_id,
-            message: `Sending account ${account.email} has an error: ${err.message}`,
+            message: `Sending account ${account.email} has an error: ${err.message}.${routingMsg}`,
             type: 'error',
+            link: `/dashboard/campaigns/${campaign.id}`,
           });
           console.error(`🔐 Auth/config failure for ${account.email}: ${err.message}`);
           return;
@@ -494,10 +514,29 @@ export async function register() {
       new SyncWorker('campaign-scheduler', async () => {
         const { data: activeCampaigns } = await supabase
           .from('campaigns')
-          .select('id, name, user_id, daily_limit, from_hour, to_hour, timezone, active_days, min_delay_secs, max_delay_secs, followup_priority_mode, followup_weight_pct, campaign_accounts(account:email_accounts(*))')
+          .select('id, name, user_id, daily_limit, daily_limit_mode, from_hour, to_hour, timezone, active_days, min_delay_secs, max_delay_secs, followup_priority_mode, followup_weight_pct, campaign_accounts(account:email_accounts(*))')
           .eq('status', 'active');
 
         if (!activeCampaigns?.length) return;
+
+        // Per-account send pacing, persisted to email_accounts.next_dispatch_at
+        // so it survives across this worker's 2-minute cycles (previously a
+        // single cursorMs reset to 0 every cycle, which meant sends landed
+        // roughly every 2 minutes regardless of the campaign's configured
+        // delay, and every mailbox in a campaign was serialized onto one
+        // shared clock instead of pacing independently). Shared across every
+        // campaign in this pass so two campaigns using the same mailbox can't
+        // double-book it. Seeded lazily from the DB the first time an account
+        // is touched this pass.
+        const dispatchReservation = new Map<string, number>();
+        const SAFE_CYCLE_SPAN_MS = 100_000; // cycle is 120s; leaves a 20s buffer
+        const reservationFor = (acc: any): number => {
+          if (!dispatchReservation.has(acc.id)) {
+            dispatchReservation.set(acc.id, acc.next_dispatch_at ? new Date(acc.next_dispatch_at).getTime() : 0);
+          }
+          return dispatchReservation.get(acc.id)!;
+        };
+        const isPacingEligible = (acc: any) => reservationFor(acc) - Date.now() <= SAFE_CYCLE_SPAN_MS;
 
         for (const campaign of activeCampaigns as any[]) {
           try {
@@ -505,6 +544,7 @@ export async function register() {
 
             const linkedAccounts = (campaign.campaign_accounts ?? []).map((ca: any) => ca.account).filter(Boolean);
             if (!linkedAccounts.length) continue;
+            const accountsById = new Map<string, any>(linkedAccounts.map((a: any) => [a.id, a]));
 
             const todayUTC = new Date();
             todayUTC.setUTCHours(0, 0, 0, 0);
@@ -532,7 +572,12 @@ export async function register() {
             const { count: campaignSentToday } = await supabase
               .from('sent_emails').select('id', { count: 'exact', head: true })
               .eq('campaign_id', campaign.id).gte('sent_at', todayUTC.toISOString());
-            const campaignRemaining = Math.max(0, (campaign.daily_limit ?? 50) - (campaignSentToday ?? 0));
+            // Auto mode: the live sum of connected accounts' warmup-aware capacity
+            // IS the ceiling — no stored number to drift out of sync as accounts
+            // are added/removed or health changes. Manual mode: today's behavior.
+            const campaignRemaining = campaign.daily_limit_mode === 'manual'
+              ? Math.max(0, (campaign.daily_limit ?? 50) - (campaignSentToday ?? 0))
+              : totalAccountCapacity;
 
             const remainingCapacity = Math.min(totalAccountCapacity, campaignRemaining);
             if (remainingCapacity <= 0) continue;
@@ -568,56 +613,79 @@ export async function register() {
             });
             if (followupsToSend.length === 0 && newToSend.length === 0) continue;
 
-            // Stagger sends across the next stretch of this cycle with the campaign's
-            // own configured gap — same "don't blast simultaneously" behavior as before.
-            // Capped well under the 2-minute cycle interval: this scheduler tick runs
-            // again in 2 minutes regardless, so anything that wouldn't fit in a safe
-            // window is simply left for the next tick to pick up (still eligible, not
-            // lost, not skipped) rather than let its stagger delay run past the point
-            // where the NEXT cycle's own near-zero-delay jobs would collide with it in
-            // real time — that collision is what caused two different leads to fire
-            // just 7 seconds apart in production despite a 60s minimum gap configured.
+            // Pace each mailbox independently using its own persisted reservation
+            // (dispatchReservation/next_dispatch_at) rather than a single shared
+            // clock — every account in this campaign can be paced at the
+            // campaign's configured gap AT THE SAME TIME, instead of every
+            // mailbox being serialized onto one global cursor (the root cause of
+            // both "sends every ~2min instead of the configured 10-20min gap"
+            // and multi-mailbox campaigns never actually using their combined
+            // capacity). An account not yet due within this cycle's safe window
+            // is simply skipped — its lead stays due and is picked up by a later
+            // cycle once the account's cooldown has actually elapsed.
             const minDelayMs = Math.max(10_000, (campaign.min_delay_secs || 60) * 1000);
             const maxDelayMs = Math.max(minDelayMs + 1000, (campaign.max_delay_secs || 300) * 1000);
-            const SAFE_CYCLE_SPAN_MS = 100_000; // cycle is 120s; leaves a 20s buffer
-            let cursorMs = 0;
             const jobs: { name: string; data: Record<string, unknown>; opts: Record<string, unknown> }[] = [];
+            const touchedAccountIds = new Set<string>();
+
+            const reserve = (accId: string): number => {
+              const acc = accountsById.get(accId);
+              const now = Date.now();
+              const reservation = reservationFor(acc);
+              const delay = Math.max(0, reservation - now);
+              const nextReservation = Math.max(now, reservation) + minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
+              dispatchReservation.set(accId, nextReservation);
+              touchedAccountIds.add(accId);
+              return delay;
+            };
 
             for (const cl of followupsToSend as any[]) {
-              if (cursorMs > SAFE_CYCLE_SPAN_MS) break;
-              // Locked mailbox for this thread. Falls back to whichever account
-              // currently has the most room only in the edge case where a lead
-              // somehow reached a follow-up without a persisted account_id.
-              const fallback = [...accountRemaining.entries()].sort((a, b) => b[1] - a[1])[0];
-              const accId: string | undefined = (cl.account_id && accountRemaining.has(cl.account_id)) ? cl.account_id : fallback?.[0];
+              // Locked mailbox for this thread, as long as it's still pacing-eligible
+              // this cycle. Falls back to whichever eligible account currently has
+              // the most room, either because the sticky one is still cooling down
+              // or because the lead somehow reached a follow-up with no persisted
+              // account_id.
+              const stickyId = cl.account_id && accountRemaining.has(cl.account_id) && isPacingEligible(accountsById.get(cl.account_id))
+                ? cl.account_id : undefined;
+              const fallback = [...accountRemaining.entries()]
+                .filter(([id]) => isPacingEligible(accountsById.get(id)))
+                .sort((a, b) => b[1] - a[1])[0];
+              const accId: string | undefined = stickyId ?? fallback?.[0];
               const room = accId ? accountRemaining.get(accId) : undefined;
               if (!accId || !room || room <= 0) continue;
               accountRemaining.set(accId, room - 1);
               jobs.push({
                 name: 'send',
                 data: { campaignLeadId: cl.id, stepNumber: cl.current_step, accountId: accId },
-                opts: { delay: cursorMs, attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
+                opts: { delay: reserve(accId), attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
               });
-              cursorMs += minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
             }
 
             for (const cl of newToSend as any[]) {
-              if (cursorMs > SAFE_CYCLE_SPAN_MS) break;
-              // Least-loaded eligible mailbox gets the new lead — avoids the old
-              // random assignment's chance of overbooking a mailbox past its cap.
-              const [accId, room] = [...accountRemaining.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+              // Least-loaded pacing-eligible mailbox gets the new lead — avoids
+              // overbooking a mailbox past its cap or past its cooldown.
+              const [accId, room] = [...accountRemaining.entries()]
+                .filter(([id]) => isPacingEligible(accountsById.get(id)))
+                .sort((a, b) => b[1] - a[1])[0] ?? [];
               if (!accId || !room || room <= 0) continue;
               accountRemaining.set(accId, room - 1);
               jobs.push({
                 name: 'send',
                 data: { campaignLeadId: cl.id, stepNumber: 0, accountId: accId },
-                opts: { delay: cursorMs, attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
+                opts: { delay: reserve(accId), attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
               });
-              cursorMs += minDelayMs + Math.floor(Math.random() * (maxDelayMs - minDelayMs));
             }
 
             if (jobs.length) {
               await schedulerQueue.addBulk(jobs as any);
+              if (touchedAccountIds.size) {
+                await Promise.all([...touchedAccountIds].map(async accId => {
+                  const { error } = await supabase.from('email_accounts')
+                    .update({ next_dispatch_at: new Date(dispatchReservation.get(accId)!).toISOString() })
+                    .eq('id', accId);
+                  if (error) console.error(`[campaign-scheduler] failed to persist pacing for account ${accId} (has the 20260710_pacing_and_auto_limit migration run?):`, error.message);
+                }));
+              }
               console.log(`[campaign-scheduler] "${campaign.name ?? campaign.id}": ${followupsToSend.length} followup(s) + ${newToSend.length} new queued (weight=${weightPct}%, capacity=${remainingCapacity})`);
             }
           } catch (e: any) {
@@ -1518,9 +1586,37 @@ export async function register() {
             const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow);
             const willPause = pauseCheck.pause;
             if (willPause && !account.warmup_paused) {
+              // Name the specific healthy sibling account absorbing each linked
+              // active campaign's sends, same selection logic as the scheduler/
+              // retry route — only runs on this pause transition (rare), not the
+              // routine 6h cycle, so the extra lookups are cheap.
+              const { data: links } = await supabase
+                .from('campaign_accounts')
+                .select('campaign:campaigns(id, name, status, campaign_accounts(account:email_accounts(*)))')
+                .eq('account_id', account.id);
+              const activeCampaigns = (links ?? [])
+                .map((l: any) => l.campaign)
+                .filter((c: any) => c && c.status === 'active');
+
+              let routingMsg = '';
+              if (activeCampaigns.length) {
+                const { computeAccountRemaining } = await import('./lib/campaign-scheduling');
+                const perCampaign: string[] = [];
+                for (const camp of activeCampaigns as any[]) {
+                  const siblings = (camp.campaign_accounts ?? []).map((ca: any) => ca.account).filter((a: any) => a && a.id !== account.id);
+                  const remaining = siblings.length ? await computeAccountRemaining(siblings) : new Map();
+                  const takeoverId = [...remaining.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+                  const takeover = takeoverId ? siblings.find((a: any) => a.id === takeoverId) : null;
+                  perCampaign.push(takeover
+                    ? `"${camp.name}" will route to ${takeover.email}`
+                    : `"${camp.name}" has no other healthy account — sends will pause until recovery`);
+                }
+                routingMsg = ` ${perCampaign.join('; ')}.`;
+              }
+
               await supabase.from('notifications').insert({
                 user_id: account.user_id,
-                message: `${account.email} warmup paused: ${pauseCheck.reason}`,
+                message: `${account.email} warmup paused: ${pauseCheck.reason}.${routingMsg}`,
                 type: 'warning',
               });
             }

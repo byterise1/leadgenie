@@ -3,14 +3,16 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
-import { DELAY_UNIT_MS } from '@/lib/campaign-scheduling';
+import { DELAY_UNIT_MS, planBacklogSmoothing } from '@/lib/campaign-scheduling';
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
+  const body: { resumeMode?: 'auto' | 'fast' | 'spread'; spreadDays?: number } = await req.json().catch(() => ({}));
+  const resumeMode = body.resumeMode === 'fast' || body.resumeMode === 'spread' ? body.resumeMode : 'auto';
 
   const rate = await checkRateLimit(user.id, 'campaign_start');
   if (!rate.allowed) {
@@ -52,6 +54,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const accountWarnings: string[] = [];
+  let totalAccountCapacityPerDay = 0;
   const safeAccounts = (linkedAccounts || []).filter(a => {
     if (a.warmup_paused) {
       accountWarnings.push(`${a.email} is paused (${a.warmup_pause_reason || 'reputation issue'}) — excluded until it recovers.`);
@@ -68,6 +71,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       accountWarnings.push(`${a.email} isn't cleared to send real campaigns yet — excluded.`);
       return false;
     }
+    totalAccountCapacityPerDay += cap;
     return true;
   });
 
@@ -128,6 +132,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
 
   // Only reset stats when starting fresh from draft, not on resume
+  const wasPaused = campaign.status === 'paused';
   const statsReset = campaign.status === 'draft' ? { total_sent: 0, total_opened: 0, total_replied: 0 } : {};
   const { error: updateErr } = await supabaseAdmin
     .from('campaigns')
@@ -149,18 +154,25 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const stepDelayDays: Record<number, number> = {};
   (stepsData || []).forEach((s: any) => { stepDelayDays[s.step_number] = s.delay_days ?? 1; });
 
-  const backfillRows = (campaignLeads as any[])
+  const naturalDue = (campaignLeads as any[])
     .filter(cl => cl.status === 'active' && !cl.next_send_at)
     .map(cl => {
       const step = cl.current_step ?? 1;
       const delayDays = stepDelayDays[step] ?? 1;
       const lastSentMs = cl.last_sent_at ? new Date(cl.last_sent_at).getTime() : Date.now();
-      const dueMs = lastSentMs + delayDays * DELAY_UNIT_MS;
-      return { id: cl.id, next_send_at: new Date(dueMs).toISOString() };
+      return { id: cl.id, dueAt: lastSentMs + delayDays * DELAY_UNIT_MS };
     });
 
-  for (const row of backfillRows) {
-    await supabaseAdmin.from('campaign_leads').update({ next_send_at: row.next_send_at }).eq('id', row.id);
+  // Only smooth on a genuine resume (paused -> active) — first launch from
+  // draft has no backlog to speak of, and real send-time capacity is still
+  // fully re-checked every cycle by the scheduler regardless, so this only
+  // ever pushes next_send_at further into the future, never sooner.
+  const smoothed = wasPaused
+    ? planBacklogSmoothing({ leads: naturalDue, dailyCapacity: totalAccountCapacityPerDay, mode: resumeMode, spreadDays: body.spreadDays })
+    : new Map(naturalDue.map(l => [l.id, l.dueAt]));
+
+  for (const [leadId, dueMs] of smoothed) {
+    await supabaseAdmin.from('campaign_leads').update({ next_send_at: new Date(dueMs).toISOString() }).eq('id', leadId);
   }
 
   return NextResponse.json({

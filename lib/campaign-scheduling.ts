@@ -172,6 +172,97 @@ export function allocateCapacity<F, N>(opts: {
   return { followupsToSend, newToSend };
 }
 
+// ── Backlog smoothing on resume ─────────────────────────────────────────────
+// A campaign paused for a while can build up a stack of follow-ups whose
+// next_send_at fell in the past. Dumping all of them as "due now" on resume
+// just blows past the account/campaign daily caps on the very next scheduler
+// cycle and gets deferred piecemeal anyway — this instead spreads a backlog
+// that's genuinely bigger than a normal day can absorb across a few days
+// (shuffled so leads aren't clustered by original order, e.g. all of one
+// account's leads landing on the same day). A small backlog that fits within
+// a day's normal capacity is left completely untouched — no manufactured delay.
+export type BacklogLead = { id: string; dueAt: number };
+
+export function planBacklogSmoothing(opts: {
+  leads: BacklogLead[];
+  dailyCapacity: number;
+  mode: 'auto' | 'fast' | 'spread';
+  spreadDays?: number;
+  now?: number;
+}): Map<string, number> {
+  const { leads, dailyCapacity, mode, now = Date.now() } = opts;
+  const result = new Map<string, number>();
+  if (mode === 'fast' || leads.length === 0) {
+    for (const l of leads) result.set(l.id, l.dueAt);
+    return result;
+  }
+
+  const days = mode === 'spread'
+    ? Math.max(1, Math.min(14, opts.spreadDays ?? 3))
+    : Math.max(1, Math.ceil(leads.length / Math.max(1, dailyCapacity)));
+
+  if (mode === 'auto' && days <= 1) {
+    for (const l of leads) result.set(l.id, l.dueAt);
+    return result;
+  }
+
+  const shuffled = [...leads].sort(() => Math.random() - 0.5);
+  shuffled.forEach((l, i) => {
+    const dayOffset = i % days;
+    result.set(l.id, dayOffset === 0 ? l.dueAt : now + dayOffset * DELAY_UNIT_MS + jitterMs());
+  });
+  return result;
+}
+
+// ── Health/pacing-aware account selection (retry-lead) ─────────────────────
+// Mirrors the exact filters the campaign-scheduler worker itself applies
+// (health, warmup pause, error status, today's real remaining capacity, and
+// the same next_dispatch_at pacing cooldown it now persists) so a manual
+// retry can never send from an account the automated system would refuse to
+// use, and never bypasses the configured send-delay. Deliberately a separate
+// function rather than a shared refactor of the scheduler's own inline
+// logic, to avoid touching the scheduler's hot loop for anything beyond the
+// pacing fix itself.
+const PACING_SAFE_WINDOW_MS = 100_000;
+
+export type RetryAccount = {
+  id: string;
+  type: string;
+  smtp_host?: string | null;
+  status?: string | null;
+  warmup_paused?: boolean | null;
+  health_score?: number | null;
+  warmup_day?: number | null;
+  warmup_enabled?: boolean | null;
+  daily_limit?: number | null;
+  next_dispatch_at?: string | null;
+};
+
+export async function computeAccountRemaining(
+  accounts: RetryAccount[],
+): Promise<Map<string, number>> {
+  const { detectProvider, campaignDailyCap } = await import('@/lib/warmup-health');
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+
+  const remaining = new Map<string, number>();
+  for (const acc of accounts) {
+    if (acc.warmup_paused || (acc.health_score ?? 50) < 35 || acc.status === 'error') continue;
+    if (acc.next_dispatch_at && new Date(acc.next_dispatch_at).getTime() - Date.now() > PACING_SAFE_WINDOW_MS) continue;
+    const cap = campaignDailyCap({
+      provider: detectProvider(acc), warmupDay: acc.warmup_day ?? 0,
+      health: acc.health_score ?? 50, warmupComplete: !acc.warmup_enabled,
+    });
+    if (cap === 0) continue;
+    const { count: sentToday } = await supabaseAdmin
+      .from('sent_emails').select('id', { count: 'exact', head: true })
+      .eq('account_id', acc.id).gte('sent_at', todayUTC.toISOString());
+    const rem = Math.max(0, Math.min(acc.daily_limit ?? 50, cap) - (sentToday ?? 0));
+    if (rem > 0) remaining.set(acc.id, rem);
+  }
+  return remaining;
+}
+
 // 1 unit = 1 real day. Shared by the start route (backfilling next_send_at
 // on resume) and the campaign-scheduler worker (computing the next
 // follow-up's due time). Set to 60*1000 (1 minute) during testing to
