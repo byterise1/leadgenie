@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
   }
 
   const forwardedHost = request.headers.get('x-forwarded-host');
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
-  const { origin } = new URL(request.url);
-  const siteOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin;
+  const { host } = new URL(request.url);
+  // Google's registered redirect URIs are all https - always build the
+  // callback URL as https regardless of the protocol the browser actually
+  // used to reach this route, or a plain-http visit produces a redirect_uri
+  // that can never match Google's console config (redirect_uri_mismatch).
+  const siteOrigin = `https://${forwardedHost || host}`;
 
   const redirectUri = `${siteOrigin}/api/admin/warmup/oauth/google/callback`;
 

@@ -8,9 +8,10 @@ export async function GET(request: NextRequest) {
   const oauthError = searchParams.get('error');
 
   const forwardedHost = request.headers.get('x-forwarded-host');
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
-  const { origin } = new URL(request.url);
-  const siteOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin;
+  const { host } = new URL(request.url);
+  // Must exactly match the https redirect_uri sent to Google in the initial
+  // auth request, or the token exchange fails with redirect_uri_mismatch.
+  const siteOrigin = `https://${forwardedHost || host}`;
 
   const redirectUri = `${siteOrigin}/api/admin/warmup/oauth/google/callback`;
   const failUrl = `${siteOrigin}/admin/warmup?error=oauth_failed`;
