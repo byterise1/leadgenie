@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
 
   if (existingAccount) {
     await supabaseAdmin.from('email_accounts').update({
+      type: 'gmail-oauth',
       smtp_pass: tokens.refresh_token,
       smtp_user: info.email,
       status: 'warming',
