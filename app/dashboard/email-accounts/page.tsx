@@ -493,6 +493,7 @@ const CONNECT_OPTIONS = [
 export default function EmailAccountsPage() {
   const router = useRouter();
   const [step, setStep] = useState<ConnectStep>(null);
+  const [alreadyWarmedUp, setAlreadyWarmedUp] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   // Explicit type instead of guessing success/error from substrings in the
@@ -553,7 +554,7 @@ export default function EmailAccountsPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  useEffect(() => { setAddError(''); }, [step]);
+  useEffect(() => { setAddError(''); if (!step) setAlreadyWarmedUp(false); }, [step]);
 
   const [connecting, setConnecting] = useState(false);
 
@@ -565,7 +566,7 @@ export default function EmailAccountsPage() {
     const res = await fetch('/api/email-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, email, ...extra }),
+      body: JSON.stringify({ type, email, already_warmed_up: alreadyWarmedUp, ...extra }),
     });
     const data = await res.json();
 
@@ -881,6 +882,13 @@ export default function EmailAccountsPage() {
 
               {step === 'choose' && (
                 <div className="space-y-2.5">
+                  <label className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 cursor-pointer">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">This mailbox is already warmed up</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Skips the 14-day ramp — starts at a healthy score instead of the neutral default, and keeps updating automatically from real sending activity.</p>
+                    </div>
+                    <input type="checkbox" checked={alreadyWarmedUp} onChange={e => setAlreadyWarmedUp(e.target.checked)} className="w-4 h-4 rounded accent-emerald-600 shrink-0 ml-3"/>
+                  </label>
                   {CONNECT_OPTIONS.map(opt => (
                     <button key={opt.id} onClick={() => setStep(opt.id)}
                       className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
@@ -904,10 +912,13 @@ export default function EmailAccountsPage() {
                     {CONNECT_OPTIONS[0].icon}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">You'll be redirected to Google to authorise access.</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">We only request permission to send email on your behalf.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">We only request permission to send email on your behalf.</p>
+                  {alreadyWarmedUp && (
+                    <p className="text-xs text-emerald-600 font-medium mb-4">✓ Already warmed up — will skip the ramp</p>
+                  )}
                   <div className="flex gap-2">
                     <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
-                    <a href="/api/email-accounts/oauth/google" target="_blank" rel="noopener noreferrer"
+                    <a href={`/api/email-accounts/oauth/google${alreadyWarmedUp ? '?already_warmed_up=1' : ''}`} target="_blank" rel="noopener noreferrer"
                       className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors text-center">
                       Connect with Google
                     </a>

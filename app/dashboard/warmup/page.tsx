@@ -9,6 +9,7 @@ type WarmupAccount = {
   email: string;
   type: string;
   warmup_enabled: boolean;
+  already_warmed_up?: boolean;
   warmup_day: number;
   warmup_target: number;
   warmup_emails_sent: number;
@@ -422,6 +423,12 @@ export default function WarmupPage() {
                         {(() => {
                           const tgt = acc.warmup_target ?? 30;
                           const d = acc.warmup_day ?? 0;
+                          if (acc.already_warmed_up) return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-semibold text-emerald-600">✓ Already warmed up</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500">Ramp skipped — full capacity, score still live</span>
+                            </div>
+                          );
                           if (acc.warmup_enabled && d < tgt) return <RampBar day={d} target={tgt}/>;
                           if (acc.warmup_enabled && d >= tgt) return (
                             <div className="flex flex-col gap-0.5">
@@ -567,6 +574,9 @@ export default function WarmupPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.email}</p>
+                      {acc.already_warmed_up && (
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5 shrink-0">✓ already warmed up</span>
+                      )}
                       {!acc.warmup_enabled && (
                         <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 shrink-0">warmup off</span>
                       )}

@@ -101,7 +101,8 @@ export async function register() {
         provider: detectProvider(account),
         warmupDay: account.warmup_day ?? 0,
         health: account.health_score ?? 50,
-        warmupComplete: !account.warmup_enabled,
+        warmupEnabled: !!account.warmup_enabled,
+        alreadyWarmedUp: !!account.already_warmed_up,
       });
       const accountDailyLimit = account.warmup_paused ? 0 : Math.min(account.daily_limit ?? 50, adaptiveCap);
       if ((sentTodayCount || 0) >= accountDailyLimit) {
@@ -564,7 +565,7 @@ export async function register() {
               if (acc.warmup_paused || (acc.health_score ?? 50) < 35 || acc.status === 'error') continue;
               const cap = campaignDailyCap({
                 provider: detectProvider(acc), warmupDay: acc.warmup_day ?? 0,
-                health: acc.health_score ?? 50, warmupComplete: !acc.warmup_enabled,
+                health: acc.health_score ?? 50, warmupEnabled: !!acc.warmup_enabled, alreadyWarmedUp: !!acc.already_warmed_up,
               });
               if (cap === 0) continue;
               const { count: sentToday } = await supabase

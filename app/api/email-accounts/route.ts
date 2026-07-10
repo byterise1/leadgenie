@@ -18,7 +18,8 @@ function effectiveDailyLimit(acc: Record<string, unknown>): number {
     provider: detectProvider(acc as { type: string; smtp_host?: string | null }),
     warmupDay: (acc.warmup_day as number) ?? 0,
     health: (acc.health_score as number) ?? 50,
-    warmupComplete: !(acc.warmup_enabled ?? false),
+    warmupEnabled: !!acc.warmup_enabled,
+    alreadyWarmedUp: !!acc.already_warmed_up,
   });
   return Math.min(configured, adaptiveCap);
 }
@@ -52,7 +53,7 @@ export async function GET() {
     return NextResponse.json(safe2.map((acc: Record<string, unknown>) => {
       const sent = cm2[acc.id as string] || 0; const limit = (acc.daily_limit as number) || 50;
       const effLimit = effectiveDailyLimit(acc);
-      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false, smtp_host: acc.smtp_host ?? null, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, effective_daily_limit: effLimit, remaining_today: Math.max(0, effLimit - sent) };
+      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, already_warmed_up: acc.already_warmed_up ?? false, warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false, smtp_host: acc.smtp_host ?? null, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, effective_daily_limit: effLimit, remaining_today: Math.max(0, effLimit - sent) };
     }));
   }
 
@@ -81,6 +82,7 @@ export async function GET() {
       return {
         id: acc.id, email: acc.email, type: acc.type, status: acc.status,
         health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false,
+        already_warmed_up: acc.already_warmed_up ?? false,
         warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false,
         smtp_host: acc.smtp_host ?? null,
         sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at,
@@ -98,6 +100,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { type, smtp_port, imap_port } = body;
+  const alreadyWarmedUp = !!body.already_warmed_up;
   // Trimmed at the point of entry — a password field is masked, so a
   // copy-pasted leading/trailing space is invisible to the user and would
   // otherwise silently fail every future auth attempt using this account.
@@ -164,6 +167,15 @@ export async function POST(req: NextRequest) {
   };
   const defaultLimit = DEFAULT_DAILY_LIMITS[type] ?? 50;
 
+  // "Already warmed up" skips the 14-day ramp for real campaign sending —
+  // starts at a healthy 85 instead of the neutral 50 baseline — but stays
+  // warmup_enabled=true so it keeps participating in the periodic warmup
+  // cycle and health keeps updating from real signals (bounces, auth
+  // errors, ping engagement) instead of freezing forever. See
+  // campaignDailyCap() in lib/warmup-health.ts for how alreadyWarmedUp
+  // short-circuits straight to the mature-cap formula.
+  const ALREADY_WARMED_START_HEALTH = 85;
+
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
     .insert({
@@ -176,12 +188,13 @@ export async function POST(req: NextRequest) {
       smtp_pass: smtp_pass || null,
       imap_host: imap_host || null,
       imap_port: imap_port ? Number(imap_port) : null,
-      status: 'warming',
-      health_score: 50,
+      status: alreadyWarmedUp ? 'active' : 'warming',
+      health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
       warmup_enabled: true,
+      already_warmed_up: alreadyWarmedUp,
       daily_limit: defaultLimit,
     })
-    .select('id,email,type,status,health_score,warmup_enabled,sent_today,daily_limit,created_at')
+    .select('id,email,type,status,health_score,warmup_enabled,already_warmed_up,sent_today,daily_limit,created_at')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

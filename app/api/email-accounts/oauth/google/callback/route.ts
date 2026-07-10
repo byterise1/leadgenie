@@ -4,7 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const state = searchParams.get('state'); // user_id
+  const rawState = searchParams.get('state'); // "userId:alreadyWarmedUp(0|1)"
+  const [state, alreadyWarmedUpFlag] = rawState ? rawState.split(':') : [null, '0'];
+  const alreadyWarmedUp = alreadyWarmedUpFlag === '1';
   const oauthError = searchParams.get('error');
 
   const forwardedHost = request.headers.get('x-forwarded-host');
@@ -70,15 +72,22 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     if (crossUserDup) return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?error=already_connected`);
 
+    // "Already warmed up" (checkbox on the connect modal, carried through
+    // Google's redirect via `state`) skips the 14-day ramp for real sending
+    // — starts at a healthy 85 instead of the neutral 50 baseline — but
+    // stays warmup_enabled=true so health keeps updating from real signals
+    // instead of freezing. See campaignDailyCap() in lib/warmup-health.ts.
+    const ALREADY_WARMED_START_HEALTH = 85;
     await supabaseAdmin.from('email_accounts').insert({
       user_id: state,
       type: 'gmail-oauth',
       email: info.email,
       smtp_user: info.email,
       smtp_pass: tokens.refresh_token,
-      status: 'warming',
-      health_score: 50,
+      status: alreadyWarmedUp ? 'active' : 'warming',
+      health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
       warmup_enabled: true,
+      already_warmed_up: alreadyWarmedUp,
     });
   }
 

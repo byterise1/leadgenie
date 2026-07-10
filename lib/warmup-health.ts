@@ -141,15 +141,27 @@ export function dailySendCap(opts: {
 }
 
 // Safe REAL campaign volume for this account — always more conservative than warmup-ping volume.
+//
+// "Ramp complete" (mature-cap formula) is true in two independent cases:
+//   - warmupEnabled is false — the user manually turned warmup off entirely
+//     (accepts the tradeoff that health stops being recomputed too, since
+//     that only happens for warmup_enabled=true accounts).
+//   - alreadyWarmedUp is true — the user declared at connect time that this
+//     mailbox already has real sending history elsewhere. Deliberately
+//     doesn't require warmupEnabled=false: the account keeps participating
+//     in the periodic warmup cycle (health keeps getting recomputed from
+//     real signals) while its SEND CAP skips straight to the mature formula.
 export function campaignDailyCap(opts: {
   provider: Provider;
   warmupDay: number;
   health: number;
-  warmupComplete: boolean;
+  warmupEnabled: boolean;
+  alreadyWarmedUp?: boolean;
 }): number {
-  const { provider, warmupDay, health, warmupComplete } = opts;
+  const { provider, warmupDay, health, warmupEnabled, alreadyWarmedUp } = opts;
   const caps = PROVIDER_CAPS[provider];
   if (health < 35) return 0;
+  const warmupComplete = !warmupEnabled || !!alreadyWarmedUp;
   if (!warmupComplete) {
     const pct = Math.min(1, warmupDay / 14);
     return Math.max(0, Math.round(caps.newAccountCap * pct * (health / 100)));

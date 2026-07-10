@@ -1,0 +1,14 @@
+-- "Already warmed up" — lets a user declare at connect time that a mailbox
+-- already has real sending history elsewhere, skipping the 14-day ramp
+-- entirely instead of freezing health by turning warmup_enabled off.
+--
+-- Deliberately kept independent of warmup_enabled: an already-warmed-up
+-- account STAYS warmup_enabled=true, so it keeps participating in the
+-- periodic warmup cycle (still gets health recomputed from real bounce/
+-- auth-error signals and warmup-ping engagement, still eligible for
+-- auto-pause-on-bad-signals/auto-recovery) — only its REAL CAMPAIGN daily
+-- cap (campaignDailyCap in lib/warmup-health.ts) treats it as ramp-complete
+-- immediately. See lib/warmup-health.ts's campaignDailyCap signature change
+-- in the same commit (warmupEnabled + alreadyWarmedUp replace the old single
+-- warmupComplete boolean callers used to compute themselves).
+ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS already_warmed_up BOOLEAN NOT NULL DEFAULT false;

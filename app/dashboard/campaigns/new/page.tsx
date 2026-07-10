@@ -21,6 +21,7 @@ type RealAccount = {
   warmup_day?: number;
   warmup_paused?: boolean;
   warmup_enabled?: boolean;
+  already_warmed_up?: boolean;
   smtp_host?: string | null;
 };
 
@@ -137,7 +138,7 @@ export default function NewCampaignPage() {
   // per account, summed across whichever accounts are currently selected.
   const autoDailyLimit = Math.max(1, dailyLimitAccountData.reduce((sum, a) => sum + campaignDailyCap({
     provider: detectProvider(a), warmupDay: a.warmup_day ?? 0,
-    health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+    health: a.health_score ?? 50, warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
   }), 0));
   const dailyLimit = dailyLimitMode === 'manual' ? Math.max(1, parseInt(dailyLimitStr) || 1) : autoDailyLimit;
 

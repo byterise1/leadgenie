@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data, error } = await supabaseAdmin
     .from('campaigns')
-    .select('*, email_steps(*), campaign_accounts(account:email_accounts(id,email,type,status,health_score,warmup_day,warmup_enabled,warmup_paused,smtp_host,daily_limit))')
+    .select('*, email_steps(*), campaign_accounts(account:email_accounts(id,email,type,status,health_score,warmup_day,warmup_enabled,already_warmed_up,warmup_paused,smtp_host,daily_limit))')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();

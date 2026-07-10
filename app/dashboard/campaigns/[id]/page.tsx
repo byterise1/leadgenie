@@ -297,7 +297,7 @@ export default function CampaignDetailPage() {
     .filter(a => !a.warmup_paused && (a.health_score ?? 50) >= 35 && a.status !== 'error')
     .reduce((sum, a) => sum + campaignDailyCap({
       provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0,
-      health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+      health: a.health_score ?? 50, warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!(a as any).already_warmed_up,
     }), 0);
 
   function startEditSchedule() {

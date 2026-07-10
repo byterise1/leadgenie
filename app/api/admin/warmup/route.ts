@@ -21,7 +21,7 @@ export async function GET() {
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, created_at')
+      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, created_at')
       .neq('is_pool_account', true)
       .order('warmup_enabled', { ascending: false })
       .order('created_at', { ascending: false });
@@ -78,7 +78,8 @@ export async function GET() {
       spam_rate: rates?.spam_rate ?? null,
       bounce_rate: rates?.bounce_rate ?? null,
       recommended_send_limit: campaignDailyCap({
-        provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+        provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50,
+        warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
       }),
     };
   });

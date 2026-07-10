@@ -234,6 +234,7 @@ export type RetryAccount = {
   health_score?: number | null;
   warmup_day?: number | null;
   warmup_enabled?: boolean | null;
+  already_warmed_up?: boolean | null;
   daily_limit?: number | null;
   next_dispatch_at?: string | null;
 };
@@ -251,7 +252,7 @@ export async function computeAccountRemaining(
     if (acc.next_dispatch_at && new Date(acc.next_dispatch_at).getTime() - Date.now() > PACING_SAFE_WINDOW_MS) continue;
     const cap = campaignDailyCap({
       provider: detectProvider(acc), warmupDay: acc.warmup_day ?? 0,
-      health: acc.health_score ?? 50, warmupComplete: !acc.warmup_enabled,
+      health: acc.health_score ?? 50, warmupEnabled: !!acc.warmup_enabled, alreadyWarmedUp: !!acc.already_warmed_up,
     });
     if (cap === 0) continue;
     const { count: sentToday } = await supabaseAdmin

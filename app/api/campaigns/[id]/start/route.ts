@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, email, type, smtp_host, health_score, warmup_day, warmup_enabled, warmup_paused, warmup_pause_reason')
+      .select('id, email, type, smtp_host, health_score, warmup_day, warmup_enabled, already_warmed_up, warmup_paused, warmup_pause_reason')
       .in('id', accountIds);
     linkedAccounts = res.data;
   }
@@ -65,7 +65,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return false;
     }
     const cap = campaignDailyCap({
-      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50,
+      warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
     });
     if (cap === 0) {
       accountWarnings.push(`${a.email} isn't cleared to send real campaigns yet — excluded.`);

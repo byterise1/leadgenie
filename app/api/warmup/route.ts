@@ -14,7 +14,7 @@ export async function GET() {
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days, created_at')
+      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
     accounts = res.data;
@@ -86,9 +86,10 @@ export async function GET() {
   const enriched = (accounts ?? []).map(a => {
     const rates = latestByEmail.get(a.email);
     const recommendedSendLimit = campaignDailyCap({
-      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50, warmupComplete: !a.warmup_enabled,
+      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50,
+      warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
     });
-    const daysToWarmed = a.warmup_enabled ? Math.max(0, Math.min(14, a.warmup_target ?? 14) - (a.warmup_day ?? 0)) : 0;
+    const daysToWarmed = a.already_warmed_up ? 0 : a.warmup_enabled ? Math.max(0, Math.min(14, a.warmup_target ?? 14) - (a.warmup_day ?? 0)) : 0;
 
     const lastActivityAt = lastActivityMap.get(a.id) ?? null;
     const accountAgeHours = a.created_at ? (Date.now() - new Date(a.created_at).getTime()) / 3_600_000 : 999;

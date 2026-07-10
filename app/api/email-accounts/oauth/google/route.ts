@@ -6,6 +6,12 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(new URL('/login', request.url));
 
+  // Carries the "already warmed up" checkbox through Google's redirect round
+  // trip — state is the only place we can stash app-specific context here.
+  // user.id is a UUID (no colons), so splitting on ':' in the callback is safe.
+  const alreadyWarmedUp = new URL(request.url).searchParams.get('already_warmed_up') === '1';
+  const state = `${user.id}:${alreadyWarmedUp ? '1' : '0'}`;
+
   const forwardedHost = request.headers.get('x-forwarded-host');
   const { host } = new URL(request.url);
   // Google's registered redirect URIs are all https - always build the
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
     scope: 'https://mail.google.com/ https://www.googleapis.com/auth/userinfo.email',
     access_type: 'offline',
     prompt: 'consent',
-    state: user.id,
+    state,
   });
 
   return NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
