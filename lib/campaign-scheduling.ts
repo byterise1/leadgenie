@@ -284,6 +284,20 @@ export function jitterMs(): number {
   return sign * minutes * 60 * 1000 * dayScale;
 }
 
+// Runs async work over items with bounded concurrency instead of either fully
+// sequential (slow) or fully unbounded Promise.all (risks flooding Supabase's
+// connection pool on a campaign with thousands of leads).
+async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const item = items[i++];
+      await fn(item);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
 // ── Step editing on paused/draft campaigns ─────────────────────────────────
 // A lead's true position in the sequence is tracked by campaign_leads.
 // current_step_id (a stable email_steps.id), not the plain step_number
@@ -291,6 +305,13 @@ export function jitterMs(): number {
 // whenever steps are added/removed/reordered. These helpers keep the two in
 // sync so editing a paused campaign's steps can never leave an in-progress
 // lead pointing at a step_number that no longer means what it used to.
+//
+// All the per-lead update loops below run with bounded concurrency
+// (mapWithConcurrency) rather than one-at-a-time sequential awaits - on a
+// campaign with hundreds of leads, sequential awaits made a step edit take
+// tens of seconds (one network round-trip per lead, one after another),
+// which read as the UI "hanging." Found and fixed 2026-07-10 during a full
+// regression test pass, not from a user bug report against real data.
 
 // Self-heal: any eligible lead that never got current_step_id set (e.g.
 // enrolled before this column existed, or before its first send) gets it
@@ -309,10 +330,10 @@ async function ensureLeadStepIds(campaignId: string): Promise<void> {
     .in('status', ['pending', 'active'])
     .is('current_step_id', null);
 
-  for (const lead of leads ?? []) {
+  await mapWithConcurrency(leads ?? [], 50, async lead => {
     const stepId = byNumber.get(lead.current_step ?? 0);
     if (stepId) await supabaseAdmin.from('campaign_leads').update({ current_step_id: stepId }).eq('id', lead.id);
-  }
+  });
 }
 
 // Reassign step_number sequentially (0..n-1) by each step's current relative
@@ -323,11 +344,10 @@ async function renumberSteps(campaignId: string): Promise<void> {
   const { data: steps } = await supabaseAdmin
     .from('email_steps').select('id, step_number').eq('campaign_id', campaignId)
     .order('step_number', { ascending: true });
-  for (let i = 0; i < (steps ?? []).length; i++) {
-    if (steps![i].step_number !== i) {
-      await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', steps![i].id);
-    }
-  }
+  const toRenumber = (steps ?? []).map((s, i) => ({ s, i })).filter(({ s, i }) => s.step_number !== i);
+  await mapWithConcurrency(toRenumber, 50, async ({ s, i }) => {
+    await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', s.id);
+  });
 }
 
 // After steps have been renumbered, refresh every eligible lead's
@@ -346,13 +366,15 @@ async function refreshLeadStepNumbers(campaignId: string): Promise<void> {
     .eq('campaign_id', campaignId)
     .in('status', ['pending', 'active']);
 
-  for (const lead of leads ?? []) {
-    if (!lead.current_step_id) continue;
+  const toUpdate = (leads ?? []).filter(lead => {
+    if (!lead.current_step_id) return false;
     const newNumber = byId.get(lead.current_step_id);
-    if (newNumber !== undefined && newNumber !== lead.current_step) {
-      await supabaseAdmin.from('campaign_leads').update({ current_step: newNumber }).eq('id', lead.id);
-    }
-  }
+    return newNumber !== undefined && newNumber !== lead.current_step;
+  });
+  await mapWithConcurrency(toUpdate, 50, async lead => {
+    const newNumber = byId.get(lead.current_step_id!);
+    await supabaseAdmin.from('campaign_leads').update({ current_step: newNumber }).eq('id', lead.id);
+  });
 }
 
 // Call after adding a new step or reordering existing ones (nothing was
@@ -388,8 +410,8 @@ export async function deleteStepAndResync(campaignId: string, stepId: string): P
     .from('campaign_leads').select('id, last_sent_at')
     .eq('campaign_id', campaignId).eq('current_step_id', stepId);
 
-  let anyCompleted = false;
-  for (const lead of affectedLeads ?? []) {
+  const anyCompleted = !nextRemaining && (affectedLeads?.length ?? 0) > 0;
+  await mapWithConcurrency(affectedLeads ?? [], 50, async lead => {
     if (nextRemaining) {
       const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
       const nextSendAt = new Date(lastSentMs + (nextRemaining.delay_days || 1) * DELAY_UNIT_MS + jitterMs()).toISOString();
@@ -400,9 +422,8 @@ export async function deleteStepAndResync(campaignId: string, stepId: string): P
       await supabaseAdmin.from('campaign_leads').update({
         current_step_id: null, status: 'completed', next_send_at: null,
       }).eq('id', lead.id);
-      anyCompleted = true;
     }
-  }
+  });
 
   const { error: deleteErr } = await supabaseAdmin.from('email_steps').delete().eq('id', stepId);
   if (deleteErr) return { error: deleteErr.message };

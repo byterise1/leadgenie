@@ -159,7 +159,13 @@ export default function CampaignDetailPage() {
 
   // ── Step editing (only ever allowed on a paused/draft campaign — see
   // requireEditableCampaign in the API routes, which enforces this too) ──
-  const [stepBusy, setStepBusy] = useState(false);
+  // stepBusyAction tracks WHICH action is in flight (not just whether one is)
+  // so the specific button clicked can show "Saving…"/"Removing…" instead of
+  // just going disabled with no feedback — on a campaign with many leads the
+  // resync this triggers can take a few seconds, and a silently-disabled
+  // button with no label reads as the page having hung.
+  const [stepBusyAction, setStepBusyAction] = useState<null | 'save' | 'delete' | 'add' | { move: string }>(null);
+  const stepBusy = stepBusyAction !== null;
   const [stepError, setStepError] = useState('');
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ subject: '', body: '', delay_days: 1 });
@@ -173,7 +179,7 @@ export default function CampaignDetailPage() {
   }
 
   async function saveEditStep(stepId: string) {
-    setStepBusy(true); setStepError('');
+    setStepBusyAction('save'); setStepError('');
     try {
       const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -183,22 +189,22 @@ export default function CampaignDetailPage() {
       if (d.error) { setStepError(d.error); return; }
       setEditingStepId(null);
       refresh();
-    } finally { setStepBusy(false); }
+    } finally { setStepBusyAction(null); }
   }
 
   async function deleteStep(stepId: string) {
     if (!confirm('Remove this step? Any lead currently on it will move to whatever comes next in the sequence.')) return;
-    setStepBusy(true); setStepError('');
+    setStepBusyAction('delete'); setStepError('');
     try {
       const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, { method: 'DELETE' });
       const d = await res.json();
       if (d.error) { setStepError(d.error); return; }
       refresh();
-    } finally { setStepBusy(false); }
+    } finally { setStepBusyAction(null); }
   }
 
   async function moveStep(stepId: string, newPosition: number) {
-    setStepBusy(true); setStepError('');
+    setStepBusyAction({ move: stepId }); setStepError('');
     try {
       const res = await fetch(`/api/campaigns/${id}/steps/${stepId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -207,12 +213,12 @@ export default function CampaignDetailPage() {
       const d = await res.json();
       if (d.error) { setStepError(d.error); return; }
       refresh();
-    } finally { setStepBusy(false); }
+    } finally { setStepBusyAction(null); }
   }
 
   async function addStep() {
     if (!newStepForm.subject.trim() || !newStepForm.body.trim()) { setStepError('Subject and body are required'); return; }
-    setStepBusy(true); setStepError('');
+    setStepBusyAction('add'); setStepError('');
     try {
       const res = await fetch(`/api/campaigns/${id}/steps`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -223,7 +229,7 @@ export default function CampaignDetailPage() {
       setAddingStep(false);
       setNewStepForm({ subject: '', body: '', delay_days: 1 });
       refresh();
-    } finally { setStepBusy(false); }
+    } finally { setStepBusyAction(null); }
   }
 
   // ── Drag-and-drop reordering — reuses the same moveStep() the ↑/↓
@@ -473,8 +479,8 @@ export default function CampaignDetailPage() {
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">Email Sequence</h2>
               {canEditSteps ? (
-                <button onClick={() => { setAddingStep(v => !v); setStepError(''); }}
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors">
+                <button disabled={stepBusy} onClick={() => { setAddingStep(v => !v); setStepError(''); }}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors disabled:opacity-50">
                   {addingStep ? 'Cancel' : '+ Add Step'}
                 </button>
               ) : (
@@ -484,6 +490,13 @@ export default function CampaignDetailPage() {
 
             {stepError && (
               <div className="px-6 py-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-b border-red-100 dark:border-red-900">{stepError}</div>
+            )}
+
+            {stepBusy && (
+              <div className="px-6 py-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900 flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                {typeof stepBusyAction === 'object' ? 'Reordering steps…' : 'Updating sequence — this can take a few seconds on a campaign with many leads…'}
+              </div>
             )}
 
             {sortedSteps.length === 0 ? (
@@ -521,7 +534,9 @@ export default function CampaignDetailPage() {
                           <button disabled={stepBusy} onClick={() => startEditStep(step)}
                             className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Edit</button>
                           <button disabled={stepBusy} onClick={() => deleteStep(step.id)}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">Remove</button>
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50">
+                            {stepBusyAction === 'delete' ? 'Removing…' : 'Remove'}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -551,7 +566,9 @@ export default function CampaignDetailPage() {
                         )}
                         <div className="flex gap-2 pt-1">
                           <button disabled={stepBusy} onClick={() => saveEditStep(step.id)}
-                            className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">Save changes</button>
+                            className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                            {stepBusyAction === 'save' ? 'Saving…' : 'Save changes'}
+                          </button>
                           <button disabled={stepBusy} onClick={() => setEditingStepId(null)}
                             className="text-xs font-bold px-4 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                         </div>
@@ -586,7 +603,9 @@ export default function CampaignDetailPage() {
                   </div>
                 </div>
                 <button disabled={stepBusy} onClick={addStep}
-                  className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">Add Step</button>
+                  className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+                  {stepBusyAction === 'add' ? 'Adding…' : 'Add Step'}
+                </button>
               </div>
             )}
           </div>
