@@ -1258,7 +1258,7 @@ export async function register() {
             const { ImapFlow } = await import('imapflow');
             const imapConfig: any = {
               host: imapHost, port: toAcc.imap_port || 993, secure: true,
-              auth: { user: toAcc.smtp_user || toAcc.email, pass: toAcc.smtp_pass },
+              auth: { user: (toAcc.smtp_user || toAcc.email).trim(), pass: (toAcc.smtp_pass || '').trim() },
               logger: false, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, socketTimeout: 20000,
             };
             if (process.env.SMTP_PROXY) imapConfig.proxy = process.env.SMTP_PROXY;
@@ -1694,7 +1694,7 @@ export async function register() {
             const { ImapFlow } = await import('imapflow');
             const imapConfig: any = {
               host: imapHost, port: account.imap_port || 993, secure: true,
-              auth: { user: account.smtp_user || account.email, pass: account.smtp_pass },
+              auth: { user: (account.smtp_user || account.email).trim(), pass: (account.smtp_pass || '').trim() },
               logger: false, tls: { rejectUnauthorized: false }, connectionTimeout: 15000, socketTimeout: 20000,
             };
             if (process.env.SMTP_PROXY) imapConfig.proxy = process.env.SMTP_PROXY;

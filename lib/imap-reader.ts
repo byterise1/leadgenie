@@ -132,7 +132,7 @@ export async function fetchImapReplies(
     host: account.imap_host.trim(),
     port: account.imap_port || 993,
     secure: (account.imap_port || 993) === 993,
-    auth: { user: (account.smtp_user || account.email).trim(), pass: account.smtp_pass },
+    auth: { user: (account.smtp_user || account.email).trim(), pass: account.smtp_pass.trim() },
     logger: false,
     tls: { rejectUnauthorized: false },
     connectionTimeout: 15000,

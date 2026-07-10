@@ -266,7 +266,11 @@ async function createSmtpTransport(account: EmailAccount) {
   // Custom SMTP (Titan, Zoho, cPanel, Hostinger, etc.)
   const smtpHostname = account.smtp_host!.trim();
   const smtpPort = account.smtp_port ?? 587;
-  const auth = { user: account.smtp_user!.trim(), pass: account.smtp_pass! };
+  // Password field is masked in the UI, so a copy-pasted leading/trailing
+  // space (common from password managers/notes apps) is invisible to the
+  // user and silently fails auth otherwise — same class of fix already
+  // applied to Gmail app passwords above.
+  const auth = { user: account.smtp_user!.trim(), pass: account.smtp_pass!.trim() };
   const tlsBase = { servername: smtpHostname };
   const isSecure = smtpPort === 465;
 

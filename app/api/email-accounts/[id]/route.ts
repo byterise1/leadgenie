@@ -65,6 +65,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
+  // Trim any credential/host string fields present in this update — a
+  // password field is masked, so a copy-pasted leading/trailing space is
+  // invisible to the user and would otherwise silently fail future auth.
+  // Only touches fields actually present, so unrelated updates (e.g. just
+  // daily_limit) are unaffected.
+  for (const key of ['email', 'smtp_host', 'smtp_user', 'smtp_pass', 'imap_host'] as const) {
+    if (typeof body[key] === 'string') body[key] = body[key].trim();
+  }
+
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
     .update(body)

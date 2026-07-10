@@ -75,7 +75,15 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { type, email, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port } = body;
+  const { type, smtp_port, imap_port } = body;
+  // Trimmed at the point of entry — a password field is masked, so a
+  // copy-pasted leading/trailing space is invisible to the user and would
+  // otherwise silently fail every future auth attempt using this account.
+  const email = body.email?.trim();
+  const smtp_host = body.smtp_host?.trim();
+  const smtp_user = body.smtp_user?.trim();
+  const smtp_pass = body.smtp_pass?.trim();
+  const imap_host = body.imap_host?.trim();
 
   if (!type || !email) return NextResponse.json({ error: 'type and email required' }, { status: 400 });
 
