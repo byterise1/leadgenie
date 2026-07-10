@@ -14,6 +14,7 @@ type Campaign = {
   daily_limit?: number;
   daily_limit_mode?: 'auto' | 'manual';
   sent_today?: number;
+  step_delay_unit_ms?: number;
   from_hour?: string | number;
   to_hour?: string | number;
   active_days?: boolean[] | string[];
@@ -142,6 +143,21 @@ export default function CampaignDetailPage() {
         if (!d.error) { setCampaign(prev => prev ? { ...prev, status: 'active' } : prev); refresh(); }
       }
     } finally { setToggling(false); }
+  }
+
+  const TEST_STEP_DELAY_UNIT_MS = 60_000; // must match lib/campaign-scheduling.ts
+  const isTestModeCampaign = campaign?.step_delay_unit_ms === TEST_STEP_DELAY_UNIT_MS;
+  const [advancingDay, setAdvancingDay] = useState(false);
+  const [advanceMsg, setAdvanceMsg] = useState('');
+  async function advanceDay() {
+    if (!campaign || advancingDay) return;
+    setAdvancingDay(true); setAdvanceMsg('');
+    try {
+      const res = await fetch(`/api/campaigns/${id}/advance-day`, { method: 'POST' });
+      const d = await res.json();
+      setAdvanceMsg(d.error || d.message || '');
+      if (!d.error) refresh();
+    } finally { setAdvancingDay(false); }
   }
 
   const [savingPriority, setSavingPriority] = useState(false);
@@ -440,12 +456,28 @@ export default function CampaignDetailPage() {
               )}
             </div>
           )}
+          {isTestModeCampaign && isActive && (
+            <button onClick={advanceDay} disabled={advancingDay}
+              title="Test-only: makes every lead waiting on a follow-up immediately due, so you can click through a multi-day sequence without waiting"
+              className="text-sm font-bold px-4 py-2 rounded-xl bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-950/60 transition-colors disabled:opacity-50">
+              {advancingDay ? 'Advancing…' : '⏩ Skip to next day'}
+            </button>
+          )}
           <a href={`/api/campaigns/${id}/export`} download
             className="text-sm font-bold px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
             Export CSV
           </a>
         </div>
       </div>
+
+      {advanceMsg && (
+        <div className="rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900 px-4 py-3 text-xs text-violet-700 dark:text-violet-400 flex items-center justify-between gap-3">
+          <span>{advanceMsg}</span>
+          <button onClick={() => setAdvanceMsg('')} className="shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
