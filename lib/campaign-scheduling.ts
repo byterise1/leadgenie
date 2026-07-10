@@ -263,23 +263,67 @@ export async function computeAccountRemaining(
   return remaining;
 }
 
-// 1 unit = 1 real day. Shared by the start route (backfilling next_send_at
-// on resume) and the campaign-scheduler worker (computing the next
-// follow-up's due time). Set to 60*1000 (1 minute) during testing to
-// accelerate multi-day sequences — see git history if that's needed again.
+// 1 unit = 1 real day. Used ONLY by planBacklogSmoothing() below (resume
+// backlog spreading) — deliberately NOT part of the per-campaign
+// step_delay_unit_ms system below, since a paused campaign resuming should
+// always spread its backlog across real calendar days regardless of whether
+// it's a fast-test campaign or not. Not the same knob as follow-up step
+// delays — see NEW_CAMPAIGN_STEP_DELAY_UNIT_MS for that.
 export const DELAY_UNIT_MS = 24 * 60 * 60 * 1000;
+
+// ── TEST MODE: fast follow-up delays for newly-created campaigns ───────────
+// ============================================================================
+// HOW TO REVERT TO PRODUCTION ("switch back to production"):
+//   Set TEST_MODE_FAST_FOLLOWUPS to false below. That is the ONLY line that
+//   needs to change. Commit + push (Railway auto-deploys on push to main).
+//
+// WHAT THIS DOES:
+//   Every campaign's follow-up-sequence delay unit (email_steps.delay_days
+//   -> real milliseconds) is stamped ONCE onto that campaign's own
+//   campaigns.step_delay_unit_ms column at creation time (see POST
+//   /api/campaigns in app/api/campaigns/route.ts) and NEVER changes
+//   afterward. So:
+//     - Existing campaigns (created before this flag existed, or created
+//       while it was false) permanently keep 86_400_000ms (1 real day) per
+//       delay_days unit - completely unaffected by this flag, forever.
+//     - Campaigns created while TEST_MODE_FAST_FOLLOWUPS=true permanently
+//       keep 60_000ms (1 real MINUTE) per delay_days unit - "1 day" in the
+//       UI means "1 minute" for those campaigns specifically, forever, even
+//       after the flag is flipped back to false.
+//     - Flipping this flag only changes what NEW campaigns get from that
+//       point on - it does not retroactively change any existing campaign,
+//       because every read of the delay unit uses the campaign's OWN stored
+//       step_delay_unit_ms column, never this flag directly (the flag is
+//       only consulted once, at creation time).
+//   Nothing else is touched: pacing (min/max gap between emails), daily
+//   limits, warmup, mailbox assignment/failover, and the scheduler's
+//   capacity/priority logic are all completely unrelated code paths.
+//
+// Migration: supabase/migrations/20260710_step_delay_unit.sql (adds
+// campaigns.step_delay_unit_ms, default 86_400_000 so existing rows are
+// unaffected).
+// ============================================================================
+export const TEST_MODE_FAST_FOLLOWUPS = true;
+export const PRODUCTION_STEP_DELAY_UNIT_MS = 24 * 60 * 60 * 1000; // 1 real day
+export const TEST_STEP_DELAY_UNIT_MS = 60 * 1000; // 1 real minute
+export const NEW_CAMPAIGN_STEP_DELAY_UNIT_MS = TEST_MODE_FAST_FOLLOWUPS
+  ? TEST_STEP_DELAY_UNIT_MS
+  : PRODUCTION_STEP_DELAY_UNIT_MS;
 
 // Jitter so a lead's follow-up lands at roughly the same time each day, but
 // not the EXACT same minute — shifted by ~60-90 minutes either direction, to
 // look like a person hit send around the same time, not a script hitting it
-// at literally the same second every day. Expressed relative to DELAY_UNIT_MS
-// (one "day") rather than the full multi-day delay, so a 5-day follow-up
-// doesn't get 5x the variance of a 1-day one — the daily send-time wobble is
-// the same regardless of how many days apart two steps are.
-export function jitterMs(): number {
+// at literally the same second every day. Expressed relative to unitMs (one
+// "day" in whatever unit the caller passes) rather than the full multi-day
+// delay, so a 5-day follow-up doesn't get 5x the variance of a 1-day one —
+// the daily send-time wobble is the same regardless of how many days apart
+// two steps are. Defaults to the real 24h unit (DELAY_UNIT_MS) for callers
+// that don't pass one (i.e. backlog smoothing, which always uses real days);
+// follow-up-sequence call sites pass the campaign's own step_delay_unit_ms.
+export function jitterMs(unitMs: number = DELAY_UNIT_MS): number {
   const sign = Math.random() < 0.5 ? -1 : 1;
   const REAL_DAY_MS = 24 * 60 * 60 * 1000;
-  const dayScale = DELAY_UNIT_MS / REAL_DAY_MS; // 1 at real scale, tiny during accelerated testing
+  const dayScale = unitMs / REAL_DAY_MS; // 1 at real scale, tiny during accelerated testing
   const minutes = 60 + Math.random() * 30; // 60-90 real minutes
   return sign * minutes * 60 * 1000 * dayScale;
 }
@@ -397,6 +441,13 @@ export async function deleteStepAndResync(campaignId: string, stepId: string): P
     .from('email_steps').select('id, step_number').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
   if (!stepToDelete) return { error: 'Step not found' };
 
+  // This campaign's own permanently-stamped delay unit (24h for every
+  // pre-existing campaign; 1 real minute only for campaigns created while
+  // TEST_MODE_FAST_FOLLOWUPS was on) — never the global default directly.
+  const { data: campRow } = await supabaseAdmin
+    .from('campaigns').select('step_delay_unit_ms').eq('id', campaignId).maybeSingle();
+  const stepDelayUnitMs = campRow?.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+
   const { data: remainingSteps } = await supabaseAdmin
     .from('email_steps').select('id, step_number, delay_days')
     .eq('campaign_id', campaignId).neq('id', stepId)
@@ -414,7 +465,7 @@ export async function deleteStepAndResync(campaignId: string, stepId: string): P
   await mapWithConcurrency(affectedLeads ?? [], 50, async lead => {
     if (nextRemaining) {
       const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
-      const nextSendAt = new Date(lastSentMs + (nextRemaining.delay_days || 1) * DELAY_UNIT_MS + jitterMs()).toISOString();
+      const nextSendAt = new Date(lastSentMs + (nextRemaining.delay_days || 1) * stepDelayUnitMs + jitterMs(stepDelayUnitMs)).toISOString();
       await supabaseAdmin.from('campaign_leads').update({
         current_step_id: nextRemaining.id, status: 'active', next_send_at: nextSendAt,
       }).eq('id', lead.id);

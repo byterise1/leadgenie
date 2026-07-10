@@ -9,7 +9,7 @@ export async function register() {
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
     const { sendEmail, replaceVars } = await import('./lib/mailer');
     const crypto = await import('crypto');
-    const { DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity, checkCampaignAutoComplete } = await import('./lib/campaign-scheduling');
+    const { PRODUCTION_STEP_DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity, checkCampaignAutoComplete } = await import('./lib/campaign-scheduling');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -206,9 +206,10 @@ export async function register() {
         const _hasNext = campaign.email_steps.some((s: any) => s.step_number === _nextStep);
         if (cl.status === 'active' && (cl.current_step ?? 0) <= stepNumber) {
           const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
-          const _rawDelayMs = (_nextStepData?.delay_days || 1) * DELAY_UNIT_MS;
+          const _stepDelayUnitMs = campaign.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+          const _rawDelayMs = (_nextStepData?.delay_days || 1) * _stepDelayUnitMs;
           const _nextSendAt = _hasNext
-            ? new Date(Date.now() + _rawDelayMs + jitterMs()).toISOString()
+            ? new Date(Date.now() + _rawDelayMs + jitterMs(_stepDelayUnitMs)).toISOString()
             : null;
           await supabase.from('campaign_leads').update({
             current_step: _nextStep,
@@ -455,8 +456,9 @@ export async function register() {
       let nextStepData: any = null;
       if (hasNextStep) {
         nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
-        const rawDelayMs = (nextStepData.delay_days || 1) * DELAY_UNIT_MS;
-        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs()).toISOString();
+        const stepDelayUnitMs = campaign.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+        const rawDelayMs = (nextStepData.delay_days || 1) * stepDelayUnitMs;
+        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs(stepDelayUnitMs)).toISOString();
       }
 
       await supabase.from('campaign_leads').update({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { NEW_CAMPAIGN_STEP_DELAY_UNIT_MS } from '@/lib/campaign-scheduling';
 
 export async function GET() {
   try {
@@ -117,6 +118,12 @@ export async function POST(req: NextRequest) {
       list_id: list_id || null,
       followup_priority_mode: followup_priority_mode === 'manual' ? 'manual' : 'auto',
       followup_weight_pct: followup_priority_mode === 'manual' ? (followup_weight_pct ?? 90) : null,
+      // Stamped once, permanently, at creation time — see the long comment
+      // above NEW_CAMPAIGN_STEP_DELAY_UNIT_MS in lib/campaign-scheduling.ts.
+      // Existing campaigns are never touched by this; this campaign keeps
+      // whichever unit was active right now, forever, even if the flag
+      // controlling NEW_CAMPAIGN_STEP_DELAY_UNIT_MS is flipped back later.
+      step_delay_unit_ms: NEW_CAMPAIGN_STEP_DELAY_UNIT_MS,
       status: 'draft',
     })
     .select()

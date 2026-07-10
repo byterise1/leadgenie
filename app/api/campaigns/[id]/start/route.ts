@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
-import { DELAY_UNIT_MS, planBacklogSmoothing } from '@/lib/campaign-scheduling';
+import { PRODUCTION_STEP_DELAY_UNIT_MS, planBacklogSmoothing } from '@/lib/campaign-scheduling';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -154,13 +154,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const stepDelayDays: Record<number, number> = {};
   (stepsData || []).forEach((s: any) => { stepDelayDays[s.step_number] = s.delay_days ?? 1; });
 
+  // This campaign's own permanently-stamped follow-up delay unit — 24h for
+  // every campaign created before/without TEST_MODE_FAST_FOLLOWUPS, 1 real
+  // minute only for campaigns created while it was on. Never the global
+  // default directly, so existing campaigns are unaffected either way.
+  const stepDelayUnitMs = campaign.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+
   const naturalDue = (campaignLeads as any[])
     .filter(cl => cl.status === 'active' && !cl.next_send_at)
     .map(cl => {
       const step = cl.current_step ?? 1;
       const delayDays = stepDelayDays[step] ?? 1;
       const lastSentMs = cl.last_sent_at ? new Date(cl.last_sent_at).getTime() : Date.now();
-      return { id: cl.id, dueAt: lastSentMs + delayDays * DELAY_UNIT_MS };
+      return { id: cl.id, dueAt: lastSentMs + delayDays * stepDelayUnitMs };
     });
 
   // Only smooth on a genuine resume (paused -> active) — first launch from
