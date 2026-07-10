@@ -16,6 +16,7 @@ type RealAccount = {
   health_score?: number;
   daily_limit?: number;
   remaining_today?: number;
+  effective_daily_limit?: number;
   sent_today_real?: number;
   warmup_day?: number;
   warmup_paused?: boolean;
@@ -90,6 +91,7 @@ export default function NewCampaignPage() {
 
   // Step 0
   const [name, setName] = useState('');
+  const [isTestCampaign, setIsTestCampaign] = useState(false);
   const [fromName, setFromName] = useState('');
   const [goal, setGoal] = useState('Book a Meeting');
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
@@ -468,7 +470,7 @@ export default function NewCampaignPage() {
                             </div>
                             {acc.remaining_today !== undefined && (
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${acc.remaining_today === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
-                                {acc.remaining_today}/{acc.daily_limit ?? 50} left
+                                {acc.remaining_today}/{acc.effective_daily_limit ?? acc.daily_limit ?? 50} left
                               </span>
                             )}
                           </label>
@@ -938,7 +940,10 @@ export default function NewCampaignPage() {
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Per Day</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">~{emailsPerDay} emails</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × warmup-aware limit {dailyLimit}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                      {activeAccountCount} account{activeAccountCount !== 1 ? 's' : ''} × {dailyLimitMode === 'auto' ? 'warmup-aware limit' : 'configured limit'} {dailyLimit}
+                      {dailyLimitMode === 'manual' && dailyLimit > totalRemainingToday ? ` (capped to ~${totalRemainingToday} today by warmup)` : ''}
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg px-3 py-2 border border-blue-100">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Completes In</p>
@@ -993,7 +998,7 @@ export default function NewCampaignPage() {
                     <div key={acc.id} className="flex items-center justify-between">
                       <span className="text-xs text-blue-700 truncate max-w-[180px]">{acc.email}</span>
                       <span className={`text-xs font-bold ${(acc.remaining_today ?? 0) === 0 ? 'text-red-600' : 'text-blue-800'}`}>
-                        {acc.remaining_today ?? acc.daily_limit ?? 50} / {acc.daily_limit ?? 50} remaining
+                        {acc.remaining_today ?? acc.effective_daily_limit ?? acc.daily_limit ?? 50} / {acc.effective_daily_limit ?? acc.daily_limit ?? 50} remaining
                         {(acc.remaining_today ?? 0) === 0 ? ' — AT LIMIT' : ''}
                       </span>
                     </div>
@@ -1001,6 +1006,14 @@ export default function NewCampaignPage() {
                 </div>
               </div>
             )}
+
+            <label className="flex items-center justify-between rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 cursor-pointer">
+              <div>
+                <p className="text-sm font-semibold text-violet-900">Test campaign</p>
+                <p className="text-xs text-violet-600 mt-0.5">Enables the ⏩ Skip to Next Day button for clicking through the sequence during QA. Delays still run at real day-based speed, same as production — this only unlocks the button, nothing else.</p>
+              </div>
+              <input type="checkbox" checked={isTestCampaign} onChange={e => setIsTestCampaign(e.target.checked)} className="w-4 h-4 rounded accent-violet-600 shrink-0 ml-3"/>
+            </label>
 
             {!name.trim() && (
               <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-center justify-between">
@@ -1055,6 +1068,7 @@ export default function NewCampaignPage() {
                       list_id: selectedListId || null,
                       followup_priority_mode: followupPriorityMode,
                       followup_weight_pct: followupPriorityMode === 'manual' ? followupWeightPct : null,
+                      is_test_campaign: isTestCampaign,
                       steps: emails.map(e => ({ subject: e.subject, body: e.body, delay: e.delay, includeUnsub: e.includeUnsub, templateId: e.templateId, threadMode: e.threadMode, abVariants: e.abEnabled && e.abVariants[0]?.body?.trim() ? e.abVariants : [] })),
                       account_ids: accountIds,
                     }),

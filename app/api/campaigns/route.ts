@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, goal, daily_limit, daily_limit_mode, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id, from_name, followup_priority_mode, followup_weight_pct } = body;
+  const { name, goal, daily_limit, daily_limit_mode, from_hour, to_hour, active_days, timezone, start_date, steps, account_ids, min_delay_secs, max_delay_secs, list_id, from_name, followup_priority_mode, followup_weight_pct, is_test_campaign } = body;
 
   if (!name || !steps?.length) {
     return NextResponse.json({ error: 'name and steps required' }, { status: 400 });
@@ -124,6 +124,11 @@ export async function POST(req: NextRequest) {
       // whichever unit was active right now, forever, even if the flag
       // controlling NEW_CAMPAIGN_STEP_DELAY_UNIT_MS is flipped back later.
       step_delay_unit_ms: NEW_CAMPAIGN_STEP_DELAY_UNIT_MS,
+      // Explicit opt-in flag, independent of delay timing — gates access to
+      // the "Skip to Next Day" button (see advance-day/route.ts). Every
+      // campaign, test or not, uses real day-based delays now; this is the
+      // only thing that makes a campaign fast-clickable for QA.
+      is_test_campaign: !!is_test_campaign,
       status: 'draft',
     })
     .select()

@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
+
+// The account's configured daily_limit is a ceiling the user set — it says
+// nothing about what the mailbox can actually send today while it's still
+// ramping through warmup. Campaign creation and the accounts list both need
+// the REAL number (same adaptive formula the scheduler enforces at send
+// time), or they promise capacity ("48/50 remaining") that the scheduler
+// will refuse to use, and a brand-new campaign looks like it "stopped" when
+// it's actually just warmup-throttled to a handful of sends/day as designed.
+function effectiveDailyLimit(acc: Record<string, unknown>): number {
+  if (acc.warmup_paused) return 0;
+  const configured = (acc.daily_limit as number) || 50;
+  const adaptiveCap = campaignDailyCap({
+    provider: detectProvider(acc as { type: string; smtp_host?: string | null }),
+    warmupDay: (acc.warmup_day as number) ?? 0,
+    health: (acc.health_score as number) ?? 50,
+    warmupComplete: !(acc.warmup_enabled ?? false),
+  });
+  return Math.min(configured, adaptiveCap);
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -31,7 +51,8 @@ export async function GET() {
     const cm2: Record<string, number> = {}; (sr2 || []).forEach((s: { account_id: string }) => { cm2[s.account_id] = (cm2[s.account_id] || 0) + 1; });
     return NextResponse.json(safe2.map((acc: Record<string, unknown>) => {
       const sent = cm2[acc.id as string] || 0; const limit = (acc.daily_limit as number) || 50;
-      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false, smtp_host: acc.smtp_host ?? null, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, remaining_today: Math.max(0, limit - sent) };
+      const effLimit = effectiveDailyLimit(acc);
+      return { id: acc.id, email: acc.email, type: acc.type, status: acc.status, health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false, warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false, smtp_host: acc.smtp_host ?? null, sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at, sent_today_real: sent, effective_daily_limit: effLimit, remaining_today: Math.max(0, effLimit - sent) };
     }));
   }
 
@@ -56,13 +77,14 @@ export async function GET() {
     .map((acc: Record<string, unknown>) => {
       const sentReal = countMap[acc.id as string] || 0;
       const limit = (acc.daily_limit as number) || 50;
+      const effLimit = effectiveDailyLimit(acc);
       return {
         id: acc.id, email: acc.email, type: acc.type, status: acc.status,
         health_score: acc.health_score ?? 80, warmup_enabled: acc.warmup_enabled ?? false,
         warmup_day: acc.warmup_day ?? 0, warmup_paused: acc.warmup_paused ?? false,
         smtp_host: acc.smtp_host ?? null,
         sent_today: acc.sent_today ?? 0, daily_limit: limit, created_at: acc.created_at,
-        sent_today_real: sentReal, remaining_today: Math.max(0, limit - sentReal),
+        sent_today_real: sentReal, effective_daily_limit: effLimit, remaining_today: Math.max(0, effLimit - sentReal),
       };
     });
 
@@ -163,6 +185,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  // Enrich with real-time capacity (just added → 0 sent today)
-  return NextResponse.json({ ...data, sent_today_real: 0, remaining_today: defaultLimit });
+  // Enrich with real-time capacity (just added → 0 sent today, warmup day 0)
+  const effLimit = effectiveDailyLimit({ ...data, warmup_day: 0 });
+  return NextResponse.json({ ...data, sent_today_real: 0, effective_daily_limit: effLimit, remaining_today: effLimit });
 }

@@ -288,9 +288,15 @@ export async function register() {
         }
       }
 
-      // Follow-up subject: ALWAYS use original step 0 subject for reply-in-thread steps.
+      // Follow-up subject: ALWAYS use original step 0 subject for reply-in-thread
+      // steps, prefixed "Re: " (once — guards against a triple-nested "Re: Re: Re:"
+      // if step 0's own subject already started with it) so it reads like a real
+      // mail-client reply instead of literally repeating the original subject verbatim.
+      function withReplyPrefix(s: string): string {
+        return /^re:/i.test(s.trim()) ? s : `Re: ${s}`;
+      }
       const subject = isReplyThread
-        ? (originalSubject ?? replaceVars(chosenSubject, lead))
+        ? withReplyPrefix(originalSubject ?? replaceVars(chosenSubject, lead))
         : replaceVars(chosenSubject, lead);
       const rawBody = replaceVars(chosenBody, lead);
 

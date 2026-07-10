@@ -15,6 +15,7 @@ type Campaign = {
   daily_limit_mode?: 'auto' | 'manual';
   sent_today?: number;
   step_delay_unit_ms?: number;
+  is_test_campaign?: boolean;
   from_hour?: string | number;
   to_hour?: string | number;
   active_days?: boolean[] | string[];
@@ -145,8 +146,7 @@ export default function CampaignDetailPage() {
     } finally { setToggling(false); }
   }
 
-  const TEST_STEP_DELAY_UNIT_MS = 60_000; // must match lib/campaign-scheduling.ts
-  const isTestModeCampaign = campaign?.step_delay_unit_ms === TEST_STEP_DELAY_UNIT_MS;
+  const isTestModeCampaign = campaign?.is_test_campaign === true;
   const [advancingDay, setAdvancingDay] = useState(false);
   const [advanceMsg, setAdvanceMsg] = useState('');
   async function advanceDay() {

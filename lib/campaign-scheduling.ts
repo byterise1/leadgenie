@@ -273,9 +273,21 @@ export const DELAY_UNIT_MS = 24 * 60 * 60 * 1000;
 
 // ── TEST MODE: fast follow-up delays for newly-created campaigns ───────────
 // ============================================================================
-// HOW TO REVERT TO PRODUCTION ("switch back to production"):
-//   Set TEST_MODE_FAST_FOLLOWUPS to false below. That is the ONLY line that
-//   needs to change. Commit + push (Railway auto-deploys on push to main).
+// RETIRED 2026-07-11 (kept as a permanently-off flag, not deleted, for the
+// same reason it was built this way originally — every read of the delay
+// unit uses a campaign's OWN stored step_delay_unit_ms, never this flag
+// directly, so leaving the mechanism in place costs nothing).
+//
+// WHY IT'S OFF NOW: testing acceleration is handled entirely by the
+// "⏩ Skip to Next Day" button now (gated on campaigns.is_test_campaign,
+// see advance-day/route.ts) instead of compressing real time. That means
+// every campaign — test or production — always uses real day-based delays,
+// identical to what will actually run in production, with zero risk of
+// forgetting to flip a global mode back before a real launch.
+//
+// If a future need for time-compressed testing comes back, flipping this
+// to `true` still works exactly as documented below — nothing about the
+// mechanism was removed, only the default changed.
 //
 // WHAT THIS DOES:
 //   Every campaign's follow-up-sequence delay unit (email_steps.delay_days
@@ -303,7 +315,7 @@ export const DELAY_UNIT_MS = 24 * 60 * 60 * 1000;
 // campaigns.step_delay_unit_ms, default 86_400_000 so existing rows are
 // unaffected).
 // ============================================================================
-export const TEST_MODE_FAST_FOLLOWUPS = true;
+export const TEST_MODE_FAST_FOLLOWUPS = false;
 export const PRODUCTION_STEP_DELAY_UNIT_MS = 24 * 60 * 60 * 1000; // 1 real day
 export const TEST_STEP_DELAY_UNIT_MS = 60 * 1000; // 1 real minute
 export const NEW_CAMPAIGN_STEP_DELAY_UNIT_MS = TEST_MODE_FAST_FOLLOWUPS
