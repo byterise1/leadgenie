@@ -495,7 +495,12 @@ export default function EmailAccountsPage() {
   const [step, setStep] = useState<ConnectStep>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState('');
+  // Explicit type instead of guessing success/error from substrings in the
+  // message text — that approach misclassified "already connected elsewhere"
+  // (an error) as success because it contains the word "connected", and
+  // "credentials refreshed" (a success) as an error because it matches neither
+  // keyword. Found while fixing the toast-duration issue below.
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [addError, setAddError] = useState('');
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
   const [limitDraft, setLimitDraft] = useState('');
@@ -522,26 +527,29 @@ export default function EmailAccountsPage() {
     const connected = params.get('connected');
     const err = params.get('error');
     if (connected === 'gmail') {
-      setToast('Gmail account connected successfully!');
+      setToast({ message: 'Gmail account connected successfully!', type: 'success' });
       router.replace('/dashboard/email-accounts');
     } else if (connected === 'gmail_refreshed') {
-      setToast('Gmail credentials refreshed — account updated.');
+      setToast({ message: 'Gmail credentials refreshed — account updated.', type: 'success' });
       router.replace('/dashboard/email-accounts');
     } else if (err === 'oauth_failed') {
-      setToast('Google OAuth failed. Try Gmail App Password instead.');
+      setToast({ message: 'Google OAuth failed. Try Gmail App Password instead.', type: 'error' });
       router.replace('/dashboard/email-accounts');
     } else if (err === 'already_connected') {
-      setToast('That Google account is already connected elsewhere on this platform. If it’s yours, remove it from the other place first — or pick a different Google account when connecting.');
+      setToast({ message: 'That Google account is already connected elsewhere on this platform. If it’s yours, remove it from the other place first — or pick a different Google account when connecting.', type: 'error' });
       router.replace('/dashboard/email-accounts');
     } else if (err) {
-      setToast('Could not connect that account. Please try again.');
+      setToast({ message: 'Could not connect that account. Please try again.', type: 'error' });
       router.replace('/dashboard/email-accounts');
     }
   }, [router]);
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(''), 4000);
+    // Error messages get more time before auto-dismissing (they tend to be
+    // longer sentences, e.g. the "already connected elsewhere" explanation)
+    // on top of the manual close button below, so the user is never rushed.
+    const t = setTimeout(() => setToast(null), toast.type === 'error' ? 9000 : 4000);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -583,7 +591,7 @@ export default function EmailAccountsPage() {
 
     setConnecting(false);
     setAccounts(prev => prev.some(a => a.id === data.id) ? prev : [data, ...prev]);
-    setToast('Account connected and verified!');
+    setToast({ message: 'Account connected and verified!', type: 'success' });
     setStep(null);
   };
 
@@ -596,8 +604,11 @@ export default function EmailAccountsPage() {
   return (
     <main className="flex-1 p-6 space-y-6">
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.includes('success') || toast.includes('connected') ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
-          {toast}
+        <div className={`fixed top-4 right-4 z-50 rounded-xl pl-4 pr-3 py-3 text-sm font-semibold shadow-lg flex items-start gap-3 max-w-md ${toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+          <span className="flex-1">{toast.message}</span>
+          <button onClick={() => setToast(null)} aria-label="Dismiss" className="shrink-0 opacity-80 hover:opacity-100 transition-opacity">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
       )}
 
@@ -837,7 +848,7 @@ export default function EmailAccountsPage() {
                 setAccounts(p => p.filter(a => a.id !== deleteId));
               } else {
                 const d = await res.json().catch(() => ({}));
-                setToast(d.error || 'Delete failed — try again');
+                setToast({ message: d.error || 'Delete failed — try again', type: 'error' });
               }
             }}
           />
@@ -848,7 +859,7 @@ export default function EmailAccountsPage() {
         <EditCredentialsModal
           accountId={editCredId}
           onClose={() => setEditCredId(null)}
-          onSaved={() => { fetchAccounts(); setToast('Credentials updated & verified!'); }}
+          onSaved={() => { fetchAccounts(); setToast({ message: 'Credentials updated & verified!', type: 'success' }); }}
         />
       )}
 
