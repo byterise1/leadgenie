@@ -244,12 +244,22 @@ export default function CampaignDetailPage() {
   }
 
   async function addStep() {
-    if (!newStepForm.subject.trim() || !newStepForm.body.trim()) { setStepError('Subject and body are required'); return; }
+    // Reply mode reuses step 1's subject regardless of whether the user
+    // interacted with the thread-mode toggle at all (it defaults to 'reply')
+    // — resolve the real subject to send here rather than depending on
+    // click-time state fills, so a fresh "Add Step" panel left on its
+    // default never fails validation with an empty subject.
+    const step0Subject = (campaign?.email_steps ?? []).find(s => (s.step_number ?? 0) === 0)?.subject?.trim() || '';
+    const isReply = newStepForm.thread_mode === 'reply' && (campaign?.email_steps?.length ?? 0) > 0;
+    const effectiveSubject = isReply && step0Subject
+      ? (/^re:/i.test(step0Subject) ? step0Subject : `Re: ${step0Subject}`)
+      : newStepForm.subject;
+    if (!effectiveSubject.trim() || !newStepForm.body.trim()) { setStepError('Subject and body are required'); return; }
     setStepBusyAction('add'); setStepError('');
     try {
       const res = await fetch(`/api/campaigns/${id}/steps`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStepForm),
+        body: JSON.stringify({ ...newStepForm, subject: effectiveSubject }),
       });
       const d = await res.json();
       if (d.error) { setStepError(d.error); return; }
@@ -592,12 +602,24 @@ export default function CampaignDetailPage() {
                       )}
                     </div>
 
-                    {editingStepId === step.id && (
+                    {editingStepId === step.id && (() => {
+                      const step0Subj = (sortedSteps[0]?.subject || '').trim();
+                      const replyPreviewSubject = step0Subj ? (/^re:/i.test(step0Subj) ? step0Subj : `Re: ${step0Subj}`) : '';
+                      const isReplyEdit = i > 0 && editForm.thread_mode === 'reply';
+                      return (
                       <div className="mt-3 ml-11 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 space-y-4">
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Subject line</label>
-                          <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                            className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                          {isReplyEdit ? (
+                            <>
+                              <input value={replyPreviewSubject} disabled
+                                className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 outline-none cursor-not-allowed" />
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Replies reuse the original subject from Step 1.</p>
+                            </>
+                          ) : (
+                            <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Email body</label>
@@ -619,7 +641,7 @@ export default function CampaignDetailPage() {
                           <div>
                             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Thread mode</label>
                             <div className="flex gap-2">
-                              <button type="button" onClick={() => setEditForm(f => ({ ...f, thread_mode: 'reply' }))}
+                              <button type="button" onClick={() => setEditForm(f => ({ ...f, thread_mode: 'reply', subject: replyPreviewSubject || f.subject }))}
                                 className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${editForm.thread_mode === 'reply' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
                                 Reply in thread
                               </button>
@@ -640,19 +662,32 @@ export default function CampaignDetailPage() {
                             className="text-xs font-bold px-4 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
             )}
 
-            {addingStep && (
+            {addingStep && (() => {
+              const step0Subj = (sortedSteps[0]?.subject || '').trim();
+              const replyPreviewSubject = step0Subj ? (/^re:/i.test(step0Subj) ? step0Subj : `Re: ${step0Subj}`) : '';
+              const isReplyAdd = sortedSteps.length > 0 && newStepForm.thread_mode === 'reply';
+              return (
               <div className="px-6 py-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Subject line</label>
-                  <input value={newStepForm.subject} onChange={e => setNewStepForm(f => ({ ...f, subject: e.target.value }))}
-                    placeholder="e.g. Quick question about {{company}}"
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                  {isReplyAdd ? (
+                    <>
+                      <input value={replyPreviewSubject} disabled
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 outline-none cursor-not-allowed" />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Replies reuse the original subject from Step 1.</p>
+                    </>
+                  ) : (
+                    <input value={newStepForm.subject} onChange={e => setNewStepForm(f => ({ ...f, subject: e.target.value }))}
+                      placeholder="e.g. Quick question about {{company}}"
+                      className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Email body</label>
@@ -672,7 +707,7 @@ export default function CampaignDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Thread mode (ignored if added as the first step)</label>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setNewStepForm(f => ({ ...f, thread_mode: 'reply' }))}
+                    <button type="button" onClick={() => setNewStepForm(f => ({ ...f, thread_mode: 'reply', subject: replyPreviewSubject || f.subject }))}
                       className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${newStepForm.thread_mode === 'reply' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
                       Reply in thread
                     </button>
@@ -687,7 +722,8 @@ export default function CampaignDetailPage() {
                   {stepBusyAction === 'add' ? 'Adding…' : 'Add Step'}
                 </button>
               </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Right column: Sending Accounts + Schedule */}

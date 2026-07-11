@@ -358,7 +358,7 @@ export function jitterMs(unitMs: number = DELAY_UNIT_MS, sameDay: boolean = fals
 // Runs async work over items with bounded concurrency instead of either fully
 // sequential (slow) or fully unbounded Promise.all (risks flooding Supabase's
 // connection pool on a campaign with thousands of leads).
-async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+export async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
   let i = 0;
   async function worker() {
     while (i < items.length) {
@@ -455,6 +455,73 @@ export async function resyncStepsAfterAddOrReorder(campaignId: string): Promise<
   await ensureLeadStepIds(campaignId);
   await renumberSteps(campaignId);
   await refreshLeadStepNumbers(campaignId);
+}
+
+// Call right after inserting a new step at `position` (0-indexed step_number,
+// AFTER renumbering has already happened, so `position` is the new step's
+// own final step_number). Only leads who were WAITING EXACTLY at that
+// position get redirected — their current_step_id previously pointed at
+// whichever step used to occupy this slot (now shifted one further along by
+// the insert); they now target the newly-inserted step instead, so it's
+// never silently skipped. Leads before the insert point are untouched
+// (nothing about their target changed); leads after it are already handled
+// correctly by resyncStepsAfterAddOrReorder's identity-preserving renumber
+// (same step, same content, just a new display number) - only the exact
+// insertion point needs this extra redirect, since that's the one spot
+// where a lead's next step's IDENTITY genuinely changes, not just its
+// number.
+export async function redirectWaitingLeadsToNewStep(campaignId: string, position: number, newStepId: string): Promise<void> {
+  const { data: newStep } = await supabaseAdmin
+    .from('email_steps').select('id, delay_days').eq('id', newStepId).maybeSingle();
+  if (!newStep) return;
+
+  const { data: campRow } = await supabaseAdmin
+    .from('campaigns').select('step_delay_unit_ms').eq('id', campaignId).maybeSingle();
+  const stepDelayUnitMs = campRow?.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+
+  const { data: affectedLeads } = await supabaseAdmin
+    .from('campaign_leads')
+    .select('id, status, last_sent_at')
+    .eq('campaign_id', campaignId)
+    .eq('current_step', position)
+    .in('status', ['pending', 'active']);
+
+  const delayDays = newStep.delay_days ?? 1;
+  await mapWithConcurrency(affectedLeads ?? [], 50, async lead => {
+    if (lead.status === 'pending') {
+      // Hasn't started yet — just point at the right step, no timer to recompute.
+      await supabaseAdmin.from('campaign_leads').update({ current_step_id: newStep.id }).eq('id', lead.id);
+      return;
+    }
+    const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
+    const nextSendAt = new Date(lastSentMs + delayDays * stepDelayUnitMs + jitterMs(stepDelayUnitMs, delayDays === 0)).toISOString();
+    await supabaseAdmin.from('campaign_leads').update({ current_step_id: newStep.id, next_send_at: nextSendAt }).eq('id', lead.id);
+  });
+}
+
+// Call right after changing an EXISTING step's delay_days (no structural
+// change - same step, same position, just a different wait time). Only
+// leads currently waiting on exactly this step (by stable id) get their
+// next_send_at recalculated from their real last_sent_at using the new
+// delay - already-sent emails are never touched, and leads waiting on a
+// different step are untouched too.
+export async function recomputeNextSendForDelayChange(campaignId: string, stepId: string, newDelayDays: number): Promise<void> {
+  const { data: campRow } = await supabaseAdmin
+    .from('campaigns').select('step_delay_unit_ms').eq('id', campaignId).maybeSingle();
+  const stepDelayUnitMs = campRow?.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
+
+  const { data: affectedLeads } = await supabaseAdmin
+    .from('campaign_leads')
+    .select('id, last_sent_at')
+    .eq('campaign_id', campaignId)
+    .eq('current_step_id', stepId)
+    .eq('status', 'active');
+
+  await mapWithConcurrency(affectedLeads ?? [], 50, async lead => {
+    const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
+    const nextSendAt = new Date(lastSentMs + newDelayDays * stepDelayUnitMs + jitterMs(stepDelayUnitMs, newDelayDays === 0)).toISOString();
+    await supabaseAdmin.from('campaign_leads').update({ next_send_at: nextSendAt }).eq('id', lead.id);
+  });
 }
 
 // Call to safely delete a step: figures out which leads were about to

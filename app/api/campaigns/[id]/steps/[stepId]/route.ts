@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { resyncStepsAfterAddOrReorder, deleteStepAndResync } from '@/lib/campaign-scheduling';
+import { resyncStepsAfterAddOrReorder, deleteStepAndResync, recomputeNextSendForDelayChange, mapWithConcurrency } from '@/lib/campaign-scheduling';
 
 async function requireEditableCampaign(campaignId: string, userId: string) {
   const { data: campaign } = await supabaseAdmin
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (guard.error) return guard.error;
 
   const { data: step } = await supabaseAdmin
-    .from('email_steps').select('id, step_number').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
+    .from('email_steps').select('id, step_number, delay_days').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
   if (!step) return NextResponse.json({ error: 'Step not found' }, { status: 404 });
 
   const { subject, body, delay_days, include_unsub, thread_mode, newPosition } = await req.json();
@@ -34,6 +34,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const contentFields: Record<string, unknown> = {};
   if (subject !== undefined) contentFields.subject = subject;
   if (body !== undefined) contentFields.body = body;
+  // undefined check, not just typeof number — a real delay_days:0 ("Same
+  // day") must still be recognized so the recompute-on-change check below
+  // fires correctly for it too.
+  const delayChanged = typeof delay_days === 'number' && delay_days !== step.delay_days;
   if (typeof delay_days === 'number') contentFields.delay_days = delay_days;
   if (include_unsub !== undefined) contentFields.include_unsub = !!include_unsub;
   if (thread_mode === 'reply' || thread_mode === 'new_thread') contentFields.thread_mode = thread_mode;
@@ -43,6 +47,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Only leads WAITING on exactly this step (not yet sent it) get rescheduled
+  // — already-sent emails are never touched, since this only ever writes
+  // campaign_leads.next_send_at, never sent_emails or last_sent_at.
+  if (delayChanged) {
+    await recomputeNextSendForDelayChange(campaignId, stepId, delay_days);
+  }
+
   if (typeof newPosition === 'number') {
     const { data: steps } = await supabaseAdmin
       .from('email_steps').select('id, step_number').eq('campaign_id', campaignId).order('step_number', { ascending: true });
@@ -50,9 +61,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const clamped = Math.max(0, Math.min(newPosition, withoutThis.length));
     const reordered = [...withoutThis];
     reordered.splice(clamped, 0, { id: stepId, step_number: -1 });
-    for (let i = 0; i < reordered.length; i++) {
-      await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', reordered[i].id);
-    }
+    // Parallelized (bounded concurrency) — no unique constraint on
+    // (campaign_id, step_number), so writing every step's new position at
+    // once is safe, and this is exactly the loop a drag-and-drop reorder
+    // was waiting on sequentially before (felt "stuck" on anything past a
+    // couple of steps).
+    await mapWithConcurrency(reordered.map((r, i) => ({ r, i })), 10, async ({ r, i }) => {
+      await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', r.id);
+    });
     await resyncStepsAfterAddOrReorder(campaignId);
   }
 
