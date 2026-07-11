@@ -10,6 +10,7 @@ export async function register() {
     const { sendEmail, replaceVars } = await import('./lib/mailer');
     const crypto = await import('crypto');
     const { PRODUCTION_STEP_DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity, checkCampaignAutoComplete } = await import('./lib/campaign-scheduling');
+    const { notifyUserByEmail } = await import('./lib/resend');
 
     const redisUrl = new URL(process.env.REDIS_URL!);
     const connection = {
@@ -182,6 +183,12 @@ export async function register() {
             user_id: campaign.user_id,
             message: `You've used all ${creditsTotal} email credits. Upgrade your plan or add more credits to continue sending.`,
             type: 'warning',
+          });
+          await notifyUserByEmail({
+            userId: campaign.user_id,
+            subject: `You've used all your email credits`,
+            bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">You've used all ${creditsTotal} email credits. Upgrade your plan or add more credits to keep your campaigns sending.</p>`,
+            link: `/dashboard/billing`,
           });
         }
         return;
@@ -447,6 +454,12 @@ export async function register() {
             user_id: campaign.user_id,
             message: `Sending account ${account.email} has an error: ${err.message}.${routingMsg}`,
             type: 'error',
+            link: `/dashboard/campaigns/${campaign.id}`,
+          });
+          await notifyUserByEmail({
+            userId: campaign.user_id,
+            subject: `Sending account ${account.email} needs attention`,
+            bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Your sending account <strong>${account.email}</strong> has an error: ${err.message}.${routingMsg}</p>`,
             link: `/dashboard/campaigns/${campaign.id}`,
           });
           console.error(`🔐 Auth/config failure for ${account.email}: ${err.message}`);

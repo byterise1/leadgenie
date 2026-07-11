@@ -3,6 +3,7 @@
 // recurring campaign-scheduler worker (instrumentation.ts).
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { notifyUserByEmail } from '@/lib/resend';
 
 // Call whenever a lead reaches a terminal state (step sequence completed,
 // bounced, unsubscribed, or replied) from ANY code path — the email-sending
@@ -39,6 +40,13 @@ export async function checkCampaignAutoComplete(campaignId: string): Promise<voi
     user_id: camp.user_id,
     message: `Campaign "${camp.name}" has completed sending.`,
     type: 'info',
+    link: `/dashboard/campaigns/${campaignId}`,
+  });
+
+  await notifyUserByEmail({
+    userId: camp.user_id,
+    subject: `Campaign "${camp.name}" has completed`,
+    bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Your campaign <strong>${camp.name}</strong> has finished sending to every lead on its list.</p>`,
     link: `/dashboard/campaigns/${campaignId}`,
   });
 }

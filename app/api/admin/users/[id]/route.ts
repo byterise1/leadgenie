@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { notifyUserByEmail } from '@/lib/resend';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -71,6 +72,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (key in body) updates[key] = body[key];
   }
 
+  // Fetch the current plan BEFORE updating so we only email on a genuine
+  // change, not on every save (the edit modal always sends `plan` even if
+  // the user didn't touch it).
+  let previousPlan: string | null = null;
+  if ('plan' in updates) {
+    const { data: before } = await supabaseAdmin.from('profiles').select('plan').eq('id', id).maybeSingle();
+    previousPlan = before?.plan ?? null;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .update(updates)
@@ -79,6 +89,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if ('plan' in updates && updates.plan !== previousPlan) {
+    notifyUserByEmail({
+      userId: id,
+      subject: 'Your subscription has been updated',
+      bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Your plan is now <strong>${String(updates.plan).charAt(0).toUpperCase()}${String(updates.plan).slice(1)}</strong>.</p>`,
+      link: '/dashboard/billing',
+    });
+  }
+
   return NextResponse.json(data);
 }
 

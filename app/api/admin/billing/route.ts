@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { notifyUserByEmail } from '@/lib/resend';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -36,6 +37,26 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fire-and-forget — a billing event must save regardless of whether the
+  // receipt/confirmation email succeeds.
+  const amountDisplay = `${((data.amount ?? 0) / 100).toFixed(2)} ${(data.currency || 'usd').toUpperCase()}`;
+  if (data.type === 'upgrade' || data.type === 'downgrade') {
+    notifyUserByEmail({
+      userId: user_id,
+      subject: data.type === 'upgrade' ? 'Your subscription has been upgraded' : 'Your subscription has changed',
+      bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Your plan has been ${data.type === 'upgrade' ? 'upgraded' : 'changed'}${plan_id ? ` to <strong>${plan_id}</strong>` : ''}.${description ? ` ${description}` : ''}</p>`,
+      link: '/dashboard/billing',
+    });
+  } else {
+    notifyUserByEmail({
+      userId: user_id,
+      subject: 'Your Leads Add receipt',
+      bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Payment received: <strong>${amountDisplay}</strong>${description ? ` — ${description}` : ''}.</p>`,
+      link: '/dashboard/billing',
+    });
+  }
+
   return NextResponse.json(data);
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { notifyUserByEmail } from '@/lib/resend';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -85,6 +86,12 @@ export async function PATCH(req: NextRequest) {
         read: false,
         link: `/dashboard/support/${id}`,
       }).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
+      notifyUserByEmail({
+        userId: existing.user_id,
+        subject: `Support reply: ${existing.subject}`,
+        bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">We've replied to your support ticket "<strong>${existing.subject}</strong>".</p>`,
+        link: `/dashboard/support/${id}`,
+      });
     }
   } else if (admin_reply !== undefined) {
     // Legacy path: editing admin_reply field directly
@@ -104,6 +111,12 @@ export async function PATCH(req: NextRequest) {
           read: false,
           link: `/dashboard/support/${id}`,
         }).then(({ error }) => { if (error) console.error('Notification insert failed:', error.message); });
+        notifyUserByEmail({
+          userId: existing.user_id,
+          subject: `Support reply: ${existing.subject}`,
+          bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">We've replied to your support ticket "<strong>${existing.subject}</strong>".</p>`,
+          link: `/dashboard/support/${id}`,
+        });
       }
     }
   }
