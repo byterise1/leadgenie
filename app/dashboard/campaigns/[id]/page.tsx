@@ -1011,6 +1011,14 @@ export default function CampaignDetailPage() {
                     const stepsSent = l.current_step ?? 0;
                     const stepsLeft = Math.max(0, totalSteps - stepsSent);
                     const nextStepData = (campaign.email_steps ?? []).find(s => s.step_number === l.current_step);
+                    // Reply-mode steps actually send "Re: [step 1's subject]", not
+                    // their own configured subject (see instrumentation.ts's
+                    // withReplyPrefix) — preview the real subject that'll go out,
+                    // not the one stored on the step itself.
+                    const step0Subject = (campaign.email_steps ?? []).find(s => s.step_number === 0)?.subject;
+                    const nextStepPreviewSubject = nextStepData?.thread_mode === 'reply' && step0Subject
+                      ? (/^re:/i.test(step0Subject.trim()) ? step0Subject : `Re: ${step0Subject}`)
+                      : nextStepData?.subject;
                     return (
                     <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-6 py-3">
@@ -1086,7 +1094,7 @@ export default function CampaignDetailPage() {
                         {l.status === 'active' && l.next_send_at ? (
                           <div>
                             <p className="text-gray-700 dark:text-gray-300 font-medium">{formatDateTime(l.next_send_at)} <span className="text-gray-400 dark:text-gray-500 font-normal">({formatRelative(l.next_send_at)})</span></p>
-                            {nextStepData && <p className="text-gray-400 dark:text-gray-500 truncate max-w-[180px]">Step {(nextStepData.step_number ?? 0) + 1}: {nextStepData.subject || '(no subject)'}</p>}
+                            {nextStepData && <p className="text-gray-400 dark:text-gray-500 truncate max-w-[180px]">Step {(nextStepData.step_number ?? 0) + 1}: {nextStepPreviewSubject || '(no subject)'}</p>}
                           </div>
                         ) : l.status === 'pending' ? (
                           <span className="text-gray-400 dark:text-gray-500">

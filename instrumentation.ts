@@ -527,7 +527,7 @@ export async function register() {
       new SyncWorker('campaign-scheduler', async () => {
         const { data: activeCampaigns } = await supabase
           .from('campaigns')
-          .select('id, name, user_id, daily_limit, daily_limit_mode, from_hour, to_hour, timezone, active_days, min_delay_secs, max_delay_secs, followup_priority_mode, followup_weight_pct, campaign_accounts(account:email_accounts(*))')
+          .select('id, name, user_id, daily_limit, daily_limit_mode, from_hour, to_hour, timezone, active_days, min_delay_secs, max_delay_secs, followup_priority_mode, followup_weight_pct, campaign_accounts(account:email_accounts(*)), email_steps(step_number, thread_mode)')
           .eq('status', 'active');
 
         if (!activeCampaigns?.length) return;
@@ -652,17 +652,34 @@ export async function register() {
               return delay;
             };
 
+            const stepThreadModeByNumber = new Map<number, string>(
+              (campaign.email_steps ?? []).map((s: any) => [s.step_number, s.thread_mode])
+            );
+
             for (const cl of followupsToSend as any[]) {
               // Locked mailbox for this thread, as long as it's still pacing-eligible
-              // this cycle. Falls back to whichever eligible account currently has
-              // the most room, either because the sticky one is still cooling down
-              // or because the lead somehow reached a follow-up with no persisted
-              // account_id.
-              const stickyId = cl.account_id && accountRemaining.has(cl.account_id) && isPacingEligible(accountsById.get(cl.account_id))
-                ? cl.account_id : undefined;
-              const fallback = [...accountRemaining.entries()]
-                .filter(([id]) => isPacingEligible(accountsById.get(id)))
-                .sort((a, b) => b[1] - a[1])[0];
+              // this cycle. Falling back to a DIFFERENT account mid-thread is only
+              // safe when there's no continuity to protect, OR the sticky account is
+              // genuinely unavailable today (unhealthy/paused/error/no capacity left —
+              // not in accountRemaining at all), matching the existing automatic
+              // mailbox failover behavior (a permanently broken mailbox must still
+              // hand off, or the lead gets stuck forever). What must NOT fall back:
+              // a 'reply' step whose sticky account is perfectly healthy and simply
+              // mid-cooldown from a recent send THIS CYCLE (in accountRemaining, just
+              // not isPacingEligible yet) — switching mailboxes there would send a
+              // "reply" from a different address than the original email in that
+              // thread, broken-looking to the recipient and a real spam-trigger
+              // pattern — found live via a real campaign where exactly this happened
+              // to 2 leads. That case is simply skipped this cycle instead (self-heals
+              // next cycle once the cooldown clears).
+              const threadMode = stepThreadModeByNumber.get(cl.current_step);
+              const stickyInPlay = !!cl.account_id && accountRemaining.has(cl.account_id);
+              const stickyEligible = stickyInPlay && isPacingEligible(accountsById.get(cl.account_id));
+              const stickyId = stickyEligible ? cl.account_id : undefined;
+              const canFallback = !cl.account_id || threadMode !== 'reply' || !stickyInPlay;
+              const fallback = canFallback
+                ? [...accountRemaining.entries()].filter(([id]) => isPacingEligible(accountsById.get(id))).sort((a, b) => b[1] - a[1])[0]
+                : undefined;
               const accId: string | undefined = stickyId ?? fallback?.[0];
               const room = accId ? accountRemaining.get(accId) : undefined;
               if (!accId || !room || room <= 0) continue;
