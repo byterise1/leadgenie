@@ -592,7 +592,7 @@ export default function NewCampaignPage() {
                         <span>Send after</span>
                         <select value={email.delay} onChange={e => updateEmail(idx, 'delay', Number(e.target.value))}
                           className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-2 focus:ring-blue-400">
-                          {[1,2,3,5,10,15].map(d => <option key={d} value={d}>{d} day{d !== 1 ? 's' : ''}</option>)}
+                          {[0,1,2,3,5,10,15].map(d => <option key={d} value={d}>{d === 0 ? 'Same day' : `${d} day${d !== 1 ? 's' : ''}`}</option>)}
                         </select>
                       </div>
                     )}
