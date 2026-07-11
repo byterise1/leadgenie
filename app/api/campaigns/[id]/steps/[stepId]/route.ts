@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { resyncStepsAfterAddOrReorder, deleteStepAndResync, recomputeNextSendForDelayChange, mapWithConcurrency } from '@/lib/campaign-scheduling';
+import { deleteStepAndResync, recomputeNextSendForDelayChange, mapWithConcurrency } from '@/lib/campaign-scheduling';
 
 async function requireEditableCampaign(campaignId: string, userId: string) {
   const { data: campaign } = await supabaseAdmin
@@ -54,27 +54,58 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await recomputeNextSendForDelayChange(campaignId, stepId, delay_days);
   }
 
+  let respondWithStepNumber: number | null = null;
+
   if (typeof newPosition === 'number') {
+    // Delays (and step_number itself) belong to the POSITION in the
+    // sequence, not to whichever email currently occupies it — reordering
+    // must only change WHICH email sends at each stage, never the
+    // campaign's overall day-by-day timing. So this does NOT move step
+    // rows to new step_numbers (that would drag each row's own delay_days
+    // along with it, exactly what must not happen). Instead it keeps every
+    // row pinned to its current step_number/delay_days and reshuffles only
+    // the CONTENT fields between them — a side benefit is that no waiting
+    // lead's current_step_id (a stable row reference) is ever invalidated
+    // by a pure reorder, so no redirect/resync pass is needed here at all,
+    // unlike insert/delete which genuinely do change what exists at a
+    // position.
     const { data: steps } = await supabaseAdmin
-      .from('email_steps').select('id, step_number').eq('campaign_id', campaignId).order('step_number', { ascending: true });
-    const withoutThis = (steps ?? []).filter(s => s.id !== stepId);
-    const clamped = Math.max(0, Math.min(newPosition, withoutThis.length));
-    const reordered = [...withoutThis];
-    reordered.splice(clamped, 0, { id: stepId, step_number: -1 });
-    // Parallelized (bounded concurrency) — no unique constraint on
-    // (campaign_id, step_number), so writing every step's new position at
-    // once is safe, and this is exactly the loop a drag-and-drop reorder
-    // was waiting on sequentially before (felt "stuck" on anything past a
-    // couple of steps).
-    await mapWithConcurrency(reordered.map((r, i) => ({ r, i })), 10, async ({ r, i }) => {
-      await supabaseAdmin.from('email_steps').update({ step_number: i }).eq('id', r.id);
+      .from('email_steps')
+      .select('id, step_number, subject, body, thread_mode, include_unsub, template_id, ab_variants')
+      .eq('campaign_id', campaignId)
+      .order('step_number', { ascending: true });
+
+    const ordered = steps ?? [];
+    const oldIndex = ordered.findIndex(s => s.id === stepId);
+    if (oldIndex === -1) return NextResponse.json({ error: 'Step not found' }, { status: 404 });
+    const clamped = Math.max(0, Math.min(newPosition, ordered.length - 1));
+
+    type ContentFields = { subject: string; body: string; thread_mode: string; include_unsub: boolean; template_id: string | null; ab_variants: unknown };
+    const contents: ContentFields[] = ordered.map(s => ({
+      subject: s.subject, body: s.body, thread_mode: s.thread_mode,
+      include_unsub: s.include_unsub, template_id: s.template_id, ab_variants: s.ab_variants,
+    }));
+    const [moved] = contents.splice(oldIndex, 1);
+    contents.splice(clamped, 0, moved);
+    // Position 0 is always the first email — there's nothing before it to
+    // reply to, so it can never end up thread_mode:'reply' regardless of
+    // which content moved there.
+    if (contents[0]) contents[0] = { ...contents[0], thread_mode: 'new_thread' };
+
+    // Parallelized (bounded concurrency) — every row's own step_number never
+    // changes here, only its content, so there's no ordering constraint to
+    // respect (unlike the insert route's position-shift loop).
+    await mapWithConcurrency(ordered.map((s, i) => ({ s, content: contents[i] })), 10, async ({ s, content }) => {
+      await supabaseAdmin.from('email_steps').update(content).eq('id', s.id);
     });
-    await resyncStepsAfterAddOrReorder(campaignId);
+    respondWithStepNumber = clamped;
   }
 
   await supabaseAdmin.from('campaigns').update({ updated_at: new Date().toISOString() }).eq('id', campaignId);
 
-  const { data: updated } = await supabaseAdmin.from('email_steps').select('*').eq('id', stepId).single();
+  const { data: updated } = respondWithStepNumber !== null
+    ? await supabaseAdmin.from('email_steps').select('*').eq('campaign_id', campaignId).eq('step_number', respondWithStepNumber).single()
+    : await supabaseAdmin.from('email_steps').select('*').eq('id', stepId).single();
   return NextResponse.json(updated);
 }
 
