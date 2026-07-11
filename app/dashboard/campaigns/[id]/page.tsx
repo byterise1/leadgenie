@@ -10,6 +10,7 @@ type Campaign = {
   name: string;
   status: string;
   created_at: string;
+  updated_at?: string | null;
   goal?: string;
   daily_limit?: number;
   daily_limit_mode?: 'auto' | 'manual';
@@ -30,7 +31,7 @@ type Campaign = {
   total_opened: number;
   total_replied: number;
   total_clicked: number;
-  email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean }[];
+  email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean; thread_mode?: 'reply' | 'new_thread' }[];
   campaign_accounts: { account: {
     id: string; email: string; type: string; status?: string;
     health_score?: number; warmup_day?: number; warmup_enabled?: boolean;
@@ -43,6 +44,7 @@ type LeadRow = {
   status: string;
   current_step: number;
   last_sent_at: string | null;
+  next_send_at?: string | null;
   lead: { id: string; email: string; first_name?: string; last_name?: string; company?: string } | null;
   opened_at?: string | null;
   clicked_at?: string | null;
@@ -80,6 +82,15 @@ function formatDateTime(d: string | null) {
   return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     + ' · '
     + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatRelative(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  const abs = Math.abs(ms);
+  const unit = abs < 3_600_000 ? `${Math.max(1, Math.round(abs / 60_000))}m`
+    : abs < 86_400_000 ? `${Math.round(abs / 3_600_000)}h`
+    : `${Math.round(abs / 86_400_000)}d`;
+  return ms >= 0 ? `in ${unit}` : `${unit} ago`;
 }
 
 export default function CampaignDetailPage() {
@@ -184,14 +195,14 @@ export default function CampaignDetailPage() {
   const stepBusy = stepBusyAction !== null;
   const [stepError, setStepError] = useState('');
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ subject: '', body: '', delay_days: 1 });
+  const [editForm, setEditForm] = useState<{ subject: string; body: string; delay_days: number; thread_mode: 'reply' | 'new_thread' }>({ subject: '', body: '', delay_days: 1, thread_mode: 'reply' });
   const [addingStep, setAddingStep] = useState(false);
-  const [newStepForm, setNewStepForm] = useState({ subject: '', body: '', delay_days: 1 });
+  const [newStepForm, setNewStepForm] = useState<{ subject: string; body: string; delay_days: number; thread_mode: 'reply' | 'new_thread' }>({ subject: '', body: '', delay_days: 1, thread_mode: 'reply' });
 
-  function startEditStep(step: { id: string; subject: string; body?: string; delay_days?: number; delay?: number }) {
+  function startEditStep(step: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; thread_mode?: 'reply' | 'new_thread' }) {
     setStepError('');
     setEditingStepId(step.id);
-    setEditForm({ subject: step.subject || '', body: step.body || '', delay_days: step.delay_days ?? step.delay ?? 1 });
+    setEditForm({ subject: step.subject || '', body: step.body || '', delay_days: step.delay_days ?? step.delay ?? 1, thread_mode: step.thread_mode === 'new_thread' ? 'new_thread' : 'reply' });
   }
 
   async function saveEditStep(stepId: string) {
@@ -243,7 +254,7 @@ export default function CampaignDetailPage() {
       const d = await res.json();
       if (d.error) { setStepError(d.error); return; }
       setAddingStep(false);
-      setNewStepForm({ subject: '', body: '', delay_days: 1 });
+      setNewStepForm({ subject: '', body: '', delay_days: 1, thread_mode: 'reply' });
       refresh();
     } finally { setStepBusyAction(null); }
   }
@@ -410,6 +421,9 @@ export default function CampaignDetailPage() {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             Created {formatDate(campaign.created_at)}
             {campaign.goal && <> · {campaign.goal}</>}
+            {campaign.updated_at && campaign.updated_at !== campaign.created_at && (
+              <> · Last edited {formatDateTime(campaign.updated_at)}</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -557,8 +571,13 @@ export default function CampaignDetailPage() {
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {step.subject || '(no subject)'}
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                          {i === 0 ? 'Sent immediately' : (() => { const d = step.delay_days ?? step.delay ?? 1; return `+${d} day${d !== 1 ? 's' : ''} after previous`; })()}
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5">
+                          <span>{i === 0 ? 'Sent immediately' : (() => { const d = step.delay_days ?? step.delay ?? 1; return d === 0 ? 'Same day, after previous' : `+${d} day${d !== 1 ? 's' : ''} after previous`; })()}</span>
+                          {i > 0 && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${step.thread_mode === 'new_thread' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400' : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400'}`}>
+                              {step.thread_mode === 'new_thread' ? 'New thread' : 'Reply'}
+                            </span>
+                          )}
                         </p>
                       </div>
                       {canEditSteps && (
@@ -589,11 +608,27 @@ export default function CampaignDetailPage() {
                           <div>
                             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Wait before sending</label>
                             <div className="flex items-center gap-2">
-                              <input type="number" min={1} value={editForm.delay_days}
-                                onChange={e => setEditForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                              <input type="number" min={0} value={editForm.delay_days}
+                                onChange={e => setEditForm(f => ({ ...f, delay_days: Math.max(0, Number(e.target.value) || 0) }))}
                                 className="w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                              <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step (0 = same day)</span>
                             </div>
+                          </div>
+                        )}
+                        {i > 0 && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Thread mode</label>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setEditForm(f => ({ ...f, thread_mode: 'reply' }))}
+                                className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${editForm.thread_mode === 'reply' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
+                                Reply in thread
+                              </button>
+                              <button type="button" onClick={() => setEditForm(f => ({ ...f, thread_mode: 'new_thread' }))}
+                                className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${editForm.thread_mode === 'new_thread' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
+                                New thread
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Reply reuses step 1's subject with "Re: " and stays in the same conversation. New thread sends this step's own subject as a fresh email.</p>
                           </div>
                         )}
                         <div className="flex gap-2 pt-1">
@@ -628,10 +663,23 @@ export default function CampaignDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Wait before sending</label>
                   <div className="flex items-center gap-2">
-                    <input type="number" min={1} value={newStepForm.delay_days}
-                      onChange={e => setNewStepForm(f => ({ ...f, delay_days: Number(e.target.value) || 1 }))}
+                    <input type="number" min={0} value={newStepForm.delay_days}
+                      onChange={e => setNewStepForm(f => ({ ...f, delay_days: Math.max(0, Number(e.target.value) || 0) }))}
                       className="w-20 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step (ignored if added as the first step)</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">day(s) after the previous step, 0 = same day (ignored if added as the first step)</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Thread mode (ignored if added as the first step)</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setNewStepForm(f => ({ ...f, thread_mode: 'reply' }))}
+                      className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${newStepForm.thread_mode === 'reply' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
+                      Reply in thread
+                    </button>
+                    <button type="button" onClick={() => setNewStepForm(f => ({ ...f, thread_mode: 'new_thread' }))}
+                      className={`flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${newStepForm.thread_mode === 'new_thread' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}>
+                      New thread
+                    </button>
                   </div>
                 </div>
                 <button disabled={stepBusy} onClick={addStep}
@@ -954,6 +1002,7 @@ export default function CampaignDetailPage() {
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Replied</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Sent</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Next Send</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -961,6 +1010,7 @@ export default function CampaignDetailPage() {
                     const totalSteps = (campaign.email_steps ?? []).length;
                     const stepsSent = l.current_step ?? 0;
                     const stepsLeft = Math.max(0, totalSteps - stepsSent);
+                    const nextStepData = (campaign.email_steps ?? []).find(s => s.step_number === l.current_step);
                     return (
                     <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-6 py-3">
@@ -1032,6 +1082,20 @@ export default function CampaignDetailPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{formatDateTime(l.last_sent_at)}</td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap min-w-[160px]">
+                        {l.status === 'active' && l.next_send_at ? (
+                          <div>
+                            <p className="text-gray-700 dark:text-gray-300 font-medium">{formatDateTime(l.next_send_at)} <span className="text-gray-400 dark:text-gray-500 font-normal">({formatRelative(l.next_send_at)})</span></p>
+                            {nextStepData && <p className="text-gray-400 dark:text-gray-500 truncate max-w-[180px]">Step {(nextStepData.step_number ?? 0) + 1}: {nextStepData.subject || '(no subject)'}</p>}
+                          </div>
+                        ) : l.status === 'pending' ? (
+                          <span className="text-gray-400 dark:text-gray-500">
+                            {campaign.status === 'active' ? 'Queued — waiting for capacity' : campaign.status === 'paused' ? 'Waiting — campaign paused' : 'Not started'}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">—</span>
+                        )}
+                      </td>
                     </tr>
                     );
                   })}

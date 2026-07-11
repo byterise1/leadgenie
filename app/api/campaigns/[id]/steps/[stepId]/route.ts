@@ -29,13 +29,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from('email_steps').select('id, step_number').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
   if (!step) return NextResponse.json({ error: 'Step not found' }, { status: 404 });
 
-  const { subject, body, delay_days, include_unsub, newPosition } = await req.json();
+  const { subject, body, delay_days, include_unsub, thread_mode, newPosition } = await req.json();
 
   const contentFields: Record<string, unknown> = {};
   if (subject !== undefined) contentFields.subject = subject;
   if (body !== undefined) contentFields.body = body;
   if (typeof delay_days === 'number') contentFields.delay_days = delay_days;
   if (include_unsub !== undefined) contentFields.include_unsub = !!include_unsub;
+  if (thread_mode === 'reply' || thread_mode === 'new_thread') contentFields.thread_mode = thread_mode;
 
   if (Object.keys(contentFields).length) {
     const { error } = await supabaseAdmin.from('email_steps').update(contentFields).eq('id', stepId);
@@ -54,6 +55,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     await resyncStepsAfterAddOrReorder(campaignId);
   }
+
+  await supabaseAdmin.from('campaigns').update({ updated_at: new Date().toISOString() }).eq('id', campaignId);
 
   const { data: updated } = await supabaseAdmin.from('email_steps').select('*').eq('id', stepId).single();
   return NextResponse.json(updated);
@@ -76,5 +79,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { error } = await deleteStepAndResync(campaignId, stepId);
   if (error) return NextResponse.json({ error }, { status: 500 });
+
+  await supabaseAdmin.from('campaigns').update({ updated_at: new Date().toISOString() }).eq('id', campaignId);
   return NextResponse.json({ success: true });
 }

@@ -29,10 +29,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const guard = await requireEditableCampaign(campaignId, user.id);
   if (guard.error) return guard.error;
 
-  const { subject, body, delay_days, include_unsub, insertAt } = await req.json();
+  const { subject, body, delay_days, include_unsub, thread_mode, insertAt } = await req.json();
   if (!subject?.trim() || !body?.trim()) {
     return NextResponse.json({ error: 'Subject and body are required' }, { status: 400 });
   }
+  // Defaults to 'reply' — a step added after the fact via this editor is
+  // almost always meant as a follow-up in the same thread, matching the
+  // creation wizard's own default for its "+ Add Follow-up Step" button.
+  const resolvedThreadMode = thread_mode === 'new_thread' ? 'new_thread' : 'reply';
 
   const { data: existingSteps } = await supabaseAdmin
     .from('email_steps').select('id, step_number').eq('campaign_id', campaignId).order('step_number', { ascending: true });
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       body,
       delay_days: typeof delay_days === 'number' ? delay_days : 1,
       include_unsub: !!include_unsub,
+      thread_mode: resolvedThreadMode,
     })
     .select()
     .single();
@@ -62,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await resyncStepsAfterAddOrReorder(campaignId);
+  await supabaseAdmin.from('campaigns').update({ updated_at: new Date().toISOString() }).eq('id', campaignId);
 
   return NextResponse.json(newStep);
 }

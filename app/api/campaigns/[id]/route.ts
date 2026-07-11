@@ -52,13 +52,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
-  const { data, error } = await supabaseAdmin
+  // This is the single generic endpoint for Pause/Resume, Schedule & Limits,
+  // and Follow-up Priority edits — a hard failure here breaks all of those,
+  // not just the "last edited" timestamp. Degrade gracefully if the
+  // updated_at migration hasn't run yet (same pattern as safeUpdateAccount
+  // in instrumentation.ts for the same class of not-yet-run-migration risk)
+  // instead of letting one missing column take down every campaign edit.
+  let { data, error } = await supabaseAdmin
     .from('campaigns')
-    .update(body)
+    .update({ ...body, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', user.id)
     .select()
     .single();
+
+  if (error?.message?.includes('updated_at') || error?.message?.includes('column')) {
+    ({ data, error } = await supabaseAdmin
+      .from('campaigns')
+      .update(body)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single());
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);

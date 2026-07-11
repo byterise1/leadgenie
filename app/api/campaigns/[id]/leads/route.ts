@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const [{ data, error }, { data: trackingRows }] = await Promise.all([
     supabaseAdmin
       .from('campaign_leads')
-      .select('id,status,current_step,last_sent_at,lead:leads(id,email,first_name,last_name,company)')
+      .select('id,status,current_step,last_sent_at,next_send_at,lead:leads(id,email,first_name,last_name,company)')
       .eq('campaign_id', id)
       .order('last_sent_at', { ascending: false, nullsFirst: false }),
     supabaseAdmin
