@@ -150,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
-          () => fetchNotifs()
+          () => { fetchNotifs(); fetchSupportBadge(); }
         )
         .subscribe();
     });
