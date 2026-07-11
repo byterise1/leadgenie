@@ -323,21 +323,35 @@ export const NEW_CAMPAIGN_STEP_DELAY_UNIT_MS = TEST_MODE_FAST_FOLLOWUPS
   ? TEST_STEP_DELAY_UNIT_MS
   : PRODUCTION_STEP_DELAY_UNIT_MS;
 
-// Jitter so a lead's follow-up lands at roughly the same time each day, but
-// not the EXACT same minute — shifted by ~60-90 minutes either direction, to
-// look like a person hit send around the same time, not a script hitting it
-// at literally the same second every day. Expressed relative to unitMs (one
-// "day" in whatever unit the caller passes) rather than the full multi-day
-// delay, so a 5-day follow-up doesn't get 5x the variance of a 1-day one —
-// the daily send-time wobble is the same regardless of how many days apart
-// two steps are. Defaults to the real 24h unit (DELAY_UNIT_MS) for callers
-// that don't pass one (i.e. backlog smoothing, which always uses real days);
-// follow-up-sequence call sites pass the campaign's own step_delay_unit_ms.
-export function jitterMs(unitMs: number = DELAY_UNIT_MS): number {
-  const sign = Math.random() < 0.5 ? -1 : 1;
+// Jitter so a follow-up doesn't fire at a suspiciously exact, script-like
+// offset. Two different shapes depending on the step's own delay, decided by
+// the caller via `sameDay` — one shared formula for every campaign, test or
+// production (no separate timing modes; the Skip to Next Day button is the
+// only test-acceleration mechanism, see TEST_MODE_FAST_FOLLOWUPS above):
+//   - sameDay (delay_days === 0): there's no "same time" to wobble around —
+//     the previous send IS the anchor — so this is a one-sided wait, always
+//     positive, 30-90 minutes after it. Never fires seconds after the prior
+//     email, never waits a full day either.
+//   - Otherwise (delay_days >= 1): lands at roughly the same clock time as
+//     the previous send, N days later, shifted ±30-60 minutes either
+//     direction so it doesn't look like a script hitting send at literally
+//     the same minute every day.
+// Expressed relative to unitMs (one "day" in whatever unit the caller
+// passes) rather than the full multi-day delay, so a 5-day follow-up doesn't
+// get 5x the variance of a 1-day one — the daily send-time wobble is the
+// same regardless of how many days apart two steps are. Defaults to the real
+// 24h unit (DELAY_UNIT_MS) for callers that don't pass one (i.e. backlog
+// smoothing, which always uses real days); follow-up-sequence call sites
+// pass the campaign's own step_delay_unit_ms.
+export function jitterMs(unitMs: number = DELAY_UNIT_MS, sameDay: boolean = false): number {
   const REAL_DAY_MS = 24 * 60 * 60 * 1000;
-  const dayScale = unitMs / REAL_DAY_MS; // 1 at real scale, tiny during accelerated testing
-  const minutes = 60 + Math.random() * 30; // 60-90 real minutes
+  const dayScale = unitMs / REAL_DAY_MS; // 1 at real scale, tiny during accelerated (legacy fast-mode) campaigns
+  if (sameDay) {
+    const minutes = 30 + Math.random() * 60; // 30-90 minutes, always forward
+    return minutes * 60 * 1000 * dayScale;
+  }
+  const sign = Math.random() < 0.5 ? -1 : 1;
+  const minutes = 30 + Math.random() * 30; // 30-60 minutes, either direction
   return sign * minutes * 60 * 1000 * dayScale;
 }
 
@@ -478,7 +492,8 @@ export async function deleteStepAndResync(campaignId: string, stepId: string): P
   await mapWithConcurrency(affectedLeads ?? [], 50, async lead => {
     if (nextRemaining) {
       const lastSentMs = lead.last_sent_at ? new Date(lead.last_sent_at).getTime() : Date.now();
-      const nextSendAt = new Date(lastSentMs + (nextRemaining.delay_days || 1) * stepDelayUnitMs + jitterMs(stepDelayUnitMs)).toISOString();
+      const nextDelayDays = nextRemaining.delay_days ?? 1;
+      const nextSendAt = new Date(lastSentMs + nextDelayDays * stepDelayUnitMs + jitterMs(stepDelayUnitMs, nextDelayDays === 0)).toISOString();
       await supabaseAdmin.from('campaign_leads').update({
         current_step_id: nextRemaining.id, status: 'active', next_send_at: nextSendAt,
       }).eq('id', lead.id);

@@ -208,9 +208,10 @@ export async function register() {
         if (cl.status === 'active' && (cl.current_step ?? 0) <= stepNumber) {
           const _nextStepData = campaign.email_steps.find((s: any) => s.step_number === _nextStep);
           const _stepDelayUnitMs = campaign.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
-          const _rawDelayMs = (_nextStepData?.delay_days || 1) * _stepDelayUnitMs;
+          const _nextDelayDays = _nextStepData?.delay_days ?? 1;
+          const _rawDelayMs = _nextDelayDays * _stepDelayUnitMs;
           const _nextSendAt = _hasNext
-            ? new Date(Date.now() + _rawDelayMs + jitterMs(_stepDelayUnitMs)).toISOString()
+            ? new Date(Date.now() + _rawDelayMs + jitterMs(_stepDelayUnitMs, _nextDelayDays === 0)).toISOString()
             : null;
           await supabase.from('campaign_leads').update({
             current_step: _nextStep,
@@ -464,8 +465,11 @@ export async function register() {
       if (hasNextStep) {
         nextStepData = campaign.email_steps.find((s: any) => s.step_number === nextStep);
         const stepDelayUnitMs = campaign.step_delay_unit_ms ?? PRODUCTION_STEP_DELAY_UNIT_MS;
-        const rawDelayMs = (nextStepData.delay_days || 1) * stepDelayUnitMs;
-        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs(stepDelayUnitMs)).toISOString();
+        // ?? not || — a real delay_days:0 ("Same day") must stay 0, not get
+        // silently promoted to 1 by a falsy-value fallback.
+        const nextDelayDays = nextStepData.delay_days ?? 1;
+        const rawDelayMs = nextDelayDays * stepDelayUnitMs;
+        nextSendAt = new Date(Date.now() + rawDelayMs + jitterMs(stepDelayUnitMs, nextDelayDays === 0)).toISOString();
       }
 
       await supabase.from('campaign_leads').update({
