@@ -807,21 +807,26 @@ export async function register() {
               const fromEmail = (match ? match[2].trim() : fromHeader) || '';
               const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
 
-              const { data: existing } = await supabase
-                .from('inbox_threads').select('id')
-                .eq('user_id', account.user_id)
-                .eq('lead_id', sent.lead_id)
-                .eq('campaign_id', sent.campaign_id)
-                .maybeSingle();
-
-              if (!existing) {
-                await supabase.from('inbox_threads').insert({
+              // Atomic upsert, not check-then-insert — the old pattern raced
+              // under concurrent worker execution (e.g. two instances briefly
+              // overlapping during a deploy restart), producing duplicate
+              // inbox_threads rows for one real reply. ignoreDuplicates:true
+              // maps to INSERT ... ON CONFLICT DO NOTHING; .select() then
+              // returns the row only if THIS call actually inserted it, so
+              // the notification only fires once regardless of how many
+              // concurrent callers raced for the same reply.
+              const { data: inserted } = await supabase
+                .from('inbox_threads')
+                .upsert({
                   user_id: account.user_id, campaign_id: sent.campaign_id,
                   lead_id: sent.lead_id, account_id: account.id,
                   subject: subjectHeader, last_message: cleanSnip(replySnippet || ''),
                   from_email: fromEmail, from_name: fromName,
                   status: 'new', read: false, received_at: receivedAt,
-                });
+                }, { onConflict: 'user_id,lead_id,campaign_id', ignoreDuplicates: true })
+                .select('id');
+
+              if (inserted && inserted.length > 0) {
                 await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
                   `New reply from ${fromName || fromEmail} — "${subjectHeader}"`,
                   'info', '/dashboard/inbox');
@@ -966,30 +971,35 @@ export async function register() {
               const sent = sentEmails.find((s: any) => s.message_id === reply.inReplyTo);
               if (!sent) continue;
 
-              const { data: existing } = await supabase
-                .from('inbox_threads').select('id')
-                .eq('user_id', account.user_id)
-                .eq('lead_id', sent.lead_id)
-                .eq('campaign_id', sent.campaign_id)
-                .maybeSingle();
-
-              if (!existing) {
-                await supabase.from('inbox_threads').insert({
+              // Atomic upsert, not check-then-insert — see the matching
+              // gmail-oauth fix above for why (this exact pattern raced
+              // under concurrent worker execution, confirmed live with 3
+              // duplicate rows for one real reply). ignoreDuplicates:true
+              // + .select() returns the row only if THIS call inserted it.
+              const { data: inserted } = await supabase
+                .from('inbox_threads')
+                .upsert({
                   user_id: account.user_id, campaign_id: sent.campaign_id,
                   lead_id: sent.lead_id, account_id: account.id,
                   subject: reply.subject || sent.subject,
                   last_message: reply.snippet || `Reply from ${reply.fromEmail}`,
                   from_email: reply.fromEmail, from_name: reply.fromName,
                   status: 'new', read: false, received_at: reply.receivedAt,
-                });
+                }, { onConflict: 'user_id,lead_id,campaign_id', ignoreDuplicates: true })
+                .select('id');
+
+              if (inserted && inserted.length > 0) {
                 await notifyIfEnabled(supabase, account.user_id, 'notif_new_reply',
                   `New reply from ${reply.fromName || reply.fromEmail} — "${reply.subject || sent.subject}"`,
                   'info', '/dashboard/inbox');
-              } else if (reply.snippet && existing.id) {
-                // Backfill snippet for threads that were created before snippet support
+              } else if (reply.snippet) {
+                // Thread already existed (this was a conflict, not an insert)
+                // — backfill snippet for threads created before snippet
+                // support. Safe to run redundantly under concurrent callers,
+                // it's an idempotent UPDATE, not a row-creating operation.
                 await supabase.from('inbox_threads')
                   .update({ last_message: reply.snippet })
-                  .eq('id', existing.id)
+                  .eq('user_id', account.user_id).eq('lead_id', sent.lead_id).eq('campaign_id', sent.campaign_id)
                   .like('last_message', 'Reply from %');
               }
 
