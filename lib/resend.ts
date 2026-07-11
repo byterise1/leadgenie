@@ -5,15 +5,15 @@ import { Resend } from 'resend';
 // notifications), never something a user request should fail on.
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const FROM = '"Leads Add" <noreply@leadsgenie.site>';
+const FROM = '"Leads Genie" <noreply@leadsgenie.site>';
 const SITE_URL = process.env.SITE_URL || 'https://leadsgenie.site';
 
 function emailShell(bodyHtml: string): string {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;margin:0">
     <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e5e7eb">
-      <p style="font-size:18px;font-weight:700;color:#111;margin:0 0 20px">Leads Add</p>
+      <p style="font-size:18px;font-weight:700;color:#111;margin:0 0 20px">Leads Genie</p>
       ${bodyHtml}
-      <p style="font-size:12px;color:#9ca3af;margin:32px 0 0;padding-top:16px;border-top:1px solid #f1f5f9">Leads Add · leadsgenie.site</p>
+      <p style="font-size:12px;color:#9ca3af;margin:32px 0 0;padding-top:16px;border-top:1px solid #f1f5f9">Leads Genie · leadsgenie.site</p>
     </div>
   </body></html>`;
 }

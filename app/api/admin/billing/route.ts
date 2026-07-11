@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   } else {
     notifyUserByEmail({
       userId: user_id,
-      subject: 'Your Leads Add receipt',
+      subject: 'Your Leads Genie receipt',
       bodyHtml: `<p style="font-size:15px;color:#111;line-height:1.5">Payment received: <strong>${amountDisplay}</strong>${description ? ` — ${description}` : ''}.</p>`,
       link: '/dashboard/billing',
     });
