@@ -1,0 +1,12 @@
+-- Separates the REAL RFC822 Message-ID (needed in In-Reply-To/References
+-- headers so the RECIPIENT's mail client threads a follow-up correctly)
+-- from Gmail's internal API threadId (only meaningful to the SENDING
+-- Gmail account's own Sent-folder organization, never transmitted to the
+-- recipient at all). Previously gmail-oauth accounts stored ONLY the raw
+-- threadId in sent_emails.message_id and reused that same raw value as the
+-- In-Reply-To/References header on follow-ups — an invalid, non-RFC822
+-- value that doesn't match any message the recipient's mail provider has
+-- actually seen, so the recipient's own client could never correctly
+-- thread the reply. Real bug, confirmed via a live campaign report
+-- ("gmail rec[eived] in diff[erent thread]").
+ALTER TABLE sent_emails ADD COLUMN IF NOT EXISTS gmail_thread_id TEXT;

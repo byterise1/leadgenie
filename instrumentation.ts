@@ -256,20 +256,24 @@ export async function register() {
         // Fetch earliest step 0 row — use limit(1) + order to handle rare duplicate sends
         const { data: firstSent } = await supabase
           .from('sent_emails')
-          .select('message_id, subject')
+          .select('message_id, gmail_thread_id, subject')
           .eq('campaign_id', campaign.id)
           .eq('lead_id', lead.id)
           .eq('step_number', 0)
           .order('sent_at', { ascending: true })
           .limit(1)
           .maybeSingle();
-        if (firstSent?.message_id) {
-          if (account.type === 'gmail-oauth') {
-            gmailThreadId = firstSent.message_id;
-          } else {
-            inReplyTo = firstSent.message_id;
-          }
-        }
+        // message_id is now ALWAYS the real RFC822 Message-ID regardless of
+        // account type — this is what makes the RECIPIENT's own mail client
+        // correctly thread the reply (In-Reply-To/References must reference
+        // an actual Message-ID the recipient has seen; Gmail's internal
+        // threadId is never transmitted to them and means nothing on their
+        // end). gmail_thread_id is separate and ADDITIONAL for gmail-oauth
+        // only — it's what makes the SENDING account's own Gmail Sent view
+        // also show it threaded, via the API's threadId parameter. Both are
+        // set together below, not either/or.
+        if (firstSent?.message_id) inReplyTo = firstSent.message_id;
+        if (account.type === 'gmail-oauth' && firstSent?.gmail_thread_id) gmailThreadId = firstSent.gmail_thread_id;
         // Always capture original subject for reply steps — used even when threading fails
         originalSubject = firstSent?.subject || undefined;
       }
@@ -385,23 +389,34 @@ export async function register() {
           text: body,
           html: fullHtml,
           messageId: explicitMessageId,
+          // inReplyTo/references (a real RFC822 Message-ID) and gmailThreadId
+          // (Gmail's internal API bookkeeping) are independent and both get
+          // passed when applicable — NEVER let gmailThreadId overwrite
+          // inReplyTo/references. Real bug, found live: the raw Gmail
+          // threadId (a bare hex string, not RFC822 format) was previously
+          // being used AS the In-Reply-To/References header value for
+          // gmail-oauth follow-ups — meaningless to the RECIPIENT's mail
+          // client (Gmail's threadId is never transmitted to them, it only
+          // organizes the SENDER's own Sent view), so the recipient's own
+          // client had nothing valid to thread against and showed the
+          // follow-up as an unrelated new conversation.
           ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
-          ...(gmailThreadId ? { gmailThreadId, inReplyTo: gmailThreadId, references: gmailThreadId } : {}),
+          ...(gmailThreadId ? { gmailThreadId } : {}),
         });
 
-        // What to store in message_id:
-        // - Gmail OAuth: threadId from the API for step 0 only (used as gmailThreadId
-        //   by follow-ups). Later steps don't need their own stored ID — Gmail's
-        //   inbox-sync path checks the whole THREAD for new messages, not a specific
-        //   message-id, so it already catches a reply to any message in the thread.
-        // - SMTP/IMAP/Gmail App Password: every step's own explicit ID, so a reply to
-        //   ANY step — not just step 0 — can be matched during inbox sync.
-        const storeMessageId = account.type === 'gmail-oauth'
-          ? (stepNumber === 0 ? threadId : null)
-          : explicitMessageId;
-
-        if (sentEmail?.id && storeMessageId) {
-          await supabase.from('sent_emails').update({ message_id: storeMessageId }).eq('id', sentEmail.id);
+        // message_id is now ALWAYS the real RFC822 Message-ID, for every
+        // account type and every step — this is what In-Reply-To/References
+        // on the NEXT follow-up (and IMAP inbox-sync matching) key off of.
+        // gmail_thread_id is separate, gmail-oauth only, step 0 only (that's
+        // the only row any follow-up ever looks up) — Gmail's own internal
+        // thread bookkeeping, used for the gmailThreadId API parameter and
+        // by inbox-sync's Path 1 thread-lookup, never for header values.
+        const updates: Record<string, unknown> = { message_id: explicitMessageId };
+        if (account.type === 'gmail-oauth' && stepNumber === 0 && threadId) {
+          updates.gmail_thread_id = threadId;
+        }
+        if (sentEmail?.id) {
+          await supabase.from('sent_emails').update(updates).eq('id', sentEmail.id);
         }
       } catch (err: any) {
         if (sentEmail?.id) await supabase.from('sent_emails').delete().eq('id', sentEmail.id);
@@ -821,11 +836,15 @@ export async function register() {
             }
 
             // ── Path 1: stored threadId lookup ───────────────────────────────
+            // Reads gmail_thread_id specifically — Gmail's internal API thread
+            // ID, distinct from message_id (which is now always the real
+            // RFC822 Message-ID, used for In-Reply-To/References headers and
+            // the IMAP path below, never a valid input to Gmail's threads.get).
             const { data: sentEmails } = await supabase
               .from('sent_emails')
-              .select('id, message_id, lead_id, campaign_id, subject')
+              .select('id, gmail_thread_id, lead_id, campaign_id, subject')
               .eq('account_id', account.id)
-              .not('message_id', 'is', null)
+              .not('gmail_thread_id', 'is', null)
               .is('replied_at', null)
               .limit(30);
 
@@ -834,11 +853,11 @@ export async function register() {
             for (const sent of (sentEmails || [])) {
               try {
                 const thread = await gmailGet(
-                  `/gmail/v1/users/me/threads/${sent.message_id}?format=metadata&metadataHeaders=From,Subject,Date`,
+                  `/gmail/v1/users/me/threads/${sent.gmail_thread_id}?format=metadata&metadataHeaders=From,Subject,Date`,
                   token,
                 );
                 if (!thread?.messages || thread.messages.length <= 1) continue;
-                handledThreadIds.add(sent.message_id);
+                handledThreadIds.add(sent.gmail_thread_id);
 
                 const reply = thread.messages.slice(1).find((m: any) => {
                   if (m.labelIds?.includes('SENT')) return false;
@@ -904,7 +923,7 @@ export async function register() {
 
                   // Backfill threadId so future syncs use the faster path
                   if (msg.threadId) {
-                    await supabase.from('sent_emails').update({ message_id: msg.threadId }).eq('id', sentRow.id);
+                    await supabase.from('sent_emails').update({ gmail_thread_id: msg.threadId }).eq('id', sentRow.id);
                     handledThreadIds.add(msg.threadId);
                   }
 
