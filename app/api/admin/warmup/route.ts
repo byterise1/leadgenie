@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
+import { predictDeliverability, diagnose, computeDomainRollup } from '@/lib/warmup-diagnosis';
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -21,7 +22,7 @@ export async function GET() {
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, created_at')
+      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, mx_status, created_at, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, consecutive_stable_days')
       .neq('is_pool_account', true)
       .order('warmup_enabled', { ascending: false })
       .order('created_at', { ascending: false });
@@ -70,6 +71,15 @@ export async function GET() {
 
   const enriched: Record<string, any>[] = (accounts ?? []).map(a => {
     const rates = latestByEmail.get(a.email);
+    const recommendedSendLimit = campaignDailyCap({
+      provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50,
+      warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
+    });
+    const domainAuth = {
+      spf: a.spf_status || 'unknown', dkim: a.dkim_status || 'unknown',
+      dmarc: a.dmarc_status || 'unknown', mx: a.mx_status || 'unknown',
+    };
+    const blacklistStatus = a.blacklist_status || 'unknown';
     return {
       ...a,
       user_name: profileMap.get(a.user_id) || emailMap.get(a.user_id) || 'Unknown',
@@ -77,10 +87,20 @@ export async function GET() {
       inbox_rate: rates?.inbox_rate ?? null,
       spam_rate: rates?.spam_rate ?? null,
       bounce_rate: rates?.bounce_rate ?? null,
-      recommended_send_limit: campaignDailyCap({
-        provider: detectProvider(a as any), warmupDay: a.warmup_day ?? 0, health: a.health_score ?? 50,
-        warmupEnabled: !!a.warmup_enabled, alreadyWarmedUp: !!a.already_warmed_up,
+      recommended_send_limit: recommendedSendLimit,
+      deliverability_label: predictDeliverability({ score: a.health_score ?? 50, blacklistStatus, domainAuth }),
+      diagnosis: diagnose({
+        score: a.health_score ?? 50,
+        factors: {
+          inboxRate: rates?.inbox_rate ?? null, spamRate: rates?.spam_rate ?? null,
+          bounceRate: rates?.bounce_rate ?? null, replyRate: null,
+          authScore: 0, consistency: a.consecutive_stable_days ?? 0, blacklistPenalty: 0,
+        },
+        warmupDay: a.warmup_day ?? 0, warmupTarget: a.warmup_target ?? 14,
+        blacklistStatus, blacklistDetails: a.blacklist_details ?? {}, domainAuth,
+        isPaused: !!a.warmup_paused, pauseReason: a.warmup_pause_reason ?? null,
       }),
+      _dailyCapForRollup: recommendedSendLimit,
     };
   });
 
@@ -91,7 +111,23 @@ export async function GET() {
     at_risk: enriched.filter(a => a.health_score > 0 && a.health_score < 50).length,
   };
 
-  return NextResponse.json({ accounts: enriched, stats });
+  // Domain dashboard — per-domain rollup across every account (warming or not).
+  const byDomain = new Map<string, typeof enriched>();
+  for (const a of enriched) {
+    const d = a.domain || a.email?.split('@')[1]?.toLowerCase() || 'unknown';
+    if (!byDomain.has(d)) byDomain.set(d, []);
+    byDomain.get(d)!.push(a);
+  }
+  const domains = [...byDomain.entries()].map(([domain, accts]) => ({
+    domain,
+    ...computeDomainRollup(accts.map(a => ({
+      healthScore: a.health_score ?? 0, blacklistStatus: a.blacklist_status || 'unknown', dailyCap: a._dailyCapForRollup,
+    }))),
+  })).sort((a, b) => b.mailboxCount - a.mailboxCount);
+
+  for (const a of enriched) delete a._dailyCapForRollup;
+
+  return NextResponse.json({ accounts: enriched, stats, domains });
 }
 
 const VALID_POOL_MODES = ['admin_pool', 'user_to_user', 'both'] as const;

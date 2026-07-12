@@ -26,9 +26,19 @@ type WarmupAccount = {
   spf_status?: string;
   dkim_status?: string;
   dmarc_status?: string;
+  mx_status?: string;
+  domain?: string | null;
+  join_shared_network?: boolean;
+  blacklist_status?: 'clean' | 'listed' | 'unknown';
+  blacklist_details?: Record<string, boolean>;
   last_activity_at?: string | null;
   is_fresh?: boolean;
   is_stale?: boolean;
+  deliverability_label?: 'High' | 'Medium' | 'Low';
+  diagnosis?: { findings: string[]; recommendations: string[] };
+  fleet_avg_health?: number;
+  fleet_percentile?: number;
+  fleet_tier?: 'top10' | 'bottom20' | null;
 };
 
 function timeAgo(iso: string): string {
@@ -144,6 +154,70 @@ function HealthSparkline({ points }: { points: number[] }) {
   );
 }
 
+// "Your inbox probability is High/Medium/Low" — the primary indicator shown
+// to the user, not a raw number (which reads as arbitrary/technical).
+function DeliverabilityBadge({ label }: { label?: string }) {
+  if (!label) return null;
+  const style = label === 'High' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+    : label === 'Medium' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
+    : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400';
+  return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${style}`}>{label} inbox chance</span>;
+}
+
+function AuthBadge({ label, status }: { label: string; status?: string }) {
+  const style = status === 'pass' || status === 'clean' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+    : status === 'fail' || status === 'listed' ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
+  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}</span>;
+}
+
+function DiagnoseModal({ account, onClose }: { account: WarmupAccount; onClose: () => void }) {
+  const findings = account.diagnosis?.findings ?? [];
+  const recommendations = account.diagnosis?.recommendations ?? [];
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{account.email}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Health {account.health_score} · <DeliverabilityBadge label={account.deliverability_label}/></p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <AuthBadge label="SPF" status={account.spf_status}/>
+          <AuthBadge label="DKIM" status={account.dkim_status}/>
+          <AuthBadge label="DMARC" status={account.dmarc_status}/>
+          <AuthBadge label="MX" status={account.mx_status}/>
+          <AuthBadge label="Blacklist" status={account.blacklist_status}/>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">Findings</p>
+          <ul className="space-y-1">
+            {findings.map((f, i) => <li key={i} className="text-xs text-gray-700 dark:text-gray-300">{f}</li>)}
+          </ul>
+        </div>
+        {recommendations.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">Recommendations</p>
+            <ul className="space-y-1 list-disc list-inside">
+              {recommendations.map((r, i) => <li key={i} className="text-xs text-gray-700 dark:text-gray-300">{r}</li>)}
+            </ul>
+          </div>
+        )}
+        {account.fleet_avg_health !== undefined && (
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-100 dark:border-gray-800">
+            Your health {account.health_score} · Network average {account.fleet_avg_health}
+            {account.fleet_tier === 'top10' ? ' · Top 10%' : account.fleet_tier === 'bottom20' ? ' · Bottom 20%' : ''}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RateStat({ label, value, goodDirection = 'up' }: { label: string; value: number | null | undefined; goodDirection?: 'up' | 'down' }) {
   if (value === null || value === undefined) return (
     <div className="flex flex-col gap-0.5">
@@ -245,6 +319,18 @@ export default function WarmupPage() {
     });
   };
 
+  const updateJoinSharedNetwork = async (id: string, join_shared_network: boolean) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, join_shared_network } : a));
+    await fetch('/api/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id, join_shared_network }),
+    });
+    showToast(join_shared_network ? 'Joined the shared warmup network' : 'Left the shared warmup network — admin pool only now');
+  };
+
+  const [diagnosingAccount, setDiagnosingAccount] = useState<WarmupAccount | null>(null);
+
   const warmingAccounts = accounts.filter(a => a.warmup_enabled || a.status === 'warming');
   const avgScore = accounts.length
     ? Math.round(accounts.reduce((s, a) => s + (a.health_score || 0), 0) / accounts.length)
@@ -255,6 +341,7 @@ export default function WarmupPage() {
   const staleAccounts = accounts.filter(a => a.is_stale);
   const inboxRates = accounts.map(a => a.inbox_rate).filter((v): v is number => v !== null && v !== undefined);
   const avgInboxRate = inboxRates.length ? Math.round(inboxRates.reduce((s, v) => s + v, 0) / inboxRates.length) : null;
+  const fleetAvg = accounts.find(a => a.fleet_avg_health !== undefined)?.fleet_avg_health;
 
   // Check if an account has prior history from before it was connected to this user
   const hasPriorHistory = (email: string) => {
@@ -270,6 +357,8 @@ export default function WarmupPage() {
           {toast}
         </div>
       )}
+
+      {diagnosingAccount && <DiagnoseModal account={diagnosingAccount} onClose={() => setDiagnosingAccount(null)}/>}
 
       <div className="flex items-center justify-between">
         <div>
@@ -293,6 +382,7 @@ export default function WarmupPage() {
           { label: 'Accounts warming', value: String(warmingAccounts.length) },
           { label: 'Avg health score', value: accounts.length ? `${avgScore}%` : '—' },
           { label: 'Avg inbox rate', value: avgInboxRate !== null ? `${avgInboxRate}%` : '—', color: avgInboxRate !== null && avgInboxRate < 70 ? 'text-amber-600' : undefined },
+          { label: 'Network average', value: fleetAvg !== undefined ? `${fleetAvg}` : '—' },
           { label: 'Needs attention', value: String(pausedAccounts.length + staleAccounts.length), color: (pausedAccounts.length + staleAccounts.length) > 0 ? 'text-rose-600' : undefined },
         ].map(s => (
           <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
@@ -417,7 +507,13 @@ export default function WarmupPage() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <ScoreRing score={acc.health_score || 0}/>
+                        <div className="flex flex-col items-start gap-1.5">
+                          <ScoreRing score={acc.health_score || 0}/>
+                          <DeliverabilityBadge label={acc.deliverability_label}/>
+                          <button onClick={() => setDiagnosingAccount(acc)} className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                            Diagnose
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         {(() => {
@@ -556,6 +652,25 @@ export default function WarmupPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Shared Warmup Network opt-in per account */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-gray-900/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Shared Warmup Network</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">When joined, this mailbox warms up with other users' mailboxes too — not just the admin pool — for more diverse partners and stronger deliverability signal. Turning it off still warms the account (via admin pool only) but stops it from warming anyone else's.</p>
+            </div>
+            {accounts.length === 0 ? (
+              <div className="px-6 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">No accounts connected.</div>
+            ) : accounts.map((acc, idx) => (
+              <div key={acc.id} className={`px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 ${idx !== accounts.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.email}</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{acc.join_shared_network === false ? 'Admin pool only' : 'Joined'}</span>
+                  <Toggle on={acc.join_shared_network !== false} onToggle={() => updateJoinSharedNetwork(acc.id, !(acc.join_shared_network !== false))}/>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Per-account limit selector */}

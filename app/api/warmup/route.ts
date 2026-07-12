@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
+import { predictDeliverability, diagnose, computeFleetBenchmark } from '@/lib/warmup-diagnosis';
 
 export async function GET() {
   const supabase = await createClient();
@@ -14,7 +15,7 @@ export async function GET() {
   {
     const res = await supabaseAdmin
       .from('email_accounts')
-      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days, created_at')
+      .select('id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, mx_status, consecutive_stable_days, created_at, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
     accounts = res.data;
@@ -83,6 +84,15 @@ export async function GET() {
     }
   }
 
+  // Fleet benchmark — aggregate-only, never exposes other accounts' raw
+  // identities/scores to a regular user, just the average and this
+  // account's percentile against the whole platform's warming accounts.
+  const { data: fleetRows } = await supabaseAdmin
+    .from('email_accounts')
+    .select('health_score')
+    .eq('warmup_enabled', true);
+  const fleetScores = (fleetRows ?? []).map((r: any) => r.health_score ?? 0);
+
   const enriched = (accounts ?? []).map(a => {
     const rates = latestByEmail.get(a.email);
     const recommendedSendLimit = campaignDailyCap({
@@ -102,6 +112,25 @@ export async function GET() {
       && accountAgeHours >= 6
       && (hoursSinceActivity === null || hoursSinceActivity > 20);
 
+    const domainAuth = {
+      spf: a.spf_status || 'unknown', dkim: a.dkim_status || 'unknown',
+      dmarc: a.dmarc_status || 'unknown', mx: a.mx_status || 'unknown',
+    };
+    const blacklistStatus = a.blacklist_status || 'unknown';
+    const deliverabilityLabel = predictDeliverability({ score: a.health_score ?? 50, blacklistStatus, domainAuth });
+    const diagnosis = diagnose({
+      score: a.health_score ?? 50,
+      factors: {
+        inboxRate: rates?.inbox_rate ?? null, spamRate: rates?.spam_rate ?? null,
+        bounceRate: rates?.bounce_rate ?? null, replyRate: null,
+        authScore: 0, consistency: a.consecutive_stable_days ?? 0, blacklistPenalty: 0,
+      },
+      warmupDay: a.warmup_day ?? 0, warmupTarget: a.warmup_target ?? 14,
+      blacklistStatus, blacklistDetails: a.blacklist_details ?? {}, domainAuth,
+      isPaused: !!a.warmup_paused, pauseReason: a.warmup_pause_reason ?? null,
+    });
+    const benchmark = computeFleetBenchmark(a.health_score ?? 50, fleetScores);
+
     return {
       ...a,
       warmup_emails_sent: statsMap.get(a.id) ?? 0,
@@ -113,6 +142,11 @@ export async function GET() {
       last_activity_at: lastActivityAt,
       is_fresh: isFresh,
       is_stale: isStale,
+      deliverability_label: deliverabilityLabel,
+      diagnosis,
+      fleet_avg_health: benchmark.fleetAverage,
+      fleet_percentile: benchmark.percentile,
+      fleet_tier: benchmark.tier,
     };
   });
 
@@ -130,7 +164,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { account_id, enabled, warmup_target, resetWarmup } = body;
+  const { account_id, enabled, warmup_target, resetWarmup, join_shared_network } = body;
 
   if (!account_id) return NextResponse.json({ error: 'account_id required' }, { status: 400 });
 
@@ -159,7 +193,8 @@ export async function PATCH(req: NextRequest) {
       .update({
         warmup_day: 0, health_score: 50, sent_today: 0, consecutive_stable_days: 0,
         warmup_paused: false, warmup_pause_reason: null, warmup_paused_at: null,
-        spf_status: 'unknown', dkim_status: 'unknown', dmarc_status: 'unknown',
+        spf_status: 'unknown', dkim_status: 'unknown', dmarc_status: 'unknown', mx_status: 'unknown',
+        blacklist_status: 'unknown', blacklist_details: {}, blacklist_checked_at: null,
         domain_checked_at: null, warmup_last_run_date: null, last_health_calc_at: null,
         bounce_count: 0, spam_count: 0, reply_count: 0, open_count: 0, auth_error_count: 0,
         status: account.warmup_enabled ? 'warming' : 'active',
@@ -183,6 +218,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof warmup_target === 'number') {
     updates.warmup_target = warmup_target;
+  }
+  if (typeof join_shared_network === 'boolean') {
+    updates.join_shared_network = join_shared_network;
   }
 
   const { data, error } = await supabaseAdmin

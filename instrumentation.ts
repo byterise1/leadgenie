@@ -1056,113 +1056,210 @@ export async function register() {
       console.log('[warmup] No prior warmup emails found — triggering bootstrap run in 5s');
     }
 
-    // Paired templates: each entry = { subject, body, reply }
-    // Reply is contextually matched to the initial email topic
-    const WARMUP_PAIRS: { subject: string; body: string; reply: string }[] = [
+    // Paired templates: each entry = { subject, body, arc }. arc[0] = the
+    // first reply, arc[1] = a follow-up, arc[2] = a closing message — a real
+    // multi-turn conversation on the SAME topic (question → reply → follow-up
+    // → closing) instead of generic "Hi/Thanks/Bye" filler. chainDepth (0-3)
+    // indexes directly into arc when a thread continues.
+    const WARMUP_PAIRS: { subject: string; body: string; arc: [string, string, string] }[] = [
       {
         subject: 'Quick question about Q3 planning',
         body: 'Hi,\n\nHope your Q3 is going well. I had a quick question about how your team is structuring priorities for the rest of the quarter — are you focusing more on growth or efficiency?\n\nWould love to hear your thoughts.\n\nBest',
-        reply: 'Good question! We\'re leaning toward efficiency this quarter — trying to tighten up processes before pushing growth again. How about your side?',
+        arc: [
+          'Good question! We\'re leaning toward efficiency this quarter — trying to tighten up processes before pushing growth again. How about your side?',
+          'We started with a full process audit actually — found a lot of manual steps that were eating time for no real benefit. Slow going but worth it.',
+          'Anyway, good talking through this — let\'s catch up again once Q4 planning kicks off.',
+        ],
       },
       {
         subject: 'Saw your LinkedIn post — had to reach out',
         body: 'Hi,\n\nI came across your recent post and it really resonated with me. The point about building systems before scaling was something I\'ve been thinking about a lot lately.\n\nWould love to connect and exchange ideas sometime.\n\nBest regards',
-        reply: 'Thanks for reaching out! That post got a lot of engagement — clearly it struck a chord. Happy to connect and chat more about it.',
+        arc: [
+          'Thanks for reaching out! That post got a lot of engagement — clearly it struck a chord. Happy to connect and chat more about it.',
+          'Funny enough I\'m mid-way through applying that same idea to our own onboarding flow right now. Slower than I\'d like but the payoff is real.',
+          'Great chatting — I\'ll ping you once we\'ve got real results to compare notes on.',
+        ],
       },
       {
         subject: 'Referral from a mutual connection',
         body: 'Hello,\n\nA mutual colleague suggested I reach out to you. They mentioned you\'ve done some interesting work in the ops space and thought we\'d have a lot to talk about.\n\nLooking forward to connecting.\n\nWarm regards',
-        reply: 'Great to hear from you! Always happy to connect with people in the same space. What kind of work are you focused on right now?',
+        arc: [
+          'Great to hear from you! Always happy to connect with people in the same space. What kind of work are you focused on right now?',
+          'Mostly process design and tooling right now — trying to cut down the number of handoffs between teams.',
+          'Sounds like a good problem to be solving. Let\'s stay in touch either way.',
+        ],
       },
       {
         subject: 'Following up on last week\'s conference',
         body: 'Hi,\n\nIt was great seeing you at the conference last week. I\'ve been thinking about the panel discussion on AI in sales — some really eye-opening perspectives.\n\nWanted to follow up and stay in touch.\n\nCheers',
-        reply: 'Great connecting with you too! That panel was one of the highlights for me. The bit about AI replacing SDRs was controversial but probably not far off.',
+        arc: [
+          'Great connecting with you too! That panel was one of the highlights for me. The bit about AI replacing SDRs was controversial but probably not far off.',
+          'Still thinking about that one honestly. I don\'t think it\'s replacement so much as everyone\'s job quietly getting more technical.',
+          'Well put. Good seeing you there — let\'s grab time at the next one too.',
+        ],
       },
       {
         subject: 'Thoughts on the market shift?',
         body: 'Hello,\n\nWith everything happening in the market right now, I\'m curious how your team is adapting. We\'ve been seeing a real shift in buyer behavior over the last 6 months.\n\nWould love to hear how you\'re navigating it.\n\nBest',
-        reply: 'Definitely feeling it on our end too. Buyers are taking longer to decide and asking a lot more questions before committing. We\'ve had to rethink our whole nurture sequence.',
+        arc: [
+          'Definitely feeling it on our end too. Buyers are taking longer to decide and asking a lot more questions before committing. We\'ve had to rethink our whole nurture sequence.',
+          'Same here — added a couple of extra touchpoints just to answer objections earlier instead of at the end.',
+          'Makes sense. Appreciate you sharing — helpful to compare notes on this one.',
+        ],
       },
       {
         subject: 'Collaboration opportunity?',
         body: 'Hi,\n\nI\'ve been following your work for a while and think there could be a really interesting collaboration opportunity between our teams.\n\nWould you be open to a quick 20-min call to explore?\n\nBest regards',
-        reply: 'Appreciate you reaching out! Always open to exploring collaborations. Send me some times that work for you and we\'ll find a slot.',
+        arc: [
+          'Appreciate you reaching out! Always open to exploring collaborations. Send me some times that work for you and we\'ll find a slot.',
+          'Just sent an invite for next week — let me know if none of those times work.',
+          'Perfect, got it on my calendar. Talk soon.',
+        ],
       },
       {
         subject: 'Re: the article you shared',
         body: 'Hello,\n\nI saw the article you shared about outbound strategies and found it really useful — especially the part about personalization at scale.\n\nDo you have any resources you\'d recommend on that topic?\n\nThanks',
-        reply: 'Glad it was helpful! For personalization at scale, I\'d recommend checking out some of the work coming out of the Pavilion community. Lots of good frameworks there.',
+        arc: [
+          'Glad it was helpful! For personalization at scale, I\'d recommend checking out some of the work coming out of the Pavilion community. Lots of good frameworks there.',
+          'Just checked it out, exactly what I was looking for. Appreciate the pointer.',
+          'Anytime — always happy to pass along good resources.',
+        ],
       },
       {
         subject: 'Quick intro — we work in similar spaces',
         body: 'Hi,\n\nI was looking through my network and noticed we work in overlapping spaces. I\'d love to stay connected and share notes on what\'s working.\n\nNo agenda — just think it\'d be valuable to know each other.\n\nWarm regards',
-        reply: 'Totally agree — always good to build those peer connections. What\'s your focus area within the space? I work mostly on the go-to-market side.',
+        arc: [
+          'Totally agree — always good to build those peer connections. What\'s your focus area within the space? I work mostly on the go-to-market side.',
+          'Mostly the same actually, with a bit more focus on retention lately.',
+          'Nice overlap — let\'s keep each other posted on what\'s working.',
+        ],
       },
       {
         subject: 'Hiring insight — curious about your approach',
         body: 'Hello,\n\nWe\'re in the middle of scaling our team and I\'ve been researching how companies our size approach the first sales hire.\n\nHave you been through that stage? Would love any perspective.\n\nBest',
-        reply: 'Been through it twice! The biggest mistake is hiring before the process is repeatable. Happy to share what worked for us if you want to jump on a call.',
+        arc: [
+          'Been through it twice! The biggest mistake is hiring before the process is repeatable. Happy to share what worked for us if you want to jump on a call.',
+          'That lines up with what I\'ve been hearing elsewhere too. Would definitely take you up on that call.',
+          'Sounds good, I\'ll send a couple of times over.',
+        ],
       },
       {
         subject: 'Loved your take on cold email',
         body: 'Hi,\n\nI read your thoughts on cold email and you\'re spot on — most people over-engineer the copy and forget that deliverability is half the battle.\n\nAre you still experimenting with warm-up strategies?\n\nCheers',
-        reply: 'Yes, actively! Warmup has become non-negotiable for us. We saw a 30% improvement in inbox rates just by being more systematic about it. What are you using?',
+        arc: [
+          'Yes, actively! Warmup has become non-negotiable for us. We saw a 30% improvement in inbox rates just by being more systematic about it. What are you using?',
+          'Been testing a mix of approaches honestly, still figuring out what sticks long term.',
+          'Same boat — always evolving. Good talking shop on this.',
+        ],
       },
       {
         subject: 'Interesting webinar coming up',
         body: 'Hello,\n\nI\'m running a small virtual session next month on pipeline generation — keeping it to 20 people max to keep it actionable.\n\nThought you might find it useful. Would you want a spot?\n\nBest regards',
-        reply: 'That sounds really interesting — I\'d definitely be up for joining. What topics are you planning to cover? Send over the details when you have them.',
+        arc: [
+          'That sounds really interesting — I\'d definitely be up for joining. What topics are you planning to cover? Send over the details when you have them.',
+          'Just sent the agenda over — let me know if the timing works.',
+          'Got it, I\'m in. Looking forward to it.',
+        ],
       },
       {
         subject: 'Checking in — how\'s business?',
         body: 'Hi,\n\nHope things are going well on your end. We\'ve had a busy few months and I\'ve been meaning to check in with a few people I respect in the industry.\n\nHow are things looking for you heading into the next quarter?\n\nBest',
-        reply: 'Things are actually going really well, thanks for asking! We had a strong close to last quarter and momentum is carrying over. How about you?',
+        arc: [
+          'Things are actually going really well, thanks for asking! We had a strong close to last quarter and momentum is carrying over. How about you?',
+          'Similar story here honestly — steady growth, no complaints.',
+          'Good to hear. Let\'s catch up properly again soon.',
+        ],
       },
       {
         subject: 'Intro from a shared connection',
         body: 'Hello,\n\nHope you don\'t mind me reaching out — we have a few shared connections and I\'ve heard your name come up more than once in conversations about B2B sales.\n\nWould love to find some time to connect.\n\nWarm regards',
-        reply: 'Small world! Always happy to connect with people who come recommended. What\'s the best way to get 20 minutes on your calendar?',
+        arc: [
+          'Small world! Always happy to connect with people who come recommended. What\'s the best way to get 20 minutes on your calendar?',
+          'Just sent an invite over — happy to move it if it doesn\'t work.',
+          'Perfect, see you then.',
+        ],
       },
       {
         subject: 'Your framework makes a lot of sense',
         body: 'Hi,\n\nI\'ve been implementing a framework similar to what you described and the results have been promising. We\'re seeing faster cycles and better conversion.\n\nCurious if you\'ve tested this across different industries.\n\nThanks',
-        reply: 'Great to hear you\'re seeing results! We\'ve tested it in SaaS and professional services mostly. Manufacturing was trickier — longer cycles needed more touchpoints.',
+        arc: [
+          'Great to hear you\'re seeing results! We\'ve tested it in SaaS and professional services mostly. Manufacturing was trickier — longer cycles needed more touchpoints.',
+          'That tracks with what we\'re seeing too on the longer-cycle side.',
+          'Glad it\'s useful — keep me posted on how it goes.',
+        ],
       },
       {
         subject: 'Partnership idea — worth a chat?',
         body: 'Hello,\n\nI\'ve been thinking about a potential partnership angle between what your company does and what we\'re building.\n\nI think there\'s a complementary fit that could benefit both sides. Worth a quick conversation?\n\nBest',
-        reply: 'Interesting — I\'m always open to exploring partnerships that make sense. Can you send a quick overview of what you have in mind? Happy to jump on a call after.',
+        arc: [
+          'Interesting — I\'m always open to exploring partnerships that make sense. Can you send a quick overview of what you have in mind? Happy to jump on a call after.',
+          'Sent a short doc over — let me know your initial thoughts.',
+          'Sounds promising, let\'s find time to dig in further.',
+        ],
       },
       {
         subject: 'How are you handling the AI wave?',
         body: 'Hi,\n\nCurious how your team is thinking about AI tools in your workflow. We\'ve been testing a few things and the results are... mixed.\n\nWould love to compare notes.\n\nCheers',
-        reply: 'Ha — mixed is the right word! We\'ve had some great wins with AI for research and first drafts, but it still needs a human eye before anything goes out. What tools are you trying?',
+        arc: [
+          'Ha — mixed is the right word! We\'ve had some great wins with AI for research and first drafts, but it still needs a human eye before anything goes out. What tools are you trying?',
+          'Similar experience honestly — great for a starting point, not so great unsupervised.',
+          'Exactly the balance we\'re trying to strike too. Good comparing notes.',
+        ],
       },
       {
         subject: 'Saw your company is hiring',
         body: 'Hello,\n\nNoticed you\'re scaling the team — congrats! Growth mode is exciting but also a lot to manage.\n\nWe\'ve helped teams in similar situations streamline their onboarding and ramp time. Happy to share some notes if useful.\n\nBest regards',
-        reply: 'Thanks! Yes, it\'s a great problem to have but definitely keeps us on our toes. I\'d be interested in hearing what you\'ve seen work for onboarding. Let\'s find some time.',
+        arc: [
+          'Thanks! Yes, it\'s a great problem to have but definitely keeps us on our toes. I\'d be interested in hearing what you\'ve seen work for onboarding. Let\'s find some time.',
+          'Just sent a couple of times over — whichever works best for you.',
+          'Great, looking forward to it.',
+        ],
       },
       {
         subject: 'Re: the podcast episode',
         body: 'Hi,\n\nI listened to the episode you were on last week — really solid insights on building a repeatable outbound motion. The bit about ICP definition was especially timely for us.\n\nDo you have a newsletter or resource list I could follow?\n\nBest',
-        reply: 'Thanks so much — that was a fun one to record! I do have a newsletter, I\'ll send you the link. Also happy to chat more about the ICP stuff if it\'s relevant to what you\'re working through.',
+        arc: [
+          'Thanks so much — that was a fun one to record! I do have a newsletter, I\'ll send you the link. Also happy to chat more about the ICP stuff if it\'s relevant to what you\'re working through.',
+          'Just subscribed, thanks for sending that over.',
+          'Glad it was useful — talk soon.',
+        ],
       },
       {
         subject: 'Feedback request — would love your thoughts',
         body: 'Hello,\n\nI\'m putting together a short guide on outbound best practices and wanted to gather input from a few practitioners I respect.\n\nWould you be willing to answer 2-3 quick questions? It\'ll take under 5 minutes.\n\nThank you',
-        reply: 'Happy to help! Send over the questions and I\'ll get back to you this week. Always glad to contribute to useful resources in the community.',
+        arc: [
+          'Happy to help! Send over the questions and I\'ll get back to you this week. Always glad to contribute to useful resources in the community.',
+          'Just sent my answers over — hope they\'re useful.',
+          'Really appreciate you taking the time on this.',
+        ],
       },
       {
         subject: 'Just wanted to say — great work',
         body: 'Hi,\n\nI don\'t say this enough, but your content has genuinely helped me think differently about pipeline. The frameworks you share are practical and not just theoretical.\n\nKeep it up — it makes a difference.\n\nBest regards',
-        reply: 'That genuinely made my day — thank you. It\'s great to hear the content is actually useful and not just adding to the noise. Let me know if there\'s ever a topic you\'d find helpful.',
+        arc: [
+          'That genuinely made my day — thank you. It\'s great to hear the content is actually useful and not just adding to the noise. Let me know if there\'s ever a topic you\'d find helpful.',
+          'Actually, a piece on early-stage pipeline reviews would be really useful if you ever get to it.',
+          'Noted — adding that to the list. Thanks again for the kind words.',
+        ],
       },
     ];
 
-    // Reply pool — extracted from pairs so replies sound contextual, not generic
-    const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.reply);
+    // Lightweight greeting/signoff variant pools applied to reply-chain
+    // messages (the original opening email already has its own baked-in
+    // greeting/signoff per pair above) — adds send-to-send variation on top
+    // of the arc content itself so no two threads read identically.
+    const REPLY_GREETINGS = ['', 'Hi,\n\n', 'Hey,\n\n', ''];
+    const REPLY_SIGNOFFS = ['', '\n\nBest', '\n\nThanks', '\n\nCheers', ''];
+
+    function formatArcMessage(text: string): string {
+      const greeting = REPLY_GREETINGS[Math.floor(Math.random() * REPLY_GREETINGS.length)];
+      const signoff = REPLY_SIGNOFFS[Math.floor(Math.random() * REPLY_SIGNOFFS.length)];
+      return `${greeting}${text}${signoff}`;
+    }
+
+    // Reply pool — fallback for the rare case a pairIndex isn't available
+    // (e.g. a legacy already-queued job from before this change deployed)
+    const WARMUP_REPLIES = WARMUP_PAIRS.map(p => p.arc[0]);
 
     async function gmailModify(msgId: string, addLabels: string[], removeLabels: string[], token: string) {
       try {
@@ -1285,7 +1382,7 @@ export async function register() {
     }
 
     new SyncWorker('warmup-engage', async (job: any) => {
-      const { fromAccountId, toAccountId, subject, chainDepth = 0 } = job.data;
+      const { fromAccountId, toAccountId, subject, chainDepth = 0, pairIndex } = job.data;
       const { sendEmail, getAccessToken } = await import('./lib/mailer');
 
       const [{ data: toAcc }, { data: fromAcc }] = await Promise.all([
@@ -1411,11 +1508,19 @@ export async function register() {
       if (labelled) await logAccountEvent(fromAccountId, 'label', { via: toAcc.email, label: 'Warmup' });
 
       if (replyTarget) {
-        const replyText = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
+        // Arc-aware: chainDepth (0-3) indexes directly into the ORIGINAL
+        // pair's arc, so a thread reads as one coherent conversation
+        // (question → reply → follow-up → closing) instead of a random
+        // unrelated line each turn. Falls back to a random pick only if
+        // pairIndex is missing (a legacy already-queued job from before
+        // this shipped) or the depth exceeds the authored arc length.
+        const arc = typeof pairIndex === 'number' ? WARMUP_PAIRS[pairIndex]?.arc : undefined;
+        const arcText = arc?.[Math.min(chainDepth, arc.length - 1)];
+        const replyText = formatArcMessage(arcText ?? WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)]);
         try {
           await sendEmail(
             { id: toAcc.id, type: toAcc.type, email: toAcc.email, smtp_host: toAcc.smtp_host, smtp_port: toAcc.smtp_port, smtp_user: toAcc.smtp_user, smtp_pass: toAcc.smtp_pass },
-            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
+            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText.replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
           );
           await logAccountEvent(fromAccountId, 'reply', { via: toAcc.email });
           await supabase.from('email_accounts').update({ reply_count: (fromAcc.reply_count ?? 0) + 1 }).eq('id', fromAccountId);
@@ -1424,7 +1529,7 @@ export async function register() {
           if (chainDepth < 4) {
             await engageQueue.add('engage', {
               fromAccountId: toAccountId, toAccountId: fromAccountId,
-              subject: replyTarget.subject, chainDepth: chainDepth + 1,
+              subject: replyTarget.subject, chainDepth: chainDepth + 1, pairIndex,
             }, { delay: pickEngageDelayMs() });
           }
         } catch (e: any) {
@@ -1461,7 +1566,7 @@ export async function register() {
       let allWarmupAccounts: any[] | null = null;
       const fullSelect = await supabase
         .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count')
+        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, mx_status')
         .eq('warmup_enabled', true)
         .neq('status', 'error');
 
@@ -1487,10 +1592,49 @@ export async function register() {
       const { sendEmail } = await import('./lib/mailer');
       const { detectProvider, computeHealthScore, dailySendCap, shouldPause, canRecover, isWarmupComplete, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
+      const { computeNetworkBalance, pickWarmupPartner } = await import('./lib/warmup-pairing');
+      const { checkBlacklists, AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
 
       // Track pairs sent this cycle — prevents A→B and B→A in the same run
       const sentPairs = new Set<string>();
       const today = new Date().toISOString().slice(0, 10);
+
+      // Dual-source network: Admin Pool (is_pool_account=true, always available)
+      // + opt-in Shared User Network (join_shared_network!==false, non-pool).
+      // Target share of pairings drawn from each scales with how large the
+      // shared network actually is — small network leans on the admin pool,
+      // large network becomes mostly self-sufficient (admin pool as backup).
+      const adminPoolAccounts = allWarmupAccounts.filter(a => a.is_pool_account);
+      const sharedNetworkAccounts = allWarmupAccounts.filter(a => !a.is_pool_account && a.join_shared_network !== false);
+      const dynamicBalance = computeNetworkBalance(sharedNetworkAccounts.length, adminPoolAccounts.length);
+      const accountsById = new Map(allWarmupAccounts.map(a => [a.id, a]));
+
+      function toPairingCandidate(a: any): { id: string; domain: string | null; provider: ReturnType<typeof detectProvider>; source: 'admin' | 'shared' } {
+        return {
+          id: a.id,
+          domain: a.domain || (a.email?.split('@')[1]?.toLowerCase() ?? null),
+          provider: detectProvider(a),
+          source: a.is_pool_account ? 'admin' : 'shared',
+        };
+      }
+
+      // Fetch fairness/recency history once per cycle — capped at
+      // accounts*(accounts-1) rows regardless of how much send history
+      // accumulates, so this stays a cheap single query even at 500+ accounts.
+      const allAccountIds = allWarmupAccounts.map(a => a.id);
+      const { data: pairingRows } = await supabase
+        .from('warmup_pairings')
+        .select('from_account_id, to_account_id, last_sent_at, send_count')
+        .in('from_account_id', allAccountIds);
+      const pairingHistory = new Map<string, Map<string, { lastSentAt: string | null; sendCount: number }>>();
+      for (const row of pairingRows ?? []) {
+        if (!pairingHistory.has(row.from_account_id)) pairingHistory.set(row.from_account_id, new Map());
+        pairingHistory.get(row.from_account_id)!.set(row.to_account_id, { lastSentAt: row.last_sent_at, sendCount: row.send_count ?? 0 });
+      }
+      function historyFor(fromId: string) {
+        if (!pairingHistory.has(fromId)) pairingHistory.set(fromId, new Map());
+        return pairingHistory.get(fromId)!;
+      }
 
       // ── PHASE 1: SEND warmup emails (parallel batches of 10) ─────────────
       // Each account's result (email row, day/health update, history row) is written
@@ -1513,19 +1657,32 @@ export async function register() {
             // Skip accounts that already ran today — except on manual trigger (allow re-run)
             const alreadyRanToday = !isManual && account.warmup_last_run_date === todayStr;
 
-            // ── Domain auth check — at most once every 7 days per account ──
+            // ── Domain auth + blacklist check — at most once every 7 days per
+            // account. Blacklist piggybacks on the exact same cadence rather
+            // than its own schedule — public DNSBL zones are meant for
+            // real-time filtering lookups, not scheduled bulk monitoring, so
+            // reusing this gate keeps automated querying within free/fair use.
             const needsAuthCheck = !account.domain_checked_at
               || (Date.now() - new Date(account.domain_checked_at).getTime()) > 7 * 86400_000;
             let spfStatus = account.spf_status || 'unknown';
             let dkimStatus = account.dkim_status || 'unknown';
             let dmarcStatus = account.dmarc_status || 'unknown';
+            let mxStatus = account.mx_status || 'unknown';
+            let blacklistStatus = account.blacklist_status || 'unknown';
+            let blacklistDetails = account.blacklist_details || {};
             if (needsAuthCheck) {
               try {
                 const auth = await checkDomainAuth(account.email);
-                spfStatus = auth.spf; dkimStatus = auth.dkim; dmarcStatus = auth.dmarc;
+                spfStatus = auth.spf; dkimStatus = auth.dkim; dmarcStatus = auth.dmarc; mxStatus = auth.mx;
+              } catch { /* keep previous status on lookup failure */ }
+              try {
+                const bl = await checkBlacklists({ email: account.email, accountType: account.type, smtpHost: account.smtp_host });
+                blacklistStatus = bl.status; blacklistDetails = bl.details;
               } catch { /* keep previous status on lookup failure */ }
             }
             const domainAuthAllPass = spfStatus === 'pass' && dkimStatus === 'pass' && dmarcStatus === 'pass';
+            const isBlacklisted = blacklistStatus === 'listed';
+            const isBlacklistedAuthoritative = isBlacklisted && blacklistDetails?.[AUTHORITATIVE_PAUSE_ZONE] === true;
 
             // ── Pause / recovery check ──
             const events7d = await fetchEventCounts(account.id, Date.now() - 7 * 86400_000);
@@ -1551,10 +1708,12 @@ export async function register() {
               const health = computeHealthScore({
                 events: events7d, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
                 consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
-                hasAuthErrorNow: false,
+                hasAuthErrorNow: false, isBlacklisted,
               });
               await safeUpdateAccount(account.id, {
-                health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+                health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+                blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+                blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
                 last_health_calc_at: new Date().toISOString(),
               });
@@ -1581,41 +1740,46 @@ export async function register() {
               dailySendCap({ provider, warmupDay: day, health: priorHealth, domainAuthAllPass }) * weekendFactor
             ));
 
-            // Filter eligible peers based on pool mode
+            // Dual-source candidate pool + balance for THIS account. 'admin_pool'
+            // is both the literal enum value AND the column's default for every
+            // untouched row, so it's treated as "no admin override — follow the
+            // account's own join_shared_network preference with automatic
+            // balancing" (matches the new opt-in-checkbox UX being the default
+            // experience). 'user_to_user'/'both' remain explicit admin-set
+            // overrides (existing admin dropdown, unchanged), which take
+            // precedence over the account's own opt-in.
             let pool: typeof allWarmupAccounts;
+            let poolBalance = dynamicBalance;
             if (account.is_pool_account) {
-              pool = allWarmupAccounts.filter(a => a.id !== account.id);
+              pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
             } else {
               const mode = account.warmup_pool_mode || 'admin_pool';
               if (mode === 'user_to_user') {
-                pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
+                pool = sharedNetworkAccounts.filter(a => a.id !== account.id);
+                poolBalance = { sharedShare: 1, adminShare: 0 };
               } else if (mode === 'both') {
-                pool = allWarmupAccounts.filter(a => a.id !== account.id);
+                pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
+              } else if (account.join_shared_network === false) {
+                pool = adminPoolAccounts.filter(a => a.id !== account.id);
+                poolBalance = { sharedShare: 0, adminShare: 1 };
               } else {
-                // admin_pool (default): use admin pool accounts
-                const adminPool = allWarmupAccounts.filter(a => a.id !== account.id && a.is_pool_account);
-                if (adminPool.length > 0) {
-                  pool = adminPool;
-                } else {
-                  // Fallback: use other warmup-enabled user accounts if admin pool is empty
-                  pool = allWarmupAccounts.filter(a => a.id !== account.id && !a.is_pool_account);
-                  if (pool.length > 0) console.log(`[warmup] ${account.email}: admin pool empty, falling back to user_to_user (${pool.length} peers)`);
-                }
+                pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
               }
             }
             if (pool.length === 0 || emailsToday === 0) {
-              if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
+              if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, join_shared_network: ${account.join_shared_network !== false}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
               await safeUpdateAccount(account.id, {
-                spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+                spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+                blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+                blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               });
               return;
             }
+            const poolCandidates = pool.map(toPairingCandidate);
 
             let sent = 0;
             let hasAuthErrorNow = false;
-            // Shuffle pool so send order is random
-            const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
             // Spread sends across whatever's left of today's business-hours window
             // (07:00–21:00 UTC) instead of a fixed block, so timing looks organic.
@@ -1627,31 +1791,54 @@ export async function register() {
                 const baseMs = remainingWindowMs / emailsToday;
                 await new Promise(r => setTimeout(r, baseMs * (0.5 + Math.random())));
               }
-              // Pick a recipient that hasn't already received from this account
-              // AND hasn't sent to this account this cycle (no connect-back)
-              const toAccount = shuffled.find(a => {
-                const fwd = `${account.id}→${a.id}`;
-                const rev = `${a.id}→${account.id}`;
+              // Exclude anyone already paired (either direction) this cycle,
+              // then pick via domain/provider/region-diverse, fairness-weighted
+              // selection instead of pure random.
+              const eligibleCandidates = poolCandidates.filter(c => {
+                const fwd = `${account.id}→${c.id}`;
+                const rev = `${c.id}→${account.id}`;
                 return !sentPairs.has(fwd) && !sentPairs.has(rev);
-              }) || shuffled[i % shuffled.length]; // fallback if all pairs used
+              });
+              const fromCandidate = toPairingCandidate(account);
+              const picked = pickWarmupPartner(fromCandidate, eligibleCandidates, historyFor(account.id), poolBalance)
+                ?? poolCandidates[i % poolCandidates.length]; // fallback if all pairs exhausted this cycle
+              const toAccount = accountsById.get(picked.id);
+              if (!toAccount) continue;
 
-              const pair = WARMUP_PAIRS[Math.floor(Math.random() * WARMUP_PAIRS.length)];
+              const pairIndex = Math.floor(Math.random() * WARMUP_PAIRS.length);
+              const pair = WARMUP_PAIRS[pairIndex];
               const { subject, body } = pair;
               const pairKey = `${account.id}→${toAccount.id}`;
+
+              // Reserved BEFORE the send (not after) — sendEmail is a real network
+              // call, and this runs inside a Promise.all batch of up to 10
+              // concurrent accounts, so two accounts could otherwise both pass
+              // the "not yet paired" check above before either had written.
+              // Rolled back in the catch block if the send actually fails, so a
+              // failed send doesn't burn a valid pairing slot for the rest of
+              // the cycle.
+              sentPairs.add(pairKey);
 
               try {
                 await sendEmail(
                   { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
                   { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
                 );
-                sentPairs.add(pairKey);
                 // Written immediately so a mid-cycle crash can't lose an email that
                 // actually went out (previously batched to a single flush at cycle end).
                 await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
-                await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0 }, { delay: pickEngageDelayMs() });
+                const priorHist = historyFor(account.id).get(toAccount.id);
+                const newSendCount = (priorHist?.sendCount ?? 0) + 1;
+                historyFor(account.id).set(toAccount.id, { lastSentAt: new Date().toISOString(), sendCount: newSendCount });
+                await supabase.from('warmup_pairings').upsert(
+                  { from_account_id: account.id, to_account_id: toAccount.id, last_sent_at: new Date().toISOString(), send_count: newSendCount },
+                  { onConflict: 'from_account_id,to_account_id' },
+                );
+                await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex }, { delay: pickEngageDelayMs() });
                 await logAccountEvent(account.id, 'sent', {});
                 sent++;
               } catch (e: any) {
+                sentPairs.delete(pairKey);
                 console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
                 if (e.responseCode === 535 || e.code === 'EAUTH') {
                   hasAuthErrorNow = true;
@@ -1665,10 +1852,10 @@ export async function register() {
             const health = computeHealthScore({
               events: events7dAfterSend, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
               consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: day,
-              hasAuthErrorNow,
+              hasAuthErrorNow, isBlacklisted,
             });
 
-            const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow);
+            const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow, isBlacklistedAuthoritative);
             const willPause = pauseCheck.pause;
             if (willPause && !account.warmup_paused) {
               // Name the specific healthy sibling account absorbing each linked
@@ -1725,7 +1912,9 @@ export async function register() {
               health_score: health.score,
               sent_today: sent,
               warmup_last_run_date: new Date().toISOString().slice(0, 10),
-              spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus,
+              spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+              blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+              blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
               domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               consecutive_stable_days: newConsecutiveStable,
               warmup_paused: willPause,

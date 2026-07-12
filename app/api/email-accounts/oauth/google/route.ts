@@ -6,11 +6,16 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(new URL('/login', request.url));
 
-  // Carries the "already warmed up" checkbox through Google's redirect round
-  // trip — state is the only place we can stash app-specific context here.
-  // user.id is a UUID (no colons), so splitting on ':' in the callback is safe.
-  const alreadyWarmedUp = new URL(request.url).searchParams.get('already_warmed_up') === '1';
-  const state = `${user.id}:${alreadyWarmedUp ? '1' : '0'}`;
+  // Carries the "already warmed up" and "join shared warmup network"
+  // checkboxes through Google's redirect round trip — state is the only
+  // place we can stash app-specific context here. user.id is a UUID (no
+  // colons), so splitting on ':' in the callback is safe.
+  const url = new URL(request.url);
+  const alreadyWarmedUp = url.searchParams.get('already_warmed_up') === '1';
+  // Defaults to joined (true) unless explicitly opted out — matches the
+  // connect-modal checkbox defaulting checked.
+  const joinSharedNetwork = url.searchParams.get('join_shared_network') !== '0';
+  const state = `${user.id}:${alreadyWarmedUp ? '1' : '0'}:${joinSharedNetwork ? '1' : '0'}`;
 
   const forwardedHost = request.headers.get('x-forwarded-host');
   const { host } = new URL(request.url);

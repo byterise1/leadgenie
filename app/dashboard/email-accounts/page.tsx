@@ -494,6 +494,9 @@ export default function EmailAccountsPage() {
   const router = useRouter();
   const [step, setStep] = useState<ConnectStep>(null);
   const [alreadyWarmedUp, setAlreadyWarmedUp] = useState(false);
+  // Opt-in to the shared cross-user warmup network — defaults on ("Recommended"),
+  // matching the checkbox defaulting checked.
+  const [joinSharedNetwork, setJoinSharedNetwork] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   // Explicit type instead of guessing success/error from substrings in the
@@ -554,7 +557,7 @@ export default function EmailAccountsPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  useEffect(() => { setAddError(''); if (!step) setAlreadyWarmedUp(false); }, [step]);
+  useEffect(() => { setAddError(''); if (!step) { setAlreadyWarmedUp(false); setJoinSharedNetwork(true); } }, [step]);
 
   const [connecting, setConnecting] = useState(false);
 
@@ -566,7 +569,7 @@ export default function EmailAccountsPage() {
     const res = await fetch('/api/email-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, email, already_warmed_up: alreadyWarmedUp, ...extra }),
+      body: JSON.stringify({ type, email, already_warmed_up: alreadyWarmedUp, join_shared_network: joinSharedNetwork, ...extra }),
     });
     const data = await res.json();
 
@@ -889,6 +892,13 @@ export default function EmailAccountsPage() {
                     </div>
                     <input type="checkbox" checked={alreadyWarmedUp} onChange={e => setAlreadyWarmedUp(e.target.checked)} className="w-4 h-4 rounded accent-emerald-600 shrink-0 ml-3"/>
                   </label>
+                  <label className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 cursor-pointer">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">Join Shared Warmup Network <span className="font-normal text-blue-500">(Recommended)</span></p>
+                      <p className="text-xs text-blue-600 mt-0.5">Lets this mailbox warm up with other users' mailboxes too, not just the admin pool — more diverse partners, better deliverability signal. Turn off and it still warms via the admin pool only, but never warms anyone else's.</p>
+                    </div>
+                    <input type="checkbox" checked={joinSharedNetwork} onChange={e => setJoinSharedNetwork(e.target.checked)} className="w-4 h-4 rounded accent-blue-600 shrink-0 ml-3"/>
+                  </label>
                   {CONNECT_OPTIONS.map(opt => (
                     <button key={opt.id} onClick={() => setStep(opt.id)}
                       className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
@@ -914,11 +924,14 @@ export default function EmailAccountsPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">You'll be redirected to Google to authorise access.</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">We only request permission to send email on your behalf.</p>
                   {alreadyWarmedUp && (
-                    <p className="text-xs text-emerald-600 font-medium mb-4">✓ Already warmed up — will skip the ramp</p>
+                    <p className="text-xs text-emerald-600 font-medium mb-1">✓ Already warmed up — will skip the ramp</p>
+                  )}
+                  {!joinSharedNetwork && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-4">Admin pool only — won't warm other users' mailboxes</p>
                   )}
                   <div className="flex gap-2">
                     <button onClick={() => setStep('choose')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
-                    <a href={`/api/email-accounts/oauth/google${alreadyWarmedUp ? '?already_warmed_up=1' : ''}`} target="_blank" rel="noopener noreferrer"
+                    <a href={`/api/email-accounts/oauth/google?already_warmed_up=${alreadyWarmedUp ? '1' : '0'}&join_shared_network=${joinSharedNetwork ? '1' : '0'}`} target="_blank" rel="noopener noreferrer"
                       className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors text-center">
                       Connect with Google
                     </a>

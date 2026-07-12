@@ -1,8 +1,8 @@
-import { resolveTxt } from 'dns/promises';
+import { resolveTxt, resolveMx } from 'dns/promises';
 
 export type AuthStatus = 'pass' | 'fail' | 'unknown';
 
-function domainFromEmail(email: string): string {
+export function domainFromEmail(email: string): string {
   return email.split('@')[1]?.toLowerCase().trim() || '';
 }
 
@@ -42,15 +42,30 @@ async function checkDkim(domain: string): Promise<AuthStatus> {
   return 'unknown';
 }
 
-export async function checkDomainAuth(email: string): Promise<{ spf: AuthStatus; dkim: AuthStatus; dmarc: AuthStatus }> {
-  const domain = domainFromEmail(email);
-  if (!domain) return { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' };
+// A domain with zero MX records genuinely can't receive mail at all — a real,
+// rare, worth-surfacing state (distinct from SPF/DKIM/DMARC, which are about
+// sender authentication, not receivability). 'fail' only when the domain
+// resolves but has no MX records; 'unknown' on lookup failure/timeout/NXDOMAIN,
+// same fail-soft convention as the other checks here.
+async function checkMx(domain: string): Promise<AuthStatus> {
+  try {
+    const records = await resolveMx(domain);
+    return records && records.length > 0 ? 'pass' : 'fail';
+  } catch {
+    return 'unknown';
+  }
+}
 
-  const [spf, dkim, dmarc] = await Promise.all([
+export async function checkDomainAuth(email: string): Promise<{ spf: AuthStatus; dkim: AuthStatus; dmarc: AuthStatus; mx: AuthStatus }> {
+  const domain = domainFromEmail(email);
+  if (!domain) return { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown', mx: 'unknown' };
+
+  const [spf, dkim, dmarc, mx] = await Promise.all([
     checkSpf(domain),
     checkDkim(domain),
     checkDmarc(domain),
+    checkMx(domain),
   ]);
 
-  return { spf, dkim, dmarc };
+  return { spf, dkim, dmarc, mx };
 }

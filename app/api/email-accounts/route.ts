@@ -101,6 +101,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { type, smtp_port, imap_port } = body;
   const alreadyWarmedUp = !!body.already_warmed_up;
+  // Defaults to joined (true) unless the connect-modal checkbox was
+  // explicitly unchecked — matches the checkbox defaulting checked.
+  const joinSharedNetwork = body.join_shared_network !== false;
   // Trimmed at the point of entry — a password field is masked, so a
   // copy-pasted leading/trailing space is invisible to the user and would
   // otherwise silently fail every future auth attempt using this account.
@@ -192,6 +195,7 @@ export async function POST(req: NextRequest) {
       health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
       warmup_enabled: true,
       already_warmed_up: alreadyWarmedUp,
+      join_shared_network: joinSharedNetwork,
       daily_limit: defaultLimit,
     })
     .select('id,email,type,status,health_score,warmup_enabled,already_warmed_up,sent_today,daily_limit,created_at')

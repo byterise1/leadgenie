@@ -4,9 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const rawState = searchParams.get('state'); // "userId:alreadyWarmedUp(0|1)"
-  const [state, alreadyWarmedUpFlag] = rawState ? rawState.split(':') : [null, '0'];
+  const rawState = searchParams.get('state'); // "userId:alreadyWarmedUp(0|1):joinSharedNetwork(0|1)"
+  const [state, alreadyWarmedUpFlag, joinSharedNetworkFlag] = rawState ? rawState.split(':') : [null, '0', '1'];
   const alreadyWarmedUp = alreadyWarmedUpFlag === '1';
+  const joinSharedNetwork = joinSharedNetworkFlag !== '0';
   const oauthError = searchParams.get('error');
 
   const forwardedHost = request.headers.get('x-forwarded-host');
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest) {
       health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
       warmup_enabled: true,
       already_warmed_up: alreadyWarmedUp,
+      join_shared_network: joinSharedNetwork,
     });
   }
 

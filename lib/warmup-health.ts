@@ -42,6 +42,7 @@ export type HealthFactors = {
   replyRate: number | null;   // 0-100, one decimal
   authScore: number;          // 0/5/10/15 — SPF+DKIM+DMARC pass count * 5
   consistency: number;        // 0-10
+  blacklistPenalty: number;   // 0 or -20 — severe but not as catastrophic as an active bounce storm (DNSBL false positives/delisting lag are real)
 };
 
 export type HealthResult = { score: number; factors: HealthFactors };
@@ -52,8 +53,9 @@ export function computeHealthScore(opts: {
   consecutiveStableDays: number;
   warmupDay: number;
   hasAuthErrorNow: boolean;
+  isBlacklisted?: boolean;
 }): HealthResult {
-  const { events, domainAuth, consecutiveStableDays, warmupDay, hasAuthErrorNow } = opts;
+  const { events, domainAuth, consecutiveStableDays, warmupDay, hasAuthErrorNow, isBlacklisted } = opts;
   const sent = Math.max(0, events.sent7d);
 
   // Clamp to [0,1] — spam/bounce event counts can exceed the sent count in edge cases
@@ -97,6 +99,14 @@ export function computeHealthScore(opts: {
   // An auth failure THIS cycle means the mailbox literally couldn't send — severe.
   if (hasAuthErrorNow) score -= 30;
 
+  // Blacklisted on a real DNSBL zone — a genuine problem, but DNSBL false
+  // positives and delisting lag are real too, so this is a heavy deduction
+  // (not an automatic zero the way an active bounce storm can approach).
+  // shouldPause() below handles the "actively harmful, stop sending now"
+  // case separately for the most authoritative zone.
+  const blacklistPenalty = isBlacklisted ? -20 : 0;
+  score += blacklistPenalty;
+
   score = Math.round(Math.max(0, Math.min(100, score)));
 
   return {
@@ -108,6 +118,7 @@ export function computeHealthScore(opts: {
       replyRate: replyRate !== null ? Math.round(replyRate * 1000) / 10 : null,
       authScore,
       consistency,
+      blacklistPenalty,
     },
   };
 }
@@ -169,8 +180,11 @@ export function campaignDailyCap(opts: {
   return Math.round(caps.matureCap * Math.max(0.5, health / 100));
 }
 
-export function shouldPause(events: EventCounts, hasAuthErrorNow: boolean): { pause: boolean; reason: string | null } {
+export function shouldPause(events: EventCounts, hasAuthErrorNow: boolean, isBlacklistedAuthoritative?: boolean): { pause: boolean; reason: string | null } {
   if (hasAuthErrorNow) return { pause: true, reason: 'Authentication failed — mailbox credentials need attention.' };
+  // Listed on the most authoritative zone (Spamhaus DBL) — actively harmful to
+  // keep sending from, same priority tier as a hard auth failure.
+  if (isBlacklistedAuthoritative) return { pause: true, reason: 'Domain is listed on Spamhaus DBL — paused until delisted.' };
   const sent = events.sent7d;
 
   if (sent >= 5) {

@@ -29,6 +29,20 @@ type WarmupAccount = {
   spf_status?: string;
   dkim_status?: string;
   dmarc_status?: string;
+  mx_status?: string;
+  domain?: string | null;
+  join_shared_network?: boolean;
+  blacklist_status?: 'clean' | 'listed' | 'unknown';
+  deliverability_label?: 'High' | 'Medium' | 'Low';
+  diagnosis?: { findings: string[]; recommendations: string[] };
+};
+
+type DomainRollup = {
+  domain: string;
+  avgHealth: number;
+  mailboxCount: number;
+  blacklistStatus: 'clean' | 'listed' | 'unknown';
+  dailyCapacity: number;
 };
 
 type PoolAccount = {
@@ -64,6 +78,19 @@ function ScoreRing({ score }: { score: number }) {
       <text x="26" y="30" textAnchor="middle" fontSize="11" fontWeight="700" fill={color}>{score}</text>
     </svg>
   );
+}
+
+function DeliverabilityBadge({ label }: { label?: string }) {
+  if (!label) return null;
+  const style = label === 'High' ? 'bg-emerald-50 text-emerald-700'
+    : label === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700';
+  return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${style}`}>{label}</span>;
+}
+
+function MiniAuthBadge({ label, status }: { label: string; status?: string }) {
+  const style = status === 'pass' || status === 'clean' ? 'bg-emerald-50 text-emerald-700'
+    : status === 'fail' || status === 'listed' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-400';
+  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}</span>;
 }
 
 type AvailableAccount = { id: string; email: string; type: string; status: string; health_score: number };
@@ -335,6 +362,8 @@ function AdminWarmupPageInner() {
   const [accounts, setAccounts] = useState<WarmupAccount[]>([]);
   const [poolAccounts, setPoolAccounts] = useState<PoolAccount[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, warming: 0, healthy: 0, at_risk: 0 });
+  const [domains, setDomains] = useState<DomainRollup[]>([]);
+  const [domainFilter, setDomainFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'warming' | 'healthy' | 'at_risk'>('all');
@@ -386,7 +415,7 @@ function AdminWarmupPageInner() {
       fetch('/api/admin/warmup').then(r => r.json()),
       fetch('/api/admin/warmup/pool').then(r => r.json()),
     ]).then(([warmup, pool]) => {
-      if (!warmup.error) { setAccounts(warmup.accounts); setStats(warmup.stats); }
+      if (!warmup.error) { setAccounts(warmup.accounts); setStats(warmup.stats); setDomains(warmup.domains ?? []); }
       if (Array.isArray(pool)) setPoolAccounts(pool);
     }).finally(() => setLoading(false));
   }, []);
@@ -500,7 +529,8 @@ function AdminWarmupPageInner() {
       filter === 'warming' ? a.warmup_enabled :
       filter === 'healthy' ? a.health_score >= 80 :
       filter === 'at_risk' ? (a.health_score > 0 && a.health_score < 50) : true;
-    return matchSearch && matchFilter;
+    const matchDomain = domainFilter === 'all' || (a.domain || a.email.split('@')[1]?.toLowerCase()) === domainFilter;
+    return matchSearch && matchFilter && matchDomain;
   });
 
   const totalPoolSize = stats.warming + poolAccounts.length;
@@ -664,6 +694,41 @@ function AdminWarmupPageInner() {
         )}
       </div>
 
+      {/* Domain Dashboard */}
+      {domains.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Domain Dashboard</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{domains.length} domain{domains.length !== 1 ? 's' : ''} · {accounts.length} mailboxes</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {domains.map(d => (
+              <button key={d.domain} onClick={() => setDomainFilter(domainFilter === d.domain ? 'all' : d.domain)}
+                className={`text-left bg-white dark:bg-gray-900 rounded-2xl border p-4 transition-colors ${domainFilter === d.domain ? 'border-blue-400 ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-100 dark:border-gray-800 hover:border-blue-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{d.domain}</p>
+                  <MiniAuthBadge label={d.blacklistStatus === 'listed' ? 'Listed' : d.blacklistStatus === 'clean' ? 'Clean' : 'Unknown'} status={d.blacklistStatus}/>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-lg font-extrabold text-gray-900 dark:text-white">{d.avgHealth}</p>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Health</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-extrabold text-gray-900 dark:text-white">{d.mailboxCount}</p>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Mailboxes</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-extrabold text-gray-900 dark:text-white">{d.dailyCapacity}</p>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Daily cap</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* All Users' Accounts */}
       <div className="space-y-3">
         <h2 className="text-sm font-bold text-gray-900 dark:text-white">User Warmup Accounts</h2>
@@ -681,6 +746,11 @@ function AdminWarmupPageInner() {
               </button>
             ))}
           </div>
+          {domainFilter !== 'all' && (
+            <button onClick={() => setDomainFilter('all')} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 flex items-center gap-1.5">
+              {domainFilter} <span className="text-blue-400">×</span>
+            </button>
+          )}
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -712,13 +782,23 @@ function AdminWarmupPageInner() {
                     <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-4 py-3">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[180px]">{a.email}</p>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500 capitalize">{a.type}</p>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 capitalize">{a.type} · {a.domain || a.email.split('@')[1]}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <MiniAuthBadge label="SPF" status={a.spf_status}/>
+                          <MiniAuthBadge label="DKIM" status={a.dkim_status}/>
+                          <MiniAuthBadge label="DMARC" status={a.dmarc_status}/>
+                          <MiniAuthBadge label="MX" status={a.mx_status}/>
+                          <MiniAuthBadge label="Blacklist" status={a.blacklist_status}/>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[140px]">{a.user_name}</p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[140px]">{a.user_email}</p>
                       </td>
-                      <td className="px-4 py-3"><ScoreRing score={a.health_score}/></td>
+                      <td className="px-4 py-3">
+                        <ScoreRing score={a.health_score}/>
+                        <div className="mt-1"><DeliverabilityBadge label={a.deliverability_label}/></div>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`text-[11px] font-bold rounded-full px-2.5 py-1 capitalize ${
                           a.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400' :
