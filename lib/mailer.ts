@@ -59,6 +59,7 @@ type SendOptions = {
   inReplyTo?: string;
   references?: string;
   gmailThreadId?: string;  // Gmail thread ID — forces follow-up into existing thread via API
+  captureRealMessageId?: boolean; // gmail-oauth only: fetch the Message-ID Gmail actually assigned (it ignores our custom header) so later follow-ups' In-Reply-To matches what the recipient really received
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -139,6 +140,53 @@ function httpsPost(
   });
 }
 
+function httpsGet(
+  hostname: string,
+  path: string,
+  headers: Record<string, string | number>,
+  timeoutMs = 15000,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { hostname, port: 443, path, method: 'GET', headers, timeout: timeoutMs },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+      }
+    );
+    req.on('timeout', () => { req.destroy(); reject(new Error('Gmail API request timed out')); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// Gmail's API unconditionally overwrites any custom Message-ID header we
+// send with its own auto-generated one (<CAxxxx@mail.gmail.com> format) —
+// confirmed live by fetching a real sent thread's headers. This means the
+// fabricated Message-ID we store and later use as In-Reply-To/References
+// on follow-ups never matches what the recipient's mail client actually
+// received, so THEIR client can't thread it (the sender's own Gmail only
+// looks threaded because of the separate internal threadId API param,
+// which is never transmitted to the recipient). Fix: after sending via the
+// API, fetch the message back and read its real Message-Id header so
+// follow-ups reference something the recipient's client has actually seen.
+async function fetchRealMessageId(gmailMessageId: string, accessToken: string): Promise<string | undefined> {
+  try {
+    const { status, body } = await httpsGet(
+      'gmail.googleapis.com',
+      `/gmail/v1/users/me/messages/${gmailMessageId}?format=metadata&metadataHeaders=Message-ID`,
+      { Authorization: `Bearer ${accessToken}` },
+    );
+    if (status < 200 || status >= 300) return undefined;
+    const parsed = JSON.parse(body) as { payload?: { headers?: { name: string; value: string }[] } };
+    const header = parsed.payload?.headers?.find(h => h.name.toLowerCase() === 'message-id');
+    return header?.value;
+  } catch {
+    return undefined;
+  }
+}
+
 async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promise<{ threadId?: string; sentMessageId?: string }> {
   const accessToken = await getAccessToken(account);
 
@@ -210,7 +258,13 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
 
   try {
     const body = JSON.parse(result.body) as { id: string; threadId: string };
-    return { threadId: body.threadId, sentMessageId: opts.messageId };
+    // Only worth the extra API round-trip when the caller will actually store
+    // and later reference this Message-ID (step 0 of a reply-mode sequence) —
+    // opts.captureRealMessageId is set by the caller for exactly that case.
+    const realMessageId = opts.captureRealMessageId && body.id
+      ? await fetchRealMessageId(body.id, accessToken)
+      : undefined;
+    return { threadId: body.threadId, sentMessageId: realMessageId || opts.messageId };
   } catch {
     return {};
   }

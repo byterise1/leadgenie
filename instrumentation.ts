@@ -389,7 +389,7 @@ export async function register() {
         // was never captured or stored — a real, silent "reply not counted" bug.
         const explicitMessageId = `<${crypto.randomUUID().replace(/-/g, '')}@leadgenie.app>`;
 
-        const { threadId } = await sendEmail(account, {
+        const { threadId, sentMessageId } = await sendEmail(account, {
           from: fromHeader,
           to: lead.email,
           subject,
@@ -409,16 +409,29 @@ export async function register() {
           // follow-up as an unrelated new conversation.
           ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
           ...(gmailThreadId ? { gmailThreadId } : {}),
+          // Gmail's API silently OVERWRITES any custom Message-ID we send —
+          // confirmed live by pulling a real sent thread's headers, it always
+          // assigns its own <CAxxxx@mail.gmail.com> one. So our fabricated
+          // explicitMessageId is never what the recipient's client actually
+          // received. Only step 0 needs the real one fetched back — every
+          // follow-up always threads against step 0 specifically (see the
+          // firstSent query above, always .eq('step_number', 0)), never a
+          // chain of prior steps, so nothing else ever reads a later step's ID.
+          ...(account.type === 'gmail-oauth' && stepNumber === 0 ? { captureRealMessageId: true } : {}),
         });
 
-        // message_id is now ALWAYS the real RFC822 Message-ID, for every
-        // account type and every step — this is what In-Reply-To/References
-        // on the NEXT follow-up (and IMAP inbox-sync matching) key off of.
+        // message_id is the real RFC822 Message-ID whenever we have one —
+        // for gmail-oauth step 0 that's what Gmail itself actually assigned
+        // (see captureRealMessageId above; our own fabricated ID is never
+        // what shipped), for everything else it's our own explicitMessageId,
+        // which SMTP submission (nodemailer, non-API) does preserve as-is.
+        // This is what In-Reply-To/References on the NEXT follow-up (and
+        // IMAP inbox-sync matching) key off of.
         // gmail_thread_id is separate, gmail-oauth only, step 0 only (that's
         // the only row any follow-up ever looks up) — Gmail's own internal
         // thread bookkeeping, used for the gmailThreadId API parameter and
         // by inbox-sync's Path 1 thread-lookup, never for header values.
-        const updates: Record<string, unknown> = { message_id: explicitMessageId };
+        const updates: Record<string, unknown> = { message_id: sentMessageId || explicitMessageId };
         if (account.type === 'gmail-oauth' && stepNumber === 0 && threadId) {
           updates.gmail_thread_id = threadId;
         }
