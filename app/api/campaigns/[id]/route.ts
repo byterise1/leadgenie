@@ -41,7 +41,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const totalReplied = repliedRes.error ? data.total_replied : (repliedRes.count ?? 0);
   const totalClicked = new Set((clickedRows.data || []).map((r: any) => r.lead_id)).size;
 
-  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked, sent_today: sentTodayCount ?? 0 });
+  // Per-step sent counts — used by the step editor to lock the position of
+  // any step that's already gone out to at least one lead. Reordering (or
+  // silently editing) an already-sent step's content would make that
+  // position mean two different emails depending on which cohort of leads
+  // you look at, so the UI needs to know which positions are "live" history.
+  const { data: sentStepRows } = await supabaseAdmin
+    .from('sent_emails').select('step_number').eq('campaign_id', id);
+  const sentCountByStep: Record<number, number> = {};
+  for (const r of sentStepRows || []) {
+    const n = (r as any).step_number as number;
+    sentCountByStep[n] = (sentCountByStep[n] ?? 0) + 1;
+  }
+
+  return NextResponse.json({ ...data, total_sent: totalSent, total_opened: totalOpened, total_replied: totalReplied, total_clicked: totalClicked, sent_today: sentTodayCount ?? 0, sent_count_by_step: sentCountByStep });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -32,6 +32,7 @@ type Campaign = {
   total_replied: number;
   total_clicked: number;
   email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean; thread_mode?: 'reply' | 'new_thread' }[];
+  sent_count_by_step?: Record<number, number>;
   campaign_accounts: { account: {
     id: string; email: string; type: string; status?: string;
     health_score?: number; warmup_day?: number; warmup_enabled?: boolean;
@@ -230,6 +231,16 @@ export default function CampaignDetailPage() {
     } finally { setStepBusyAction(null); }
   }
 
+  // A step that's already been sent to at least one lead keeps its position
+  // pinned — reordering it would make that position mean a different email
+  // depending on which cohort of leads you look at. Server enforces this
+  // too (409 if bypassed); this is just so the UI doesn't offer a drag/move
+  // that's guaranteed to be rejected.
+  function isStepLocked(stepNumber: number | undefined): boolean {
+    if (stepNumber === undefined) return false;
+    return (campaign?.sent_count_by_step?.[stepNumber] ?? 0) > 0;
+  }
+
   async function moveStep(stepId: string, newPosition: number) {
     setStepBusyAction({ move: stepId }); setStepError('');
     try {
@@ -274,9 +285,15 @@ export default function CampaignDetailPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  function onStepDrop(targetIndex: number, orderedSteps: { id: string }[]) {
+  function onStepDrop(targetIndex: number, orderedSteps: { id: string; step_number?: number }[]) {
     if (dragIndex !== null && dragIndex !== targetIndex) {
-      moveStep(orderedSteps[dragIndex].id, targetIndex);
+      const draggedLocked = isStepLocked(orderedSteps[dragIndex].step_number);
+      const targetLocked = isStepLocked(orderedSteps[targetIndex].step_number);
+      if (draggedLocked || targetLocked) {
+        setStepError('This step has already been sent to at least one lead — its position is locked.');
+      } else {
+        moveStep(orderedSteps[dragIndex].id, targetIndex);
+      }
     }
     setDragIndex(null);
     setDragOverIndex(null);
@@ -559,9 +576,12 @@ export default function CampaignDetailPage() {
               <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">No email steps configured.</div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {sortedSteps.map((step, i) => (
+                {sortedSteps.map((step, i) => {
+                  const locked = isStepLocked(step.step_number);
+                  const sentCount = campaign?.sent_count_by_step?.[step.step_number ?? -1] ?? 0;
+                  return (
                   <div key={step.id}
-                    draggable={canEditSteps && !stepBusy}
+                    draggable={canEditSteps && !stepBusy && !locked}
                     onDragStart={() => setDragIndex(i)}
                     onDragOver={e => { e.preventDefault(); if (dragOverIndex !== i) setDragOverIndex(i); }}
                     onDragLeave={() => setDragOverIndex(prev => (prev === i ? null : prev))}
@@ -570,9 +590,15 @@ export default function CampaignDetailPage() {
                     className={`px-6 py-4 transition-colors ${dragIndex === i ? 'opacity-40' : ''} ${dragOverIndex === i && dragIndex !== null && dragIndex !== i ? 'bg-blue-50/70 dark:bg-blue-950/30' : ''}`}>
                     <div className="flex items-center gap-3">
                       {canEditSteps && (
-                        <span className="text-gray-300 dark:text-gray-600 cursor-grab active:cursor-grabbing shrink-0 select-none" title="Drag to reorder">
-                          <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
-                        </span>
+                        locked ? (
+                          <span className="text-gray-300 dark:text-gray-600 shrink-0 select-none" title="Already sent — position locked">
+                            <svg width="12" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600 cursor-grab active:cursor-grabbing shrink-0 select-none" title="Drag to reorder">
+                            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                          </span>
+                        )
                       )}
                       <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
                         {i + 1}
@@ -586,6 +612,11 @@ export default function CampaignDetailPage() {
                           {i > 0 && (
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${step.thread_mode === 'new_thread' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400' : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400'}`}>
                               {step.thread_mode === 'new_thread' ? 'New thread' : 'Reply'}
+                            </span>
+                          )}
+                          {locked && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" title="Position locked — already sent">
+                              Sent to {sentCount} lead{sentCount !== 1 ? 's' : ''}
                             </span>
                           )}
                         </p>
@@ -608,6 +639,12 @@ export default function CampaignDetailPage() {
                       const isReplyEdit = i > 0 && editForm.thread_mode === 'reply';
                       return (
                       <div className="mt-3 ml-11 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+                        {locked && (
+                          <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-xl px-3 py-2.5">
+                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                            <span>{sentCount} lead{sentCount !== 1 ? 's' : ''} already received this exact email. Changes here only apply to leads who haven&apos;t reached this step yet.</span>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Subject line</label>
                           {isReplyEdit ? (
@@ -665,7 +702,8 @@ export default function CampaignDetailPage() {
                       );
                     })()}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

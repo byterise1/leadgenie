@@ -80,6 +80,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (oldIndex === -1) return NextResponse.json({ error: 'Step not found' }, { status: 404 });
     const clamped = Math.max(0, Math.min(newPosition, ordered.length - 1));
 
+    // A position that's already sent to at least one lead must keep its
+    // content pinned — swapping content into/out of it would make that
+    // position mean a different email depending on which cohort of leads
+    // you look at. Block the reorder entirely (not just the moved step's
+    // own old position, but also whatever position it would land on/swap
+    // with) rather than silently reinterpreting the request.
+    if (oldIndex !== clamped) {
+      const { data: sentSteps } = await supabaseAdmin
+        .from('sent_emails').select('step_number').eq('campaign_id', campaignId);
+      const sentStepNumbers = new Set((sentSteps ?? []).map((r: any) => r.step_number));
+      const oldStepNumber = ordered[oldIndex].step_number;
+      const targetStepNumber = ordered[clamped].step_number;
+      if (sentStepNumbers.has(oldStepNumber) || sentStepNumbers.has(targetStepNumber)) {
+        return NextResponse.json(
+          { error: 'This step has already been sent to at least one lead — its position is locked so past and future sends stay consistent.' },
+          { status: 409 },
+        );
+      }
+    }
+
     type ContentFields = { subject: string; body: string; thread_mode: string; include_unsub: boolean; template_id: string | null; ab_variants: unknown };
     const contents: ContentFields[] = ordered.map(s => ({
       subject: s.subject, body: s.body, thread_mode: s.thread_mode,
