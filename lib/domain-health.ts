@@ -44,7 +44,7 @@ async function checkDmarc(domain: string): Promise<AuthStatus> {
 // DKIM has no fixed DNS location — the selector is chosen by whoever configured it.
 // We can only check the common ones. A miss here means "not found under common
 // selectors", not "definitely no DKIM" — reported as 'unknown', never 'fail'.
-const COMMON_DKIM_SELECTORS = ['google', 'default', 'selector1', 'selector2', 'k1', 's1', 'dkim', 'mail'];
+const COMMON_DKIM_SELECTORS = ['google', 'default', 'selector1', 'selector2', 'k1', 's1', 's2', 'dkim', 'mail', 'titan1', 'titan2', 'zoho'];
 
 async function checkDkim(domain: string): Promise<AuthStatus> {
   for (const selector of COMMON_DKIM_SELECTORS) {
