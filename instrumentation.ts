@@ -1643,6 +1643,278 @@ export async function register() {
 
     console.log('✅ Warmup engagement worker started (delayed reads/replies/star/archive)');
 
+    // ── Shared warmup helpers ───────────────────────────────────────────────
+    // Used by both the main 6h cycle worker below AND the decoupled
+    // 'warmup-send' follow-up worker. Splitting same-day sends across
+    // independent queued jobs (instead of awaiting long in-process pacing
+    // delays inside one held-open job) is what makes this scale to
+    // hundreds/thousands of mailboxes — a real production bug traced to
+    // exactly the opposite design: a single BullMQ job stayed "active" for
+    // 10+ hours for any account with a high daily send volume, blocking
+    // every other account's cycle behind it. Each helper here re-reads
+    // whatever it needs fresh rather than trusting anything computed
+    // earlier in the day, since a decoupled per-send job can run hours
+    // after the cycle that scheduled it.
+    const WU_BASE_COLS = 'id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, status, warmup_enabled';
+    const WU_PHASE1_COLS = 'spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count';
+    const WU_PHASE23_COLS = 'domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, mx_status';
+    const WU_TRUST_COLS = 'trust_score, network_isolated, network_isolation_reason, network_isolated_at, abuse_flag_count';
+
+    async function fetchWarmupAccountOne(accountId: string): Promise<any | null> {
+      const tier3 = await supabase.from('email_accounts').select(`${WU_BASE_COLS}, ${WU_PHASE1_COLS}, ${WU_PHASE23_COLS}, ${WU_TRUST_COLS}`).eq('id', accountId).maybeSingle();
+      if (!tier3.error) return tier3.data;
+      const tier2 = await supabase.from('email_accounts').select(`${WU_BASE_COLS}, ${WU_PHASE1_COLS}, ${WU_PHASE23_COLS}`).eq('id', accountId).maybeSingle();
+      if (!tier2.error) return tier2.data;
+      const tier1 = await supabase.from('email_accounts').select(`${WU_BASE_COLS}, ${WU_PHASE1_COLS}`).eq('id', accountId).maybeSingle();
+      if (!tier1.error) return tier1.data;
+      const tier0 = await supabase.from('email_accounts').select(WU_BASE_COLS).eq('id', accountId).maybeSingle();
+      return tier0.data;
+    }
+
+    async function toPairingCandidate(a: any): Promise<{ id: string; domain: string | null; provider: import('./lib/warmup-health').Provider; source: 'admin' | 'shared'; trustScore?: number }> {
+      const { detectProvider } = await import('./lib/warmup-health');
+      return {
+        id: a.id,
+        domain: a.domain || (a.email?.split('@')[1]?.toLowerCase() ?? null),
+        provider: detectProvider(a),
+        source: a.is_pool_account ? 'admin' : 'shared',
+        trustScore: typeof a.trust_score === 'number' ? a.trust_score : undefined,
+      };
+    }
+
+    // Admin-pool / shared-network candidate context. Pass an already-fetched
+    // account list to avoid a duplicate query (the main cycle already has
+    // one); omit it to fetch fresh (used by the decoupled send worker).
+    async function loadWarmupPoolContext(preFetched?: any[]) {
+      const { computeNetworkBalance } = await import('./lib/warmup-pairing');
+      let accounts = preFetched;
+      if (!accounts) {
+        const { data } = await supabase.from('email_accounts')
+          .select(`${WU_BASE_COLS}, ${WU_PHASE1_COLS}, ${WU_PHASE23_COLS}, ${WU_TRUST_COLS}`)
+          .eq('warmup_enabled', true).neq('status', 'error');
+        accounts = data ?? [];
+      }
+      const isEligiblePairingTarget = (a: any) => !a.warmup_paused && !a.network_isolated && a.blacklist_status !== 'listed';
+      const adminPoolAccounts = accounts.filter(a => a.is_pool_account && isEligiblePairingTarget(a));
+      const sharedNetworkAccounts = accounts.filter(a => !a.is_pool_account && a.join_shared_network !== false && isEligiblePairingTarget(a));
+      const dynamicBalance = computeNetworkBalance(sharedNetworkAccounts.length, adminPoolAccounts.length);
+      const accountsById = new Map(accounts.map(a => [a.id, a]));
+      return { accounts, adminPoolAccounts, sharedNetworkAccounts, dynamicBalance, accountsById };
+    }
+
+    // Which pool ONE account draws partners from — honors admin overrides
+    // (warmup_pool_mode) and the account's own shared-network opt-in, same
+    // precedence rules everywhere this is evaluated.
+    function poolForAccount(account: any, ctx: { adminPoolAccounts: any[]; sharedNetworkAccounts: any[]; dynamicBalance: { sharedShare: number; adminShare: number } }) {
+      let pool: any[];
+      let poolBalance = ctx.dynamicBalance;
+      if (account.is_pool_account) {
+        pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+      } else {
+        const mode = account.warmup_pool_mode || 'admin_pool';
+        if (mode === 'user_to_user') {
+          pool = ctx.sharedNetworkAccounts.filter(a => a.id !== account.id);
+          poolBalance = { sharedShare: 1, adminShare: 0 };
+        } else if (mode === 'both') {
+          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+        } else if (account.join_shared_network === false) {
+          pool = ctx.adminPoolAccounts.filter(a => a.id !== account.id);
+          poolBalance = { sharedShare: 0, adminShare: 1 };
+        } else {
+          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+        }
+      }
+      return { pool, poolBalance };
+    }
+
+    async function fetchPairingHistoryForAccount(fromAccountId: string) {
+      const { data } = await supabase.from('warmup_pairings').select('to_account_id, last_sent_at, send_count').eq('from_account_id', fromAccountId);
+      const map = new Map<string, { lastSentAt: string | null; sendCount: number }>();
+      for (const row of data ?? []) map.set(row.to_account_id, { lastSentAt: row.last_sent_at, sendCount: row.send_count ?? 0 });
+      return map;
+    }
+
+    // Actual send + bookkeeping for ONE warmup ping. Never awaits anything
+    // but the send itself and a handful of fast DB writes — this can never
+    // be the thing holding a job open for hours (unlike the old inline
+    // "sleep, then send, N times" loop it replaces).
+    async function performWarmupSend(account: any, toAccount: any): Promise<{ ok: boolean; authError?: boolean; message?: string }> {
+      const { sendEmail } = await import('./lib/mailer');
+      const pairIndex = Math.floor(Math.random() * WARMUP_PAIRS.length);
+      const pair = WARMUP_PAIRS[pairIndex];
+      const { subject, body } = pair;
+      try {
+        await sendEmail(
+          { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
+          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
+        );
+        await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
+        const { data: priorHist } = await supabase.from('warmup_pairings').select('send_count').eq('from_account_id', account.id).eq('to_account_id', toAccount.id).maybeSingle();
+        const newSendCount = (priorHist?.send_count ?? 0) + 1;
+        await supabase.from('warmup_pairings').upsert(
+          { from_account_id: account.id, to_account_id: toAccount.id, last_sent_at: new Date().toISOString(), send_count: newSendCount },
+          { onConflict: 'from_account_id,to_account_id' },
+        );
+        await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex }, { delay: pickEngageDelayMs() });
+        await logAccountEvent(account.id, 'sent', {});
+        return { ok: true };
+      } catch (e: any) {
+        console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
+        if (e.responseCode === 535 || e.code === 'EAUTH') {
+          await logAccountEvent(account.id, 'auth_error', { message: e.message });
+          return { ok: false, authError: true, message: e.message };
+        }
+        return { ok: false, message: e.message };
+      }
+    }
+
+    // End-of-day rollup for one account — health score, day advance, pause/
+    // recovery, trust fields, history row, completion check. Re-reads the
+    // account and its last-7-days events fresh (may run hours after the
+    // cycle started, on a completely separate 'warmup-send' job).
+    async function finalizeWarmupDay(accountId: string, day: number) {
+      const { computeHealthScore, shouldPause, isWarmupComplete } = await import('./lib/warmup-health');
+      const { AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
+      const account = await fetchWarmupAccountOne(accountId);
+      if (!account) return;
+      const events7d = await fetchEventCounts(accountId, Date.now() - 7 * 86400_000);
+      const isBlacklisted = account.blacklist_status === 'listed';
+      const isBlacklistedAuthoritative = isBlacklisted && account.blacklist_details?.[AUTHORITATIVE_PAUSE_ZONE] === true;
+      const hasAuthErrorNow = account.status === 'error';
+      const sent = account.sent_today ?? 0;
+
+      const health = computeHealthScore({
+        events: events7d, domainAuth: { spf: account.spf_status, dkim: account.dkim_status, dmarc: account.dmarc_status },
+        consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: day,
+        hasAuthErrorNow, isBlacklisted,
+      });
+
+      const pauseCheck = shouldPause(events7d, hasAuthErrorNow, isBlacklistedAuthoritative);
+      const willPause = pauseCheck.pause;
+      if (willPause && !account.warmup_paused) {
+        const { data: links } = await supabase
+          .from('campaign_accounts')
+          .select('campaign:campaigns(id, name, status, campaign_accounts(account:email_accounts(*)))')
+          .eq('account_id', accountId);
+        const activeCampaigns = (links ?? [])
+          .map((l: any) => l.campaign)
+          .filter((c: any) => c && c.status === 'active');
+
+        let routingMsg = '';
+        if (activeCampaigns.length) {
+          const { computeAccountRemaining } = await import('./lib/campaign-scheduling');
+          const perCampaign: string[] = [];
+          for (const camp of activeCampaigns as any[]) {
+            const siblings = (camp.campaign_accounts ?? []).map((ca: any) => ca.account).filter((a: any) => a && a.id !== accountId);
+            const remaining = siblings.length ? await computeAccountRemaining(siblings) : new Map();
+            const takeoverId = [...remaining.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+            const takeover = takeoverId ? siblings.find((a: any) => a.id === takeoverId) : null;
+            perCampaign.push(takeover
+              ? `"${camp.name}" will route to ${takeover.email}`
+              : `"${camp.name}" has no other healthy account — sends will pause until recovery`);
+          }
+          routingMsg = ` ${perCampaign.join('; ')}.`;
+        }
+
+        await supabase.from('notifications').insert({
+          user_id: account.user_id,
+          message: `${account.email} warmup paused: ${pauseCheck.reason}.${routingMsg}`,
+          type: 'warning',
+        });
+      }
+
+      const newConsecutiveStable = health.score >= 80 && !willPause
+        ? (account.consecutive_stable_days ?? 0) + 1
+        : 0;
+
+      const target = account.warmup_target ?? 30;
+      const today = new Date().toISOString().slice(0, 10);
+      const recentHistory = await supabase
+        .from('warmup_history').select('health_score').eq('email', account.email)
+        .order('date', { ascending: false }).limit(5);
+      const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
+      const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
+
+      const trustFields = await computeTrustFields({ ...account, sent_today: sent }, health.score, isBlacklisted, sent);
+
+      await safeUpdateAccount(accountId, {
+        warmup_day: day,
+        health_score: health.score,
+        warmup_last_run_date: today,
+        ...trustFields,
+        consecutive_stable_days: newConsecutiveStable,
+        warmup_paused: willPause,
+        warmup_pause_reason: willPause ? pauseCheck.reason : null,
+        warmup_paused_at: willPause && !account.warmup_paused ? new Date().toISOString() : (willPause ? account.warmup_paused_at : null),
+        last_health_calc_at: new Date().toISOString(),
+        ...(complete ? { warmup_enabled: false, status: 'active' } : {}),
+      });
+      if (complete) {
+        await supabase.from('notifications').insert({
+          user_id: account.user_id,
+          message: `${account.email} warmup complete! Health has stayed 90+ for several days straight — safe to lean on for campaigns. Re-enable warmup any time to keep the reputation warm.`,
+          type: 'info',
+        });
+      }
+
+      await safeUpsertHistory([{
+        account_id: accountId,
+        email: account.email,
+        user_id: account.user_id,
+        date: today,
+        day_number: day,
+        emails_sent: sent,
+        health_score: health.score,
+        paused: willPause,
+        inbox_rate: health.factors.inboxRate,
+        spam_rate: health.factors.spamRate,
+        bounce_rate: health.factors.bounceRate,
+      }]);
+
+      console.log(`[warmup-send] ${account.email} day=${day}${complete ? ' (COMPLETE)' : ''}${willPause ? ' (PAUSED)' : ''} sent=${sent} score=${health.score} inbox=${health.factors.inboxRate ?? '—'}%`);
+    }
+
+    // Same-day sends after the first are each their own independently
+    // scheduled job (instead of an in-process sleep inside one held-open
+    // job) — this is the actual scale fix. A cycle job now only ever does
+    // ONE send per account before returning, regardless of that account's
+    // total daily volume, so it finishes in seconds whether the fleet is
+    // 8 mailboxes or 5,000.
+    const warmupSendQueue = new Queue('warmup-send', { connection });
+
+    new SyncWorker('warmup-send', async (job: any) => {
+      const { accountId, day, isFinal } = job.data as { accountId: string; day: number; isFinal: boolean };
+      const account = await fetchWarmupAccountOne(accountId);
+      // Re-check current state — pause/disable/error may have happened since
+      // this send was scheduled, possibly hours ago.
+      if (!account || account.warmup_paused || account.warmup_enabled === false || account.status === 'error') {
+        if (isFinal && account) await finalizeWarmupDay(accountId, day);
+        return;
+      }
+
+      const { pickWarmupPartner } = await import('./lib/warmup-pairing');
+      const ctx = await loadWarmupPoolContext();
+      const { pool, poolBalance } = poolForAccount(account, ctx);
+      if (pool.length > 0) {
+        const history = await fetchPairingHistoryForAccount(accountId);
+        const poolCandidates = await Promise.all(pool.map(toPairingCandidate));
+        const fromCandidate = await toPairingCandidate(account);
+        const picked = pickWarmupPartner(fromCandidate, poolCandidates, history, poolBalance) ?? poolCandidates[0];
+        const toAccount = ctx.accountsById.get(picked.id);
+        if (toAccount) {
+          const result = await performWarmupSend(account, toAccount);
+          if (result.ok) {
+            await supabase.from('email_accounts').update({ sent_today: (account.sent_today ?? 0) + 1 }).eq('id', accountId);
+          } else if (result.authError) {
+            await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', accountId);
+          }
+        }
+      }
+      if (isFinal) await finalizeWarmupDay(accountId, day);
+    }, { connection, concurrency: 10 });
+
+    console.log('✅ Warmup send-pacing worker started (decoupled same-day sends)');
+
     new SyncWorker('warmup', async (job: any) => {
       const isManual = job?.data?.manual === true;
 
@@ -1716,46 +1988,24 @@ export async function register() {
 
       console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts (pool: ${allWarmupAccounts.filter(a => a.is_pool_account).length}, users: ${allWarmupAccounts.filter(a => !a.is_pool_account).length})`);
 
-      const { sendEmail } = await import('./lib/mailer');
-      const { detectProvider, computeHealthScore, dailySendCap, shouldPause, canRecover, isWarmupComplete, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
+      const { detectProvider, computeHealthScore, dailySendCap, canRecover, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
-      const { computeNetworkBalance, pickWarmupPartner } = await import('./lib/warmup-pairing');
+      const { pickWarmupPartner } = await import('./lib/warmup-pairing');
       const { checkBlacklists, AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
 
       // Track pairs sent this cycle — prevents A→B and B→A in the same run
       const sentPairs = new Set<string>();
       const today = new Date().toISOString().slice(0, 10);
 
-      // Reputation Protection: an account that's paused (its own bad signals),
-      // network-isolated (flagged as a bad network CITIZEN — see
-      // lib/warmup-trust.ts), or blacklisted must never be selected as a
-      // pairing TARGET — pinging it doesn't help the sender, and it can drag
-      // down engagement/deliverability signal for whoever gets paired with
-      // it. This uses each account's status as of the START of this cycle
-      // (same timing convention as health-based pairing weight below) — a
-      // fresh isolation decision made during this cycle's own processing
-      // takes effect starting next cycle, not retroactively mid-cycle.
-      const isEligiblePairingTarget = (a: any) => !a.warmup_paused && !a.network_isolated && a.blacklist_status !== 'listed';
-
       // Dual-source network: Admin Pool (is_pool_account=true, always available)
       // + opt-in Shared User Network (join_shared_network!==false, non-pool).
       // Target share of pairings drawn from each scales with how large the
-      // shared network actually is — small network leans on the admin pool,
-      // large network becomes mostly self-sufficient (admin pool as backup).
-      const adminPoolAccounts = allWarmupAccounts.filter(a => a.is_pool_account && isEligiblePairingTarget(a));
-      const sharedNetworkAccounts = allWarmupAccounts.filter(a => !a.is_pool_account && a.join_shared_network !== false && isEligiblePairingTarget(a));
-      const dynamicBalance = computeNetworkBalance(sharedNetworkAccounts.length, adminPoolAccounts.length);
-      const accountsById = new Map(allWarmupAccounts.map(a => [a.id, a]));
-
-      function toPairingCandidate(a: any): { id: string; domain: string | null; provider: ReturnType<typeof detectProvider>; source: 'admin' | 'shared'; trustScore?: number } {
-        return {
-          id: a.id,
-          domain: a.domain || (a.email?.split('@')[1]?.toLowerCase() ?? null),
-          provider: detectProvider(a),
-          source: a.is_pool_account ? 'admin' : 'shared',
-          trustScore: typeof a.trust_score === 'number' ? a.trust_score : undefined,
-        };
-      }
+      // shared network actually is. Reputation Protection: paused,
+      // network-isolated, or blacklisted accounts are excluded as pairing
+      // TARGETS inside loadWarmupPoolContext — using each account's status
+      // as of the START of this cycle, same convention as before.
+      const poolCtx = await loadWarmupPoolContext(allWarmupAccounts);
+      const { adminPoolAccounts, sharedNetworkAccounts, accountsById } = poolCtx;
 
       // Fetch fairness/recency history once per cycle — capped at
       // accounts*(accounts-1) rows regardless of how much send history
@@ -1781,7 +2031,7 @@ export async function register() {
       // once at the end of the whole cycle. A worker restart/redeploy mid-cycle (which
       // happens routinely on deploy) would otherwise lose already-sent accounts' results
       // even though the emails had actually gone out.
-      const BATCH_SIZE = 10;
+      const BATCH_SIZE = 25;
       for (let b = 0; b < allWarmupAccounts.length; b += BATCH_SIZE) {
         const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
         await Promise.all(batch.map(async account => {
@@ -1907,229 +2157,87 @@ export async function register() {
               dailySendCap({ provider, warmupDay: day, health: priorHealth, domainAuthAllPass }) * weekendFactor
             ));
 
-            // Dual-source candidate pool + balance for THIS account. 'admin_pool'
-            // is both the literal enum value AND the column's default for every
-            // untouched row, so it's treated as "no admin override — follow the
-            // account's own join_shared_network preference with automatic
-            // balancing" (matches the new opt-in-checkbox UX being the default
-            // experience). 'user_to_user'/'both' remain explicit admin-set
-            // overrides (existing admin dropdown, unchanged), which take
-            // precedence over the account's own opt-in.
-            let pool: typeof allWarmupAccounts;
-            let poolBalance = dynamicBalance;
-            if (account.is_pool_account) {
-              pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
-            } else {
-              const mode = account.warmup_pool_mode || 'admin_pool';
-              if (mode === 'user_to_user') {
-                pool = sharedNetworkAccounts.filter(a => a.id !== account.id);
-                poolBalance = { sharedShare: 1, adminShare: 0 };
-              } else if (mode === 'both') {
-                pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
-              } else if (account.join_shared_network === false) {
-                pool = adminPoolAccounts.filter(a => a.id !== account.id);
-                poolBalance = { sharedShare: 0, adminShare: 1 };
-              } else {
-                pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
-              }
-            }
-            trace(`pool-built size=${pool.length} emailsToday=${emailsToday}`);
-            if (pool.length === 0 || emailsToday === 0) {
-              if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, join_shared_network: ${account.join_shared_network !== false}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
-              await safeUpdateAccount(account.id, {
-                spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
-                blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
-                blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
-                domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
-              });
-              trace('empty-pool-return: done');
-              return;
-            }
-            const poolCandidates = pool.map(toPairingCandidate);
-
-            let sent = 0;
-            let hasAuthErrorNow = false;
-
-            // Spread sends across whatever's left of today's business-hours window
-            // (07:00–21:00 UTC) instead of a fixed block, so timing looks organic.
-            const endOfWindowMs = new Date(new Date().setUTCHours(21, 0, 0, 0)).getTime();
-            const remainingWindowMs = Math.max(15 * 60 * 1000, endOfWindowMs - Date.now());
-
-            for (let i = 0; i < emailsToday; i++) {
-              if (i > 0) {
-                const baseMs = remainingWindowMs / emailsToday;
-                await new Promise(r => setTimeout(r, baseMs * (0.5 + Math.random())));
-              }
-              // Exclude anyone already paired (either direction) this cycle,
-              // then pick via domain/provider/region-diverse, fairness-weighted
-              // selection instead of pure random.
-              const eligibleCandidates = poolCandidates.filter(c => {
-                const fwd = `${account.id}→${c.id}`;
-                const rev = `${c.id}→${account.id}`;
-                return !sentPairs.has(fwd) && !sentPairs.has(rev);
-              });
-              const fromCandidate = toPairingCandidate(account);
-              const picked = pickWarmupPartner(fromCandidate, eligibleCandidates, historyFor(account.id), poolBalance)
-                ?? poolCandidates[i % poolCandidates.length]; // fallback if all pairs exhausted this cycle
-              const toAccount = accountsById.get(picked.id);
-              if (!toAccount) continue;
-
-              const pairIndex = Math.floor(Math.random() * WARMUP_PAIRS.length);
-              const pair = WARMUP_PAIRS[pairIndex];
-              const { subject, body } = pair;
-              const pairKey = `${account.id}→${toAccount.id}`;
-
-              // Reserved BEFORE the send (not after) — sendEmail is a real network
-              // call, and this runs inside a Promise.all batch of up to 10
-              // concurrent accounts, so two accounts could otherwise both pass
-              // the "not yet paired" check above before either had written.
-              // Rolled back in the catch block if the send actually fails, so a
-              // failed send doesn't burn a valid pairing slot for the rest of
-              // the cycle.
-              sentPairs.add(pairKey);
-
-              trace(`send[${i}] → ${toAccount.email} starting`);
-              try {
-                await sendEmail(
-                  { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-                  { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
-                );
-                trace(`send[${i}] sendEmail resolved`);
-                // Written immediately so a mid-cycle crash can't lose an email that
-                // actually went out (previously batched to a single flush at cycle end).
-                await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
-                const priorHist = historyFor(account.id).get(toAccount.id);
-                const newSendCount = (priorHist?.sendCount ?? 0) + 1;
-                historyFor(account.id).set(toAccount.id, { lastSentAt: new Date().toISOString(), sendCount: newSendCount });
-                await supabase.from('warmup_pairings').upsert(
-                  { from_account_id: account.id, to_account_id: toAccount.id, last_sent_at: new Date().toISOString(), send_count: newSendCount },
-                  { onConflict: 'from_account_id,to_account_id' },
-                );
-                await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex }, { delay: pickEngageDelayMs() });
-                await logAccountEvent(account.id, 'sent', {});
-                sent++;
-                trace(`send[${i}] done`);
-              } catch (e: any) {
-                sentPairs.delete(pairKey);
-                console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
-                trace(`send[${i}] failed: ${e.message}`);
-                if (e.responseCode === 535 || e.code === 'EAUTH') {
-                  hasAuthErrorNow = true;
-                  await logAccountEvent(account.id, 'auth_error', { message: e.message });
-                  break;
-                }
-              }
-            }
-            trace('send-loop-complete');
-
-            const events7dAfterSend = { ...events7d, sent7d: events7d.sent7d + sent };
-            const health = computeHealthScore({
-              events: events7dAfterSend, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
-              consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: day,
-              hasAuthErrorNow, isBlacklisted,
-            });
-
-            const pauseCheck = shouldPause(events7dAfterSend, hasAuthErrorNow, isBlacklistedAuthoritative);
-            const willPause = pauseCheck.pause;
-            if (willPause && !account.warmup_paused) {
-              // Name the specific healthy sibling account absorbing each linked
-              // active campaign's sends, same selection logic as the scheduler/
-              // retry route — only runs on this pause transition (rare), not the
-              // routine 6h cycle, so the extra lookups are cheap.
-              const { data: links } = await supabase
-                .from('campaign_accounts')
-                .select('campaign:campaigns(id, name, status, campaign_accounts(account:email_accounts(*)))')
-                .eq('account_id', account.id);
-              const activeCampaigns = (links ?? [])
-                .map((l: any) => l.campaign)
-                .filter((c: any) => c && c.status === 'active');
-
-              let routingMsg = '';
-              if (activeCampaigns.length) {
-                const { computeAccountRemaining } = await import('./lib/campaign-scheduling');
-                const perCampaign: string[] = [];
-                for (const camp of activeCampaigns as any[]) {
-                  const siblings = (camp.campaign_accounts ?? []).map((ca: any) => ca.account).filter((a: any) => a && a.id !== account.id);
-                  const remaining = siblings.length ? await computeAccountRemaining(siblings) : new Map();
-                  const takeoverId = [...remaining.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-                  const takeover = takeoverId ? siblings.find((a: any) => a.id === takeoverId) : null;
-                  perCampaign.push(takeover
-                    ? `"${camp.name}" will route to ${takeover.email}`
-                    : `"${camp.name}" has no other healthy account — sends will pause until recovery`);
-                }
-                routingMsg = ` ${perCampaign.join('; ')}.`;
-              }
-
-              await supabase.from('notifications').insert({
-                user_id: account.user_id,
-                message: `${account.email} warmup paused: ${pauseCheck.reason}.${routingMsg}`,
-                type: 'warning',
-              });
-            }
-
-            const newConsecutiveStable = health.score >= 80 && !willPause
-              ? (account.consecutive_stable_days ?? 0) + 1
-              : 0;
-
-            // Completion: health-and-stability based, not just "day X reached"
-            const target = account.warmup_target ?? 30;
-            const recentHistory = await supabase
-              .from('warmup_history').select('health_score').eq('email', account.email)
-              .order('date', { ascending: false }).limit(5);
-            const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
-            const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
-
-            trace('before-trust-fields');
-            const trustFields = await computeTrustFields({ ...account, sent_today: sent }, health.score, isBlacklisted, emailsToday);
-            trace('after-trust-fields');
-
-            // Write this account's result now — immediately after it finishes, not
-            // deferred to a batch flush after every other account in the cycle is done.
-            await safeUpdateAccount(account.id, {
-              warmup_day: day,
-              health_score: health.score,
-              sent_today: sent,
-              warmup_last_run_date: new Date().toISOString().slice(0, 10),
+            // Domain/blacklist results are written NOW rather than only at the
+            // very end of this account's processing — for a high-volume
+            // account the rest of today's sends happen via decoupled jobs
+            // that may finish hours from now, and the dashboard shouldn't
+            // show stale auth/blacklist status until then.
+            await supabase.from('email_accounts').update({
               spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
               blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
               blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
-              ...trustFields,
               domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
-              consecutive_stable_days: newConsecutiveStable,
-              warmup_paused: willPause,
-              warmup_pause_reason: willPause ? pauseCheck.reason : null,
-              warmup_paused_at: willPause && !account.warmup_paused ? new Date().toISOString() : (willPause ? account.warmup_paused_at : null),
-              last_health_calc_at: new Date().toISOString(),
-              ...(complete ? { warmup_enabled: false, status: 'active' } : {}),
+            }).eq('id', account.id);
+
+            // Dual-source candidate pool + balance for THIS account — honors
+            // admin overrides (warmup_pool_mode) and the account's own
+            // shared-network opt-in.
+            const { pool, poolBalance } = poolForAccount(account, poolCtx);
+            trace(`pool-built size=${pool.length} emailsToday=${emailsToday}`);
+            if (pool.length === 0 || emailsToday === 0) {
+              if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, join_shared_network: ${account.join_shared_network !== false}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
+              trace('empty-pool-return: done');
+              return;
+            }
+            const poolCandidates = await Promise.all(pool.map(toPairingCandidate));
+
+            // Only the FIRST send of the day happens synchronously here,
+            // using the same-cycle sentPairs dedup (meaningful only across
+            // accounts processed together in this same fast pass). Any
+            // remaining sends for accounts with a higher daily cap are each
+            // scheduled as an independent 'warmup-send' job instead of an
+            // in-process sleep — this account's own processing time is now
+            // bounded to "one send" regardless of whether emailsToday is 1
+            // or 50, which is what keeps this whole cycle job fast (seconds,
+            // not hours) at any fleet size.
+            const eligibleCandidates = poolCandidates.filter(c => {
+              const fwd = `${account.id}→${c.id}`;
+              const rev = `${c.id}→${account.id}`;
+              return !sentPairs.has(fwd) && !sentPairs.has(rev);
             });
-            if (hasAuthErrorNow) {
-              await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', account.id);
-            }
-            if (complete) {
-              await supabase.from('notifications').insert({
-                user_id: account.user_id,
-                message: `${account.email} warmup complete! Health has stayed 90+ for several days straight — safe to lean on for campaigns. Re-enable warmup any time to keep the reputation warm.`,
-                type: 'info',
-              });
+            const fromCandidate = await toPairingCandidate(account);
+            const picked = pickWarmupPartner(fromCandidate, eligibleCandidates, historyFor(account.id), poolBalance)
+              ?? poolCandidates[0];
+            const toAccount = picked ? accountsById.get(picked.id) : undefined;
+
+            let authError = false;
+            if (toAccount) {
+              const pairKey = `${account.id}→${toAccount.id}`;
+              sentPairs.add(pairKey);
+              trace(`send[0] → ${toAccount.email} starting`);
+              const result = await performWarmupSend(account, toAccount);
+              trace(`send[0] ${result.ok ? 'done' : 'failed: ' + result.message}`);
+              if (result.ok) {
+                historyFor(account.id).set(toAccount.id, { lastSentAt: new Date().toISOString(), sendCount: (historyFor(account.id).get(toAccount.id)?.sendCount ?? 0) + 1 });
+                await supabase.from('email_accounts').update({ sent_today: (account.sent_today ?? 0) + 1 }).eq('id', account.id);
+              } else {
+                sentPairs.delete(pairKey);
+                if (result.authError) {
+                  authError = true;
+                  await supabase.from('email_accounts').update({ status: 'error', warmup_enabled: false }).eq('id', account.id);
+                }
+              }
             }
 
-            // Persist today's history row immediately too (upsert so re-runs don't duplicate)
-            await safeUpsertHistory([{
-              account_id: account.id,
-              email: account.email,
-              user_id: account.user_id,
-              date: today,
-              day_number: day,
-              emails_sent: sent,
-              health_score: health.score,
-              paused: willPause,
-              inbox_rate: health.factors.inboxRate,
-              spam_rate: health.factors.spamRate,
-              bounce_rate: health.factors.bounceRate,
-            }]);
-
+            if (authError || emailsToday <= 1) {
+              trace('finalize: same job');
+              await finalizeWarmupDay(account.id, day);
+            } else {
+              // Spread remaining sends across whatever's left of today's
+              // business-hours window (07:00–21:00 UTC), same pacing feel as
+              // before — but each one is its own delayed job, not an await
+              // inside this one.
+              const endOfWindowMs = new Date(new Date().setUTCHours(21, 0, 0, 0)).getTime();
+              const remainingWindowMs = Math.max(15 * 60 * 1000, endOfWindowMs - Date.now());
+              const baseMs = remainingWindowMs / emailsToday;
+              let cumulativeDelay = 0;
+              for (let i = 1; i < emailsToday; i++) {
+                cumulativeDelay += baseMs * (0.5 + Math.random());
+                await warmupSendQueue.add('send', { accountId: account.id, day, isFinal: i === emailsToday - 1 }, { delay: Math.round(cumulativeDelay) });
+              }
+              trace(`scheduled ${emailsToday - 1} follow-up sends`);
+            }
             trace('done');
-            console.log(`[warmup-send] ${account.email} day=${day}${complete ? ' (COMPLETE)' : ''}${willPause ? ' (PAUSED)' : ''} sent=${sent}/${emailsToday} score=${health.score} inbox=${health.factors.inboxRate ?? '—'}%`);
           } catch (e: any) {
             trace(`threw: ${e.message}`);
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
@@ -2139,11 +2247,17 @@ export async function register() {
 
       // ── PHASE 2: backstop spam sweep — catches anything a delayed engage job missed
       // (e.g. a worker restart). Primary engagement now happens via warmup-engage jobs.
-      for (const account of allWarmupAccounts) {
+      // Parallelized in the same bounded batches as Phase 1 — a fully
+      // sequential per-account IMAP connect+search+move loop would itself
+      // become a scale bottleneck at hundreds/thousands of mailboxes even
+      // with each connection individually timeout-bounded.
+      for (let b = 0; b < allWarmupAccounts.length; b += BATCH_SIZE) {
+        const sweepBatch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
+        await Promise.all(sweepBatch.map(async (account) => {
         try {
           if (account.type !== 'gmail-oauth') {
             const imapHost = account.imap_host || (account.type === 'gmail-app' ? 'imap.gmail.com' : null);
-            if (!imapHost) continue;
+            if (!imapHost) return;
             const { ImapFlow } = await import('imapflow');
             const imapConfig: any = {
               host: imapHost, port: account.imap_port || 993, secure: true,
@@ -2177,6 +2291,7 @@ export async function register() {
         } catch (e: any) {
           console.error(`[warmup-backstop] ${account.email}: ${e.message}`);
         }
+        }));
       }
 
     }, { connection, concurrency: 1 });
