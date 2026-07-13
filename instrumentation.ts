@@ -1706,22 +1706,29 @@ export async function register() {
     // (warmup_pool_mode) and the account's own shared-network opt-in, same
     // precedence rules everywhere this is evaluated.
     function poolForAccount(account: any, ctx: { adminPoolAccounts: any[]; sharedNetworkAccounts: any[]; dynamicBalance: { sharedShare: number; adminShare: number } }) {
+      // Excludes by email, not just account id — pre-existing duplicate rows
+      // (same real mailbox connected under >1 user_id, from before "one
+      // mailbox = one identity" was enforced; never retroactively cleaned
+      // up) would otherwise let a mailbox get paired with a second DB row
+      // pointing at its own inbox. A real case of this was caught live:
+      // uaeshopify123@gmail.com sending a warmup ping to itself.
+      const notSelf = (a: any) => a.id !== account.id && a.email?.toLowerCase() !== account.email?.toLowerCase();
       let pool: any[];
       let poolBalance = ctx.dynamicBalance;
       if (account.is_pool_account) {
-        pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+        pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(notSelf);
       } else {
         const mode = account.warmup_pool_mode || 'admin_pool';
         if (mode === 'user_to_user') {
-          pool = ctx.sharedNetworkAccounts.filter(a => a.id !== account.id);
+          pool = ctx.sharedNetworkAccounts.filter(notSelf);
           poolBalance = { sharedShare: 1, adminShare: 0 };
         } else if (mode === 'both') {
-          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(notSelf);
         } else if (account.join_shared_network === false) {
-          pool = ctx.adminPoolAccounts.filter(a => a.id !== account.id);
+          pool = ctx.adminPoolAccounts.filter(notSelf);
           poolBalance = { sharedShare: 0, adminShare: 1 };
         } else {
-          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(a => a.id !== account.id);
+          pool = [...ctx.adminPoolAccounts, ...ctx.sharedNetworkAccounts].filter(notSelf);
         }
       }
       return { pool, poolBalance };
