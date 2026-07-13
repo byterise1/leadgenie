@@ -1339,6 +1339,90 @@ export async function register() {
       return counts;
     }
 
+    // Recipient-side stats for Trust Score / abuse detection (lib/warmup-trust.ts) —
+    // "how good a network CITIZEN is this account," not its own send-side health.
+    // pingsReceived/opensAsRecipient/unreachable all look at this account as a
+    // TARGET other accounts pinged, not as a sender.
+    async function fetchRecipientStats(accountId: string, accountEmail: string, sinceMs: number) {
+      const sinceIso = new Date(sinceMs).toISOString();
+      const [pingsRes, unreachableRes, engagedRes] = await Promise.all([
+        supabase.from('warmup_emails').select('id', { count: 'exact', head: true }).eq('to_account_id', accountId).gte('sent_at', sinceIso),
+        supabase.from('email_account_events').select('id', { count: 'exact', head: true }).eq('account_id', accountId).eq('event_type', 'recipient_unreachable').gte('created_at', sinceIso),
+        // 'open'/'reply' events are credited to the SENDER's account_id with
+        // meta.via holding the recipient's email — the only way to measure
+        // "did people who pinged THIS account see engagement back" is by
+        // matching on that email field, not account_id.
+        supabase.from('email_account_events').select('id', { count: 'exact', head: true }).in('event_type', ['open', 'reply']).eq('meta->>via', accountEmail).gte('created_at', sinceIso),
+      ]);
+      return {
+        pingsReceived7d: pingsRes.count ?? 0,
+        unreachableCount7d: unreachableRes.count ?? 0,
+        opensAsRecipient7d: engagedRes.count ?? 0,
+      };
+    }
+
+    // Trust Score + Automatic Abuse Detection + Reputation Protection
+    // (lib/warmup-trust.ts). Returns the fields to merge into the caller's
+    // own safeUpdateAccount() call — no separate DB write here, avoids
+    // double-writing the same row every cycle.
+    async function computeTrustFields(account: any, healthScore: number, isBlacklisted: boolean, computedDailyCap: number): Promise<Record<string, unknown>> {
+      const { computeTrustScore, detectAbuse, shouldIsolateFromNetwork, canRejoinNetwork } = await import('./lib/warmup-trust');
+      const recipientStats = await fetchRecipientStats(account.id, account.email, Date.now() - 7 * 86400_000);
+      const accountAgeDays = account.created_at ? (Date.now() - new Date(account.created_at).getTime()) / 86400_000 : 0;
+
+      const abuse = detectAbuse({
+        pingsReceived7d: recipientStats.pingsReceived7d,
+        unreachableCount7d: recipientStats.unreachableCount7d,
+        opensAsRecipient7d: recipientStats.opensAsRecipient7d,
+        sentToday: account.sent_today ?? 0,
+        computedDailyCap,
+      });
+      let abuseFlagCount = account.abuse_flag_count ?? 0;
+      if (abuse.flagged) {
+        abuseFlagCount += 1;
+        for (const reason of abuse.reasons) await logAccountEvent(account.id, 'abuse_flag', { reason });
+      }
+
+      const trustScore = computeTrustScore({
+        accountAgeDays, healthScore,
+        pingsReceived7d: recipientStats.pingsReceived7d,
+        opensAsRecipient7d: recipientStats.opensAsRecipient7d,
+        unreachableCount7d: recipientStats.unreachableCount7d,
+        abuseFlagCount,
+        isBlacklisted,
+      });
+
+      const fields: Record<string, unknown> = { trust_score: trustScore, abuse_flag_count: abuseFlagCount };
+
+      if (account.network_isolated) {
+        if (canRejoinNetwork({ trustScore, healthScore, isBlacklisted, isolatedAt: account.network_isolated_at ?? null })) {
+          fields.network_isolated = false;
+          fields.network_isolation_reason = null;
+          fields.network_isolated_at = null;
+          fields.abuse_flag_count = 0; // clean slate on recovery — an old count shouldn't immediately re-trigger isolation
+          await supabase.from('notifications').insert({
+            user_id: account.user_id,
+            message: `${account.email} rejoined the shared warmup network — trust and health signals recovered.`,
+            type: 'info',
+          });
+        }
+      } else {
+        const isolation = shouldIsolateFromNetwork({ trustScore, healthScore, isBlacklisted, abuseFlagCount });
+        if (isolation.isolate) {
+          fields.network_isolated = true;
+          fields.network_isolation_reason = isolation.reason;
+          fields.network_isolated_at = new Date().toISOString();
+          await supabase.from('notifications').insert({
+            user_id: account.user_id,
+            message: `${account.email} isolated from the shared warmup network: ${isolation.reason}`,
+            type: 'warning',
+          });
+        }
+      }
+
+      return fields;
+    }
+
     // Columns that exist regardless of whether 20260705_warmup_phase1.sql has run yet.
     const LEGACY_SAFE_ACCOUNT_KEYS = new Set([
       'warmup_day', 'health_score', 'sent_today', 'warmup_last_run_date', 'warmup_enabled', 'status',
@@ -1397,13 +1481,20 @@ export async function register() {
       let archived = false;
       let labelled = false;
       let replyTarget: { toEmail: string; subject: string } | null = null;
+      // First recipient-side signal (everything else in this worker is
+      // credited to the SENDER) — feeds Trust Score / abuse detection: does
+      // pairing with this account as a recipient actually work, or is its
+      // mailbox unreachable/broken? Only meaningful if we never managed to
+      // engage at all this cycle (checked after the try/catch below).
+      let unreachable = false;
 
       try {
         if (toAcc.type === 'gmail-oauth') {
-          let token: string;
+          let token: string | null = null;
           try { token = await getAccessToken({ id: toAcc.id, type: toAcc.type, email: toAcc.email, smtp_pass: toAcc.smtp_pass }); }
-          catch { return; }
+          catch { unreachable = true; }
 
+          if (token) {
           const messages = await gmailSearch(`"--warmup-ping--" from:${fromAcc.email} newer_than:2d`, token);
           for (const msg of messages.slice(0, 1)) {
             const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
@@ -1432,8 +1523,10 @@ export async function register() {
               replyTarget = { toEmail: fromAcc.email, subject: subjH };
             }
           }
+          }
         } else {
           const imapHost = toAcc.imap_host || (toAcc.type === 'gmail-app' ? 'imap.gmail.com' : null);
+          if (!imapHost) unreachable = true;
           if (imapHost) {
             const { ImapFlow } = await import('imapflow');
             const imapConfig: any = {
@@ -1483,13 +1576,23 @@ export async function register() {
 
               await client.logout();
             } catch (e: any) {
+              unreachable = true;
               console.error(`[warmup-engage] IMAP ${toAcc.email}: ${e.message}`);
               try { await client.logout(); } catch { /* already closed */ }
             }
           }
         }
       } catch (e: any) {
+        unreachable = true;
         console.error(`[warmup-engage] ${toAcc.email}: ${e.message}`);
+      }
+
+      // Recipient-side signal, credited to toAccountId — feeds Trust Score /
+      // abuse detection (see lib/warmup-trust.ts). Only logged if we truly
+      // never managed to engage at all this cycle, so a partial failure
+      // after a successful check-in doesn't get flagged as unreachable.
+      if (unreachable && !engaged) {
+        await logAccountEvent(toAccountId, 'recipient_unreachable', { via: fromAcc.email });
       }
 
       // Every signal below is credited to fromAccountId — it's fromAccountId's
@@ -1559,27 +1662,51 @@ export async function register() {
         .neq('status', 'error')
         .or(`warmup_last_run_date.is.null,warmup_last_run_date.lt.${todayDate}`);
 
-      // Phase 1 migration (20260705_warmup_phase1.sql) adds the columns below. If it hasn't
-      // been run yet, PostgREST errors on the whole select — fall back to the pre-migration
-      // column set so warmup keeps running (with the new scoring simply defaulting) instead
-      // of going dark until someone runs the SQL.
+      // Three-tier cascading fallback, oldest-migration-safe first. Each tier
+      // adds columns from a LATER migration — if a later one hasn't been run
+      // yet, PostgREST errors on the WHOLE select (not just the missing
+      // column), so bundling a brand-new column into an already-working
+      // select would silently regress everything that select used to
+      // provide. Real bug once already: trust_score (Phase 2/3 follow-up,
+      // 20260714_trust_and_isolation.sql) was briefly bundled into the same
+      // select as domain/blacklist_status/mx_status (20260713 migrations,
+      // already run in production) — until trust_score's own migration also
+      // ran, that would have taken SPF/DKIM/DMARC/blacklist/MX display back
+      // down with it. Keep each migration's columns in their own tier.
       let allWarmupAccounts: any[] | null = null;
-      const fullSelect = await supabase
-        .from('email_accounts')
-        .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, mx_status')
-        .eq('warmup_enabled', true)
-        .neq('status', 'error');
+      const PHASE1_COLS = 'spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count';
+      const PHASE23_COLS = 'domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, mx_status';
+      const TRUST_COLS = 'trust_score, network_isolated, network_isolation_reason, network_isolated_at, abuse_flag_count';
+      const BASE_COLS = 'id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date';
 
-      if (fullSelect.error) {
-        console.warn(`[warmup] Extended columns unavailable (${fullSelect.error.message}) — has supabase/migrations/20260705_warmup_phase1.sql been run? Falling back to legacy column set for this cycle.`);
-        const fallback = await supabase
-          .from('email_accounts')
-          .select('id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date')
-          .eq('warmup_enabled', true)
-          .neq('status', 'error');
-        allWarmupAccounts = fallback.data;
+      const tier3 = await supabase.from('email_accounts')
+        .select(`${BASE_COLS}, ${PHASE1_COLS}, ${PHASE23_COLS}, ${TRUST_COLS}`)
+        .eq('warmup_enabled', true).neq('status', 'error');
+
+      if (!tier3.error) {
+        allWarmupAccounts = tier3.data;
       } else {
-        allWarmupAccounts = fullSelect.data;
+        console.warn(`[warmup] Trust/isolation columns unavailable (${tier3.error.message}) — has supabase/migrations/20260714_trust_and_isolation.sql been run? Falling back one tier for this cycle.`);
+        const tier2 = await supabase.from('email_accounts')
+          .select(`${BASE_COLS}, ${PHASE1_COLS}, ${PHASE23_COLS}`)
+          .eq('warmup_enabled', true).neq('status', 'error');
+        if (!tier2.error) {
+          allWarmupAccounts = tier2.data;
+        } else {
+          console.warn(`[warmup] Phase 2/3 columns unavailable (${tier2.error.message}) — has supabase/migrations/20260713_shared_network_and_pairing.sql been run? Falling back one more tier for this cycle.`);
+          const tier1 = await supabase.from('email_accounts')
+            .select(`${BASE_COLS}, ${PHASE1_COLS}`)
+            .eq('warmup_enabled', true).neq('status', 'error');
+          if (!tier1.error) {
+            allWarmupAccounts = tier1.data;
+          } else {
+            console.warn(`[warmup] Extended columns unavailable (${tier1.error.message}) — has supabase/migrations/20260705_warmup_phase1.sql been run? Falling back to legacy column set for this cycle.`);
+            const tier0 = await supabase.from('email_accounts')
+              .select(BASE_COLS)
+              .eq('warmup_enabled', true).neq('status', 'error');
+            allWarmupAccounts = tier0.data;
+          }
+        }
       }
 
       if (!allWarmupAccounts || allWarmupAccounts.length < 2) {
@@ -1599,22 +1726,34 @@ export async function register() {
       const sentPairs = new Set<string>();
       const today = new Date().toISOString().slice(0, 10);
 
+      // Reputation Protection: an account that's paused (its own bad signals),
+      // network-isolated (flagged as a bad network CITIZEN — see
+      // lib/warmup-trust.ts), or blacklisted must never be selected as a
+      // pairing TARGET — pinging it doesn't help the sender, and it can drag
+      // down engagement/deliverability signal for whoever gets paired with
+      // it. This uses each account's status as of the START of this cycle
+      // (same timing convention as health-based pairing weight below) — a
+      // fresh isolation decision made during this cycle's own processing
+      // takes effect starting next cycle, not retroactively mid-cycle.
+      const isEligiblePairingTarget = (a: any) => !a.warmup_paused && !a.network_isolated && a.blacklist_status !== 'listed';
+
       // Dual-source network: Admin Pool (is_pool_account=true, always available)
       // + opt-in Shared User Network (join_shared_network!==false, non-pool).
       // Target share of pairings drawn from each scales with how large the
       // shared network actually is — small network leans on the admin pool,
       // large network becomes mostly self-sufficient (admin pool as backup).
-      const adminPoolAccounts = allWarmupAccounts.filter(a => a.is_pool_account);
-      const sharedNetworkAccounts = allWarmupAccounts.filter(a => !a.is_pool_account && a.join_shared_network !== false);
+      const adminPoolAccounts = allWarmupAccounts.filter(a => a.is_pool_account && isEligiblePairingTarget(a));
+      const sharedNetworkAccounts = allWarmupAccounts.filter(a => !a.is_pool_account && a.join_shared_network !== false && isEligiblePairingTarget(a));
       const dynamicBalance = computeNetworkBalance(sharedNetworkAccounts.length, adminPoolAccounts.length);
       const accountsById = new Map(allWarmupAccounts.map(a => [a.id, a]));
 
-      function toPairingCandidate(a: any): { id: string; domain: string | null; provider: ReturnType<typeof detectProvider>; source: 'admin' | 'shared' } {
+      function toPairingCandidate(a: any): { id: string; domain: string | null; provider: ReturnType<typeof detectProvider>; source: 'admin' | 'shared'; trustScore?: number } {
         return {
           id: a.id,
           domain: a.domain || (a.email?.split('@')[1]?.toLowerCase() ?? null),
           provider: detectProvider(a),
           source: a.is_pool_account ? 'admin' : 'shared',
+          trustScore: typeof a.trust_score === 'number' ? a.trust_score : undefined,
         };
       }
 
@@ -1664,6 +1803,15 @@ export async function register() {
             // reusing this gate keeps automated querying within free/fair use.
             const needsAuthCheck = !account.domain_checked_at
               || (Date.now() - new Date(account.domain_checked_at).getTime()) > 7 * 86400_000;
+            // Blacklist/MX checking piggybacks on the SAME 7-day cadence as
+            // SPF/DKIM/DMARC (see above) — but that cadence was already
+            // running for weeks on existing accounts before this feature
+            // shipped, so domain_checked_at could already be recent for them,
+            // silently deferring their very FIRST blacklist/MX check up to 7
+            // days out. Force it once immediately (blacklist_checked_at is
+            // only ever null before a check has genuinely run at all) so
+            // existing accounts don't wait a week for a brand-new capability.
+            const needsBlacklistCheck = needsAuthCheck || !account.blacklist_checked_at;
             let spfStatus = account.spf_status || 'unknown';
             let dkimStatus = account.dkim_status || 'unknown';
             let dmarcStatus = account.dmarc_status || 'unknown';
@@ -1675,6 +1823,8 @@ export async function register() {
                 const auth = await checkDomainAuth(account.email);
                 spfStatus = auth.spf; dkimStatus = auth.dkim; dmarcStatus = auth.dmarc; mxStatus = auth.mx;
               } catch { /* keep previous status on lookup failure */ }
+            }
+            if (needsBlacklistCheck) {
               try {
                 const bl = await checkBlacklists({ email: account.email, accountType: account.type, smtpHost: account.smtp_host });
                 blacklistStatus = bl.status; blacklistDetails = bl.details;
@@ -1710,12 +1860,14 @@ export async function register() {
                 consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
                 hasAuthErrorNow: false, isBlacklisted,
               });
+              const trustFields = await computeTrustFields(account, health.score, isBlacklisted, 0);
               await safeUpdateAccount(account.id, {
                 health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
                 blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
-                blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
+                blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
                 last_health_calc_at: new Date().toISOString(),
+                ...trustFields,
               });
               // Keep today's already-written history row in sync with the live score.
               // Without this, only the FIRST cycle of the day ever writes warmup_history,
@@ -1771,7 +1923,7 @@ export async function register() {
               await safeUpdateAccount(account.id, {
                 spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
                 blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
-                blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
+                blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               });
               return;
@@ -1905,6 +2057,8 @@ export async function register() {
             const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
             const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
 
+            const trustFields = await computeTrustFields({ ...account, sent_today: sent }, health.score, isBlacklisted, emailsToday);
+
             // Write this account's result now — immediately after it finishes, not
             // deferred to a batch flush after every other account in the cycle is done.
             await safeUpdateAccount(account.id, {
@@ -1914,7 +2068,8 @@ export async function register() {
               warmup_last_run_date: new Date().toISOString().slice(0, 10),
               spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
               blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
-              blacklist_checked_at: needsAuthCheck ? new Date().toISOString() : account.blacklist_checked_at,
+              blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
+              ...trustFields,
               domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               consecutive_stable_days: newConsecutiveStable,
               warmup_paused: willPause,

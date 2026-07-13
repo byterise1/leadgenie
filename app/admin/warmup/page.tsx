@@ -45,6 +45,18 @@ type DomainRollup = {
   dailyCapacity: number;
 };
 
+type NetworkHealth = {
+  networkSize: number;
+  sharedNetworkSize: number;
+  adminPoolSize: number;
+  distinctDomains: number;
+  avgHealth: number;
+  avgTrust: number | null;
+  isolatedAccounts: { email: string; reason: string | null }[];
+  abuseFlaggedAccounts: { email: string; count: number }[];
+  pairingFairness: { min: number; max: number; avg: number } | null;
+};
+
 type PoolAccount = {
   id: string;
   email: string;
@@ -87,10 +99,15 @@ function DeliverabilityBadge({ label }: { label?: string }) {
   return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${style}`}>{label}</span>;
 }
 
+// Shows the actual status as text, not just color — color alone is easy to
+// misread at a glance in a dense table and carries zero information when
+// copy-pasted as plain text (both real complaints from live use).
 function MiniAuthBadge({ label, status }: { label: string; status?: string }) {
-  const style = status === 'pass' || status === 'clean' ? 'bg-emerald-50 text-emerald-700'
-    : status === 'fail' || status === 'listed' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-400';
-  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}</span>;
+  const s = status || 'unknown';
+  const style = s === 'pass' || s === 'clean' ? 'bg-emerald-50 text-emerald-700'
+    : s === 'fail' || s === 'listed' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-400';
+  const statusText = s === 'pass' ? 'Pass' : s === 'clean' ? 'Clean' : s === 'fail' ? 'Fail' : s === 'listed' ? 'Listed' : 'Unknown';
+  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}: {statusText}</span>;
 }
 
 type AvailableAccount = { id: string; email: string; type: string; status: string; health_score: number };
@@ -364,6 +381,7 @@ function AdminWarmupPageInner() {
   const [stats, setStats] = useState<Stats>({ total: 0, warming: 0, healthy: 0, at_risk: 0 });
   const [domains, setDomains] = useState<DomainRollup[]>([]);
   const [domainFilter, setDomainFilter] = useState<string>('all');
+  const [networkHealth, setNetworkHealth] = useState<NetworkHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'warming' | 'healthy' | 'at_risk'>('all');
@@ -415,7 +433,7 @@ function AdminWarmupPageInner() {
       fetch('/api/admin/warmup').then(r => r.json()),
       fetch('/api/admin/warmup/pool').then(r => r.json()),
     ]).then(([warmup, pool]) => {
-      if (!warmup.error) { setAccounts(warmup.accounts); setStats(warmup.stats); setDomains(warmup.domains ?? []); }
+      if (!warmup.error) { setAccounts(warmup.accounts); setStats(warmup.stats); setDomains(warmup.domains ?? []); setNetworkHealth(warmup.networkHealth ?? null); }
       if (Array.isArray(pool)) setPoolAccounts(pool);
     }).finally(() => setLoading(false));
   }, []);
@@ -579,6 +597,69 @@ function AdminWarmupPageInner() {
         ))}
       </div>
 
+      {/* Network Health Dashboard — whole-network view, admin pool + shared user network */}
+      {networkHealth && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Network Health</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {networkHealth.sharedNetworkSize} shared + {networkHealth.adminPoolSize} admin pool = {networkHealth.networkSize} mailboxes
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p className="text-lg font-extrabold text-gray-900 dark:text-white">{networkHealth.distinctDomains}</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Distinct domains</p>
+            </div>
+            <div>
+              <p className="text-lg font-extrabold text-gray-900 dark:text-white">{networkHealth.avgHealth}</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Avg health</p>
+            </div>
+            <div>
+              <p className="text-lg font-extrabold text-gray-900 dark:text-white">{networkHealth.avgTrust ?? '—'}</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Avg trust score</p>
+            </div>
+            <div>
+              <p className="text-lg font-extrabold text-gray-900 dark:text-white">
+                {networkHealth.pairingFairness ? `${networkHealth.pairingFairness.min}–${networkHealth.pairingFairness.max}` : '—'}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Pairing range (min–max)</p>
+            </div>
+          </div>
+          {networkHealth.avgTrust === null && (
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Trust scores activate once the Phase 2/3 follow-up migration (`20260714_trust_and_isolation.sql`) has been run.</p>
+          )}
+          {(networkHealth.isolatedAccounts.length > 0 || networkHealth.abuseFlaggedAccounts.length > 0) && (
+            <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+              {networkHealth.isolatedAccounts.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-950/30 rounded-xl p-3">
+                  <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-1.5">🔒 Isolated from network ({networkHealth.isolatedAccounts.length})</p>
+                  <ul className="space-y-1">
+                    {networkHealth.isolatedAccounts.map(a => (
+                      <li key={a.email} className="text-[11px] text-red-600 dark:text-red-400">
+                        <span className="font-semibold">{a.email}</span> — {a.reason || 'no reason recorded'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {networkHealth.abuseFlaggedAccounts.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3">
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1.5">⚠ Abuse-flagged ({networkHealth.abuseFlaggedAccounts.length})</p>
+                  <ul className="space-y-1">
+                    {networkHealth.abuseFlaggedAccounts.map(a => (
+                      <li key={a.email} className="text-[11px] text-amber-600 dark:text-amber-400">
+                        <span className="font-semibold">{a.email}</span> — {a.count} flag{a.count !== 1 ? 's' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Platform Pool Accounts */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -707,7 +788,7 @@ function AdminWarmupPageInner() {
                 className={`text-left bg-white dark:bg-gray-900 rounded-2xl border p-4 transition-colors ${domainFilter === d.domain ? 'border-blue-400 ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-100 dark:border-gray-800 hover:border-blue-200'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{d.domain}</p>
-                  <MiniAuthBadge label={d.blacklistStatus === 'listed' ? 'Listed' : d.blacklistStatus === 'clean' ? 'Clean' : 'Unknown'} status={d.blacklistStatus}/>
+                  <MiniAuthBadge label="Blacklist" status={d.blacklistStatus}/>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>

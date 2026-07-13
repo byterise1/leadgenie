@@ -17,29 +17,44 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  // Cascading fallback, same reasoning as instrumentation.ts's warmup cycle:
+  // bundling a not-yet-migrated column into an already-working select fails
+  // the WHOLE query, not just that column — so a brand-new tier (trust_score
+  // etc.) must never share a select with columns from an earlier, already-
+  // deployed migration, or a missing trust migration would silently regress
+  // SPF/DKIM/DMARC/blacklist display too.
+  const BASE = 'id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, created_at';
+  const PHASE1 = 'already_warmed_up, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, consecutive_stable_days';
+  const PHASE23 = 'mx_status, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at';
+  const TRUST = 'trust_score, network_isolated, network_isolation_reason, network_isolated_at, abuse_flag_count';
+
   let accounts: Record<string, any>[] | null;
   let error: { message: string } | null;
-  {
-    const res = await supabaseAdmin
-      .from('email_accounts')
-      .select('id, user_id, email, type, smtp_host, status, health_score, warmup_enabled, already_warmed_up, warmup_day, warmup_target, sent_today, warmup_pool_mode, warmup_paused, warmup_pause_reason, spf_status, dkim_status, dmarc_status, mx_status, created_at, domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, consecutive_stable_days')
-      .neq('is_pool_account', true)
-      .order('warmup_enabled', { ascending: false })
-      .order('created_at', { ascending: false });
-    accounts = res.data;
-    error = res.error;
-  }
 
-  // Phase 1 migration not run yet — fall back to the pre-migration column set.
-  if (error) {
-    const fallback = await supabaseAdmin
-      .from('email_accounts')
-      .select('id, user_id, email, type, status, health_score, warmup_enabled, warmup_day, warmup_target, sent_today, warmup_pool_mode, created_at')
-      .neq('is_pool_account', true)
-      .order('warmup_enabled', { ascending: false })
-      .order('created_at', { ascending: false });
-    accounts = fallback.data;
-    error = fallback.error;
+  const tier3 = await supabaseAdmin.from('email_accounts')
+    .select(`${BASE}, ${PHASE1}, ${PHASE23}, ${TRUST}`)
+    .neq('is_pool_account', true).order('warmup_enabled', { ascending: false }).order('created_at', { ascending: false });
+  if (!tier3.error) {
+    accounts = tier3.data; error = null;
+  } else {
+    const tier2 = await supabaseAdmin.from('email_accounts')
+      .select(`${BASE}, ${PHASE1}, ${PHASE23}`)
+      .neq('is_pool_account', true).order('warmup_enabled', { ascending: false }).order('created_at', { ascending: false });
+    if (!tier2.error) {
+      accounts = tier2.data; error = null;
+    } else {
+      const tier1 = await supabaseAdmin.from('email_accounts')
+        .select(`${BASE}, ${PHASE1}`)
+        .neq('is_pool_account', true).order('warmup_enabled', { ascending: false }).order('created_at', { ascending: false });
+      if (!tier1.error) {
+        accounts = tier1.data; error = null;
+      } else {
+        const tier0 = await supabaseAdmin.from('email_accounts')
+          .select(BASE)
+          .neq('is_pool_account', true).order('warmup_enabled', { ascending: false }).order('created_at', { ascending: false });
+        accounts = tier0.data; error = tier0.error;
+      }
+    }
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -127,7 +142,47 @@ export async function GET() {
 
   for (const a of enriched) delete a._dailyCapForRollup;
 
-  return NextResponse.json({ accounts: enriched, stats, domains });
+  // Network Health Dashboard — whole-network view spanning both the admin
+  // pool and the shared user network, not just one user's own accounts.
+  const { data: poolForHealth } = await supabaseAdmin
+    .from('email_accounts').select('email, health_score, domain').eq('is_pool_account', true);
+  const poolDomains = (poolForHealth ?? []).map((p: any) => p.domain || p.email?.split('@')[1]?.toLowerCase()).filter(Boolean);
+  const poolHealthScores = (poolForHealth ?? []).map((p: any) => p.health_score ?? 0);
+
+  const distinctDomains = new Set([
+    ...enriched.map(a => a.domain || a.email?.split('@')[1]?.toLowerCase()).filter(Boolean),
+    ...poolDomains,
+  ]);
+  const trustScores = enriched.map(a => a.trust_score).filter((v: any): v is number => typeof v === 'number');
+  const healthScores = [...enriched.map(a => a.health_score ?? 0), ...poolHealthScores];
+  const isolatedAccounts = enriched.filter(a => a.network_isolated).map(a => ({ email: a.email, reason: a.network_isolation_reason }));
+  const abuseFlaggedAccounts = enriched.filter(a => (a.abuse_flag_count ?? 0) > 0).map(a => ({ email: a.email, count: a.abuse_flag_count }));
+
+  // Pairing fairness — leverages the warmup_pairings table built for smart
+  // pairing (Phase 2) to show whether rotation is actually spreading fairly.
+  const { data: pairingRows } = await supabaseAdmin.from('warmup_pairings').select('from_account_id, send_count');
+  const perAccountSendCount = new Map<string, number>();
+  for (const row of pairingRows ?? []) {
+    perAccountSendCount.set(row.from_account_id, (perAccountSendCount.get(row.from_account_id) ?? 0) + (row.send_count ?? 0));
+  }
+  const sendCounts = [...perAccountSendCount.values()];
+
+  const networkHealth = {
+    networkSize: enriched.length + (poolForHealth?.length ?? 0),
+    sharedNetworkSize: enriched.filter(a => a.join_shared_network !== false).length,
+    adminPoolSize: poolForHealth?.length ?? 0,
+    distinctDomains: distinctDomains.size,
+    avgHealth: healthScores.length ? Math.round(healthScores.reduce((s, v) => s + v, 0) / healthScores.length) : 0,
+    avgTrust: trustScores.length ? Math.round(trustScores.reduce((s, v) => s + v, 0) / trustScores.length) : null,
+    isolatedAccounts,
+    abuseFlaggedAccounts,
+    pairingFairness: sendCounts.length ? {
+      min: Math.min(...sendCounts), max: Math.max(...sendCounts),
+      avg: Math.round((sendCounts.reduce((s, v) => s + v, 0) / sendCounts.length) * 10) / 10,
+    } : null,
+  };
+
+  return NextResponse.json({ accounts: enriched, stats, domains, networkHealth });
 }
 
 const VALID_POOL_MODES = ['admin_pool', 'user_to_user', 'both'] as const;

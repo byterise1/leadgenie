@@ -13,6 +13,7 @@ export type PairingCandidate = {
   domain: string | null;
   provider: Provider;
   source: PoolSource;
+  trustScore?: number; // 0-100, from lib/warmup-trust.ts — how good a network CITIZEN this candidate is, not its own health
 };
 
 export type PairingHistoryEntry = { lastSentAt: string | null; sendCount: number };
@@ -100,7 +101,14 @@ export function scorePartnerCandidates(
       const recW = recencyWeight(hist?.lastSentAt ?? null);
       const freqW = frequencyWeight(hist?.sendCount ?? 0);
       const sourceW = Math.max(0.0001, c.source === 'shared' ? networkBalance.sharedShare : networkBalance.adminShare);
-      const weight = domainW * providerW * regionW * recW * freqW * sourceW;
+      // Trust weight — soft preference for candidates that are good network
+      // citizens (lib/warmup-trust.ts), not a hard filter: genuinely bad
+      // partners (paused/isolated/blacklisted) are already excluded from the
+      // candidate list entirely by the caller before this function ever
+      // sees them, so this only has to break ties among otherwise-eligible
+      // candidates. Untested/unknown trust (undefined) is neutral.
+      const trustW = c.trustScore === undefined ? 1 : Math.max(0.2, c.trustScore / 100);
+      const weight = domainW * providerW * regionW * recW * freqW * sourceW * trustW;
       return { candidate: c, weight };
     });
 }

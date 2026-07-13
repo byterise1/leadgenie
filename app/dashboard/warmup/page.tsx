@@ -164,11 +164,16 @@ function DeliverabilityBadge({ label }: { label?: string }) {
   return <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${style}`}>{label} inbox chance</span>;
 }
 
+// Shows the actual status as text, not just color — color alone is easy to
+// misread at a glance in a dense table and carries zero information when
+// copy-pasted as plain text (both real complaints from live use).
 function AuthBadge({ label, status }: { label: string; status?: string }) {
-  const style = status === 'pass' || status === 'clean' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-    : status === 'fail' || status === 'listed' ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+  const s = status || 'unknown';
+  const style = s === 'pass' || s === 'clean' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+    : s === 'fail' || s === 'listed' ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
-  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}</span>;
+  const statusText = s === 'pass' ? 'Pass' : s === 'clean' ? 'Clean' : s === 'fail' ? 'Fail' : s === 'listed' ? 'Listed' : 'Unknown';
+  return <span className={`text-[9px] font-bold rounded-full px-1.5 py-0.5 ${style}`}>{label}: {statusText}</span>;
 }
 
 function DiagnoseModal({ account, onClose }: { account: WarmupAccount; onClose: () => void }) {
