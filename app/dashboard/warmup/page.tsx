@@ -198,6 +198,11 @@ function DiagnoseModal({ account, onClose }: { account: WarmupAccount; onClose: 
           <AuthBadge label="MX" status={account.mx_status}/>
           <AuthBadge label="Blacklist" status={account.blacklist_status}/>
         </div>
+        <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/60 rounded-xl px-3 py-2.5">
+          <RateStat label="Inbox" value={account.inbox_rate} goodDirection="up"/>
+          <RateStat label="Spam" value={account.spam_rate} goodDirection="down"/>
+          <RateStat label="Bounce" value={account.bounce_rate} goodDirection="down"/>
+        </div>
         <div>
           <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">Findings</p>
           <ul className="space-y-1">
@@ -456,7 +461,7 @@ export default function WarmupPage() {
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Score</th>
                       <th className="px-4 py-3 text-left">Ramp Progress</th>
-                      <th className="px-4 py-3 text-left">Inbox / Spam</th>
+                      <th className="px-4 py-3 text-left">Inbox / Spam / Bounce</th>
                       <th className="px-4 py-3 text-left">Recommended send limit</th>
                       <th className="px-4 py-3 text-left">Warmup</th>
                     </tr>
@@ -556,6 +561,7 @@ export default function WarmupPage() {
                         <div className="flex items-center gap-3">
                           <RateStat label="Inbox" value={acc.inbox_rate} goodDirection="up"/>
                           <RateStat label="Spam" value={acc.spam_rate} goodDirection="down"/>
+                          <RateStat label="Bounce" value={acc.bounce_rate} goodDirection="down"/>
                         </div>
                       </td>
                       <td className="px-4 py-4">
