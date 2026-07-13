@@ -333,6 +333,13 @@ async function createSmtpTransport(account: EmailAccount) {
 
     // Port 465 uses implicit SSL — nodemailer does not reliably upgrade a
     // pre-connected socket to TLS, so we do it manually before handing off.
+    // This manual tls.connect() runs BEFORE nodemailer ever sees the socket,
+    // so none of nodemailer's own connectionTimeout/socketTimeout protection
+    // applies here — a remote server that accepts the TCP connection but
+    // never completes (or never fails) the TLS handshake left this promise
+    // unresolved forever, hanging the whole warmup cycle indefinitely (a
+    // real production hang traced to exactly this). Explicit timeout below
+    // closes that gap.
     const finalSocket: net.Socket = isSecure
       ? await new Promise<net.Socket>((resolve, reject) => {
           const tlsSocket = tls.connect({
@@ -340,8 +347,12 @@ async function createSmtpTransport(account: EmailAccount) {
             servername: smtpHostname,
             rejectUnauthorized: false,
           });
-          tlsSocket.once('secureConnect', () => resolve(tlsSocket as unknown as net.Socket));
-          tlsSocket.once('error', reject);
+          const timer = setTimeout(() => {
+            tlsSocket.destroy();
+            reject(Object.assign(new Error('TLS handshake timed out (proxy, port 465)'), { code: 'ETIMEOUT' }));
+          }, 20000);
+          tlsSocket.once('secureConnect', () => { clearTimeout(timer); resolve(tlsSocket as unknown as net.Socket); });
+          tlsSocket.once('error', (err) => { clearTimeout(timer); reject(err); });
         })
       : rawSocket;
 

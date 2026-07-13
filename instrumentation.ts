@@ -1785,12 +1785,20 @@ export async function register() {
       for (let b = 0; b < allWarmupAccounts.length; b += BATCH_SIZE) {
         const batch = allWarmupAccounts.slice(b, b + BATCH_SIZE);
         await Promise.all(batch.map(async account => {
+          // Temporary step-by-step tracing while chasing a real production
+          // hang (jobs stuck permanently "active" in BullMQ for specific
+          // accounts, cause not yet fully isolated). Cheap no-op cost;
+          // remove once the hang is confirmed fixed and stays fixed.
+          const _t0 = Date.now();
+          const trace = (step: string) => console.log(`[warmup-trace] ${account.email} ${step} +${Date.now() - _t0}ms`);
+          trace('start');
           try {
             // Random start offset per account (0–8 min) so all accounts don't fire simultaneously
             // Skipped for manual "Run Now" so admin sees results immediately
             if (!isManual) {
               await new Promise(r => setTimeout(r, Math.random() * 8 * 60 * 1000));
             }
+            trace('after-start-offset');
 
             const todayStr = new Date().toISOString().slice(0, 10);
             // Skip accounts that already ran today — except on manual trigger (allow re-run)
@@ -1824,18 +1832,21 @@ export async function register() {
                 spfStatus = auth.spf; dkimStatus = auth.dkim; dmarcStatus = auth.dmarc; mxStatus = auth.mx;
               } catch { /* keep previous status on lookup failure */ }
             }
+            trace('after-domain-auth');
             if (needsBlacklistCheck) {
               try {
                 const bl = await checkBlacklists({ email: account.email, accountType: account.type, smtpHost: account.smtp_host });
                 blacklistStatus = bl.status; blacklistDetails = bl.details;
               } catch { /* keep previous status on lookup failure */ }
             }
+            trace('after-blacklist');
             const domainAuthAllPass = spfStatus === 'pass' && dkimStatus === 'pass' && dmarcStatus === 'pass';
             const isBlacklisted = blacklistStatus === 'listed';
             const isBlacklistedAuthoritative = isBlacklisted && blacklistDetails?.[AUTHORITATIVE_PAUSE_ZONE] === true;
 
             // ── Pause / recovery check ──
             const events7d = await fetchEventCounts(account.id, Date.now() - 7 * 86400_000);
+            trace('after-events7d');
             let paused = !!account.warmup_paused;
             let dayAdjustment = 0;
 
@@ -1852,6 +1863,7 @@ export async function register() {
               }
             }
 
+            trace(`pause-check paused=${paused} alreadyRanToday=${alreadyRanToday}`);
             if (paused || alreadyRanToday) {
               // Still compute health from existing signals so the dashboard stays live even
               // while paused/idle, but don't advance day or send anything.
@@ -1860,7 +1872,9 @@ export async function register() {
                 consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
                 hasAuthErrorNow: false, isBlacklisted,
               });
+              trace('early-return: before trustFields');
               const trustFields = await computeTrustFields(account, health.score, isBlacklisted, 0);
+              trace('early-return: after trustFields, before write');
               await safeUpdateAccount(account.id, {
                 health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
                 blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
@@ -1881,6 +1895,7 @@ export async function register() {
                 spam_rate: health.factors.spamRate,
                 bounce_rate: health.factors.bounceRate,
               }).eq('email', account.email).eq('date', today);
+              trace('early-return: done');
               return;
             }
 
@@ -1918,6 +1933,7 @@ export async function register() {
                 pool = [...adminPoolAccounts, ...sharedNetworkAccounts].filter(a => a.id !== account.id);
               }
             }
+            trace(`pool-built size=${pool.length} emailsToday=${emailsToday}`);
             if (pool.length === 0 || emailsToday === 0) {
               if (pool.length === 0) console.warn(`[warmup] ${account.email}: no eligible pool (mode: ${account.warmup_pool_mode || 'admin_pool'}, join_shared_network: ${account.join_shared_network !== false}, total warmup accounts: ${allWarmupAccounts.length}) — add pool accounts or enable warmup on more accounts`);
               await safeUpdateAccount(account.id, {
@@ -1926,6 +1942,7 @@ export async function register() {
                 blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
               });
+              trace('empty-pool-return: done');
               return;
             }
             const poolCandidates = pool.map(toPairingCandidate);
@@ -1971,11 +1988,13 @@ export async function register() {
               // the cycle.
               sentPairs.add(pairKey);
 
+              trace(`send[${i}] → ${toAccount.email} starting`);
               try {
                 await sendEmail(
                   { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
                   { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
                 );
+                trace(`send[${i}] sendEmail resolved`);
                 // Written immediately so a mid-cycle crash can't lose an email that
                 // actually went out (previously batched to a single flush at cycle end).
                 await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
@@ -1989,9 +2008,11 @@ export async function register() {
                 await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex }, { delay: pickEngageDelayMs() });
                 await logAccountEvent(account.id, 'sent', {});
                 sent++;
+                trace(`send[${i}] done`);
               } catch (e: any) {
                 sentPairs.delete(pairKey);
                 console.error(`[warmup-send] ${account.email} → ${toAccount.email}: ${e.message}`);
+                trace(`send[${i}] failed: ${e.message}`);
                 if (e.responseCode === 535 || e.code === 'EAUTH') {
                   hasAuthErrorNow = true;
                   await logAccountEvent(account.id, 'auth_error', { message: e.message });
@@ -1999,6 +2020,7 @@ export async function register() {
                 }
               }
             }
+            trace('send-loop-complete');
 
             const events7dAfterSend = { ...events7d, sent7d: events7d.sent7d + sent };
             const health = computeHealthScore({
@@ -2057,7 +2079,9 @@ export async function register() {
             const recentScores = [health.score, ...((recentHistory.data || []).map((r: any) => r.health_score))];
             const complete = isWarmupComplete(recentScores.reverse(), day, Math.min(14, target));
 
+            trace('before-trust-fields');
             const trustFields = await computeTrustFields({ ...account, sent_today: sent }, health.score, isBlacklisted, emailsToday);
+            trace('after-trust-fields');
 
             // Write this account's result now — immediately after it finishes, not
             // deferred to a batch flush after every other account in the cycle is done.
@@ -2104,8 +2128,10 @@ export async function register() {
               bounce_rate: health.factors.bounceRate,
             }]);
 
+            trace('done');
             console.log(`[warmup-send] ${account.email} day=${day}${complete ? ' (COMPLETE)' : ''}${willPause ? ' (PAUSED)' : ''} sent=${sent}/${emailsToday} score=${health.score} inbox=${health.factors.inboxRate ?? '—'}%`);
           } catch (e: any) {
+            trace(`threw: ${e.message}`);
             console.error(`[warmup-send] ${account.email}: ${e.message}`);
           }
         }));
