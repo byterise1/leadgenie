@@ -11,6 +11,22 @@ import { domainFromEmail } from './domain-health';
 
 export type BlacklistStatus = 'clean' | 'listed' | 'unknown';
 
+// Node's dns/promises has no built-in per-call timeout — it relies on the
+// OS resolver's own timeout, which can be much longer than expected (or
+// effectively unbounded) for certain hostnames/network conditions. A real
+// production hang was traced to exactly this: one slow/unresponsive DNS
+// lookup here stalled the entire warmup cycle indefinitely (BullMQ showed
+// the job stuck "active" forever, blocking every later job behind it).
+// Every DNS call in this file is now explicitly time-boxed so a single bad
+// lookup can only ever cost a few seconds, never the whole cycle.
+const DNS_TIMEOUT_MS = 8000;
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(Object.assign(new Error('DNS lookup timed out'), { code: 'ETIMEOUT' })), ms)),
+  ]);
+}
+
 // Domain-based zones — meaningful for any account type, since the domain
 // itself (used in From/links) can be listed independently of any provider's
 // IP reputation.
@@ -31,7 +47,7 @@ type ZoneResult = 'hit' | 'miss' | 'error';
 
 async function queryZone(hostname: string): Promise<ZoneResult> {
   try {
-    const records = await resolve4(hostname);
+    const records = await withTimeout(resolve4(hostname), DNS_TIMEOUT_MS);
     return records.length > 0 ? 'hit' : 'miss';
   } catch (err: any) {
     // NXDOMAIN/no-data is the DEFINITIVE "not listed" response for a DNSBL
@@ -50,7 +66,7 @@ function reverseIpOctets(ip: string): string | null {
 
 async function resolveFirstIp(host: string): Promise<string | null> {
   try {
-    const addrs = await resolve4(host);
+    const addrs = await withTimeout(resolve4(host), DNS_TIMEOUT_MS);
     return addrs[0] || null;
   } catch {
     return null;

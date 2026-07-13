@@ -6,12 +6,26 @@ export function domainFromEmail(email: string): string {
   return email.split('@')[1]?.toLowerCase().trim() || '';
 }
 
+// Node's dns/promises has no built-in per-call timeout — relies entirely on
+// the OS resolver's own timeout, which can be far longer than expected (or
+// effectively unbounded) for certain hostnames/network conditions. A real
+// production hang was traced to exactly this class of call stalling an
+// entire warmup cycle indefinitely. Every DNS call here is explicitly
+// time-boxed so one bad lookup can only ever cost a few seconds.
+const DNS_TIMEOUT_MS = 8000;
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(Object.assign(new Error('DNS lookup timed out'), { code: 'ETIMEOUT' })), ms)),
+  ]);
+}
+
 async function txtRecords(hostname: string): Promise<string[]> {
   try {
-    const records = await resolveTxt(hostname);
+    const records = await withTimeout(resolveTxt(hostname), DNS_TIMEOUT_MS);
     return records.map(r => r.join(''));
   } catch {
-    return []; // NXDOMAIN / no records / lookup failure — treated as "none found", not an error
+    return []; // NXDOMAIN / no records / lookup failure / timeout — treated as "none found", not an error
   }
 }
 
@@ -49,7 +63,7 @@ async function checkDkim(domain: string): Promise<AuthStatus> {
 // same fail-soft convention as the other checks here.
 async function checkMx(domain: string): Promise<AuthStatus> {
   try {
-    const records = await resolveMx(domain);
+    const records = await withTimeout(resolveMx(domain), DNS_TIMEOUT_MS);
     return records && records.length > 0 ? 'pass' : 'fail';
   } catch {
     return 'unknown';
