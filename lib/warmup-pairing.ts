@@ -14,6 +14,7 @@ export type PairingCandidate = {
   provider: Provider;
   source: PoolSource;
   trustScore?: number; // 0-100, from lib/warmup-trust.ts — how good a network CITIZEN this candidate is, not its own health
+  userId?: string; // owning account's user_id — same-owner pairs are heavily deprioritized (see SAME_OWNER_PENALTY)
 };
 
 export type PairingHistoryEntry = { lastSentAt: string | null; sendCount: number };
@@ -65,6 +66,16 @@ export function computeNetworkBalance(sharedNetworkSize: number, adminPoolSize: 
 const DOMAIN_DIVERSITY_BOOST = 3;
 const PROVIDER_DIVERSITY_BOOST = 1.5;
 const REGION_DIVERSITY_BOOST = 1.3;
+// Two mailboxes owned by the same real user shouldn't repeatedly ping each
+// other — that's a much weaker deliverability signal than a genuinely
+// independent recipient, and at real scale (e.g. one user connecting 50+
+// mailboxes across several of their own domains) domain-diversity boosting
+// would otherwise actively ENCOURAGE same-owner pairing, since different
+// domains look "diverse" even when they're all one person's infrastructure.
+// A strong multiplicative penalty, not a hard filter — a same-owner pair can
+// still win if it's genuinely the only option left (matches how every other
+// weight here degrades gracefully instead of excluding outright).
+const SAME_OWNER_PENALTY = 0.12;
 // Recency weight approaches 1 as a pair's last send recedes past this window,
 // but never drops all the way to 0 — a just-paired partner is heavily
 // deprioritized, not literally impossible (matters when the pool is small).
@@ -108,7 +119,8 @@ export function scorePartnerCandidates(
       // sees them, so this only has to break ties among otherwise-eligible
       // candidates. Untested/unknown trust (undefined) is neutral.
       const trustW = c.trustScore === undefined ? 1 : Math.max(0.2, c.trustScore / 100);
-      const weight = domainW * providerW * regionW * recW * freqW * sourceW * trustW;
+      const ownerW = from.userId && c.userId && c.userId === from.userId ? SAME_OWNER_PENALTY : 1;
+      const weight = domainW * providerW * regionW * recW * freqW * sourceW * trustW * ownerW;
       return { candidate: c, weight };
     });
 }

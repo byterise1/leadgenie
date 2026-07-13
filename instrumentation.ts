@@ -1671,7 +1671,7 @@ export async function register() {
       return tier0.data;
     }
 
-    async function toPairingCandidate(a: any): Promise<{ id: string; domain: string | null; provider: import('./lib/warmup-health').Provider; source: 'admin' | 'shared'; trustScore?: number }> {
+    async function toPairingCandidate(a: any): Promise<{ id: string; domain: string | null; provider: import('./lib/warmup-health').Provider; source: 'admin' | 'shared'; trustScore?: number; userId?: string }> {
       const { detectProvider } = await import('./lib/warmup-health');
       return {
         id: a.id,
@@ -1679,6 +1679,7 @@ export async function register() {
         provider: detectProvider(a),
         source: a.is_pool_account ? 'admin' : 'shared',
         trustScore: typeof a.trust_score === 'number' ? a.trust_score : undefined,
+        userId: a.user_id ?? undefined,
       };
     }
 
