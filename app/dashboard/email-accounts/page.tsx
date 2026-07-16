@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
+import PostmasterPanel from '@/components/PostmasterPanel';
 
 type Account = {
   id: string;
@@ -542,6 +543,12 @@ export default function EmailAccountsPage() {
     } else if (err === 'already_connected') {
       setToast({ message: 'That Google account is already connected elsewhere on this platform. If it’s yours, remove it from the other place first — or pick a different Google account when connecting.', type: 'error' });
       router.replace('/dashboard/email-accounts');
+    } else if (params.get('pm_connected') === '1') {
+      setToast({ message: 'Google Postmaster Tools connected!', type: 'success' });
+      router.replace('/dashboard/email-accounts');
+    } else if (params.get('pm_error')) {
+      setToast({ message: 'Could not connect Google Postmaster Tools. Please try again.', type: 'error' });
+      router.replace('/dashboard/email-accounts');
     } else if (err) {
       setToast({ message: 'Could not connect that account. Please try again.', type: 'error' });
       router.replace('/dashboard/email-accounts');
@@ -640,6 +647,8 @@ export default function EmailAccountsPage() {
           </div>
         ))}
       </div>
+
+      <PostmasterPanel />
 
       {/* Duplicate warning */}
       {(() => {

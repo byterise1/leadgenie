@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { bodyToHtml } from '@/lib/body-to-html';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
+import { genDraftId, loadDrafts, saveDraft, removeDraft, type StoredDraft } from '@/lib/campaign-drafts';
 
 const steps = ['Details', 'Sequence', 'Schedule', 'Review'];
 
@@ -89,6 +90,7 @@ export default function NewCampaignPage() {
   const [draftBanner, setDraftBanner] = useState<{ name: string } | null>(null);
   const launchedRef = useRef(false); // true once campaign is launched successfully
   const formRef = useRef<Record<string, unknown>>({}); // always holds latest form state for draft save
+  const draftIdRef = useRef<string>(''); // id of this session's entry in the local drafts list
 
   // Step 0
   const [name, setName] = useState('');
@@ -211,39 +213,48 @@ export default function NewCampaignPage() {
   });
 
   useEffect(() => {
-    // Auto-restore draft from a previous navigation-away (silently, without requiring user action)
-    // Skip if ?fresh=1 (user explicitly clicked "New Campaign" button)
-    const isFresh = new URLSearchParams(window.location.search).get('fresh') === '1';
+    // Each wizard session owns one entry (by id) in the local drafts list, so
+    // starting a new campaign never overwrites a different unsaved draft.
+    const params = new URLSearchParams(window.location.search);
+    const isFresh = params.get('fresh') === '1';
+    const draftId = params.get('draftId');
+
+    const restore = (found: StoredDraft) => {
+      const d = found.state as Record<string, unknown>;
+      if (d.name) setName(d.name as string);
+      if (d.goal) setGoal(d.goal as string);
+      if (d.fromName) setFromName(d.fromName as string);
+      if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails as EmailStep[]);
+      if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts as string[]);
+      if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
+      if (d.selectedListId) setSelectedListId(d.selectedListId as string);
+      if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr as string);
+      if (d.dailyLimitMode === 'manual' || d.dailyLimitMode === 'auto') setDailyLimitMode(d.dailyLimitMode);
+      if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays as boolean[]);
+      if (d.fromTime) setFromTime(d.fromTime as string);
+      if (d.toTime) setToTime(d.toTime as string);
+      if (d.timezone) setTimezone(d.timezone as string);
+      if (d.startDate) setStartDate(d.startDate as string);
+      if (d.minDelayStr) setMinDelayStr(d.minDelayStr as string);
+      if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr as string);
+      if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
+      setDraftBanner({ name: found.name });
+      draftIdRef.current = found.id;
+      removeDraft(found.id); // re-saved on nav-away/unload below if still unfinished
+    };
+
     if (isFresh) {
-      try { localStorage.removeItem('campaign_draft'); } catch {}
+      // Explicit "New Campaign" click — start blank with a fresh id. Other
+      // unsaved drafts in the list are left untouched.
+      draftIdRef.current = genDraftId();
+    } else if (draftId) {
+      const found = loadDrafts().find(d => d.id === draftId);
+      if (found) restore(found); else draftIdRef.current = genDraftId();
     } else {
-      try {
-        const saved = localStorage.getItem('campaign_draft');
-        if (saved) {
-          const d = JSON.parse(saved);
-          if (d?.name?.trim()) {
-            if (d.name) setName(d.name);
-            if (d.goal) setGoal(d.goal);
-            if (d.fromName) setFromName(d.fromName);
-            if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails);
-            if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts);
-            if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
-            if (d.selectedListId) setSelectedListId(d.selectedListId);
-            if (d.dailyLimitStr) setDailyLimitStr(d.dailyLimitStr);
-            if (d.dailyLimitMode === 'manual' || d.dailyLimitMode === 'auto') setDailyLimitMode(d.dailyLimitMode);
-            if (Array.isArray(d.activeDays)) setActiveDays(d.activeDays);
-            if (d.fromTime) setFromTime(d.fromTime);
-            if (d.toTime) setToTime(d.toTime);
-            if (d.timezone) setTimezone(d.timezone);
-            if (d.startDate) setStartDate(d.startDate);
-            if (d.minDelayStr) setMinDelayStr(d.minDelayStr);
-            if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr);
-            if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
-            setDraftBanner({ name: d.name });
-            localStorage.removeItem('campaign_draft');
-          }
-        }
-      } catch {}
+      // Entered without a specific draft in mind (e.g. dashboard shortcut) —
+      // best-effort resume of the most recently interrupted session, if any.
+      const drafts = loadDrafts().sort((a, b) => b.savedAt - a.savedAt);
+      if (drafts[0]) restore(drafts[0]); else draftIdRef.current = genDraftId();
     }
 
     // Pre-fill from template when coming via "Use →" on templates page
@@ -264,11 +275,7 @@ export default function NewCampaignPage() {
     // Save draft on tab close / refresh (beforeunload fires; React cleanup does not)
     const saveDraftNow = () => {
       if (launchedRef.current) return;
-      try {
-        const state = formRef.current;
-        if (!String(state.name || '').trim()) return;
-        localStorage.setItem('campaign_draft', JSON.stringify(state));
-      } catch {}
+      saveDraft(draftIdRef.current, formRef.current);
     };
     window.addEventListener('beforeunload', saveDraftNow);
 
@@ -276,11 +283,7 @@ export default function NewCampaignPage() {
     return () => {
       window.removeEventListener('beforeunload', saveDraftNow);
       if (launchedRef.current) return;
-      try {
-        const state = formRef.current;
-        if (!String(state.name || '').trim()) { localStorage.removeItem('campaign_draft'); return; }
-        localStorage.setItem('campaign_draft', JSON.stringify(state));
-      } catch {}
+      saveDraft(draftIdRef.current, formRef.current);
     };
   }, []);
 
@@ -1082,7 +1085,7 @@ export default function NewCampaignPage() {
                   if (!startRes.ok) throw new Error(startData.error || 'Failed to start campaign');
 
                   launchedRef.current = true;
-                  localStorage.removeItem('campaign_draft');
+                  removeDraft(draftIdRef.current);
                   router.push('/dashboard/campaigns');
                 } catch (err: any) {
                   setLaunchError(err.message);

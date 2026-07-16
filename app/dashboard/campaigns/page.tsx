@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Skeleton } from '@/components/Skeleton';
+import { loadDrafts, removeDraft, type StoredDraft } from '@/lib/campaign-drafts';
 
 const tabs = ['All', 'Active', 'Paused', 'Completed', 'Draft'];
 
@@ -52,18 +53,16 @@ export default function CampaignsPage() {
   const [tab, setTab] = useState('All');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [localDraft, setLocalDraft] = useState<{ name: string } | null>(null);
+  const [localDrafts, setLocalDrafts] = useState<StoredDraft[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cloningId, setCloningId] = useState<string | null>(null);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const d = localStorage.getItem('campaign_draft');
-      if (d) { const p = JSON.parse(d); if (p?.name?.trim()) setLocalDraft({ name: p.name }); }
-    } catch {}
+    setLocalDrafts(loadDrafts().sort((a, b) => b.savedAt - a.savedAt));
 
     try { const c = sessionStorage.getItem(CACHE_KEY); if (c) { setCampaigns(JSON.parse(c)); setLoading(false); } } catch {}
     const fetchCampaigns = () =>
@@ -142,6 +141,20 @@ export default function CampaignsPage() {
     }).catch(() => setCampaigns(cs => cs.map(x => x.id === c.id ? { ...x, status: prev } : x)));
   };
 
+  const cloneCampaign = async (c: Campaign) => {
+    setOpenMenuId(null);
+    setCloningId(c.id);
+    const res = await fetch(`/api/campaigns/${c.id}/clone`, { method: 'POST' });
+    const d = await res.json().catch(() => ({}));
+    setCloningId(null);
+    if (res.ok && d.id) {
+      setCampaigns(prev => [{ ...d, total_sent: 0, total_opened: 0, total_replied: 0, total_clicked: 0 }, ...prev]);
+      setTab('Draft');
+    } else {
+      alert(d.error || 'Clone failed — please try again.');
+    }
+  };
+
   const deleteCampaign = (c: Campaign) => {
     setOpenMenuId(null);
     setConfirmModal({
@@ -183,28 +196,28 @@ export default function CampaignsPage() {
       </div>
 
       {/* Campaign cards */}
-      {/* In-progress draft from localStorage (only visible in Draft or All tab) */}
-      {localDraft && (tab === 'Draft' || tab === 'All') && (
-        <div className="mb-2 bg-white rounded-2xl border border-amber-200 flex items-center overflow-hidden">
+      {/* In-progress drafts from localStorage — every unsaved wizard session, not just the last one */}
+      {localDrafts.length > 0 && (tab === 'Draft' || tab === 'All') && localDrafts.map(d => (
+        <div key={d.id} className="mb-2 bg-white rounded-2xl border border-amber-200 flex items-center overflow-hidden">
           <div className="w-1.5 self-stretch shrink-0 rounded-l-2xl bg-amber-300" />
           <div className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3.5">
             <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">{localDraft.name}</p>
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">{d.name}</p>
               <p className="text-[11px] text-amber-600 font-semibold mt-0.5">Unsaved draft — not yet launched</p>
             </div>
           </div>
           <div className="flex items-center gap-2 px-4 shrink-0">
-            <Link href="/dashboard/campaigns/new" className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">
+            <Link href={`/dashboard/campaigns/new?draftId=${d.id}`} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap">
               Continue →
             </Link>
-            <button onClick={() => { try { localStorage.removeItem('campaign_draft'); } catch {} setLocalDraft(null); }}
+            <button onClick={() => { removeDraft(d.id); setLocalDrafts(cs => cs.filter(x => x.id !== d.id)); }}
               className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors px-2 py-1.5">
               Discard
             </button>
           </div>
         </div>
-      )}
+      ))}
 
       <div className="space-y-2">
         {loading ? (
@@ -377,6 +390,14 @@ export default function CampaignsPage() {
                         <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         Edit Campaign
                       </Link>
+
+                      <button
+                        onClick={() => cloneCampaign(c)}
+                        disabled={cloningId === c.id}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
+                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        {cloningId === c.id ? 'Cloning…' : 'Clone Campaign'}
+                      </button>
 
                       {c.status !== 'draft' && (
                         <button
