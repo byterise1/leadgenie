@@ -1,10 +1,71 @@
 ﻿'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Skeleton } from '@/components/Skeleton';
-import { loadDrafts, removeDraft, type StoredDraft } from '@/lib/campaign-drafts';
+import { loadDrafts, saveDraft, removeDraft, genDraftId, type StoredDraft } from '@/lib/campaign-drafts';
+
+type FullCampaign = Record<string, unknown> & {
+  name: string;
+  goal?: string;
+  from_name?: string | null;
+  is_test_campaign?: boolean;
+  followup_priority_mode?: 'auto' | 'manual';
+  followup_weight_pct?: number | null;
+  daily_limit?: number;
+  daily_limit_mode?: 'auto' | 'manual';
+  active_days?: boolean[];
+  from_hour?: string;
+  to_hour?: string;
+  timezone?: string;
+  start_date?: string | null;
+  min_delay_secs?: number;
+  max_delay_secs?: number;
+  list_id?: string | null;
+  email_steps?: Record<string, unknown>[];
+  campaign_accounts?: { account?: { id: string } }[];
+};
+
+// Maps a full campaign (as returned by GET /api/campaigns/[id]) into the
+// wizard's own draft-state shape, so "Clone" re-enters the exact same
+// 4-step Details/Sequence/Schedule/Review flow used at creation time,
+// pre-filled, rather than a separate lighter-weight edit surface.
+function campaignToDraftState(c: FullCampaign): Record<string, unknown> {
+  const steps = (c.email_steps || []).slice().sort((a, b) => (a.step_number as number) - (b.step_number as number));
+  return {
+    name: `${c.name} (Copy)`,
+    goal: c.goal || 'Book a Meeting',
+    fromName: c.from_name || '',
+    isTestCampaign: !!c.is_test_campaign,
+    followupPriorityMode: c.followup_priority_mode === 'manual' ? 'manual' : 'auto',
+    followupWeightPct: c.followup_weight_pct ?? 90,
+    selectedAccounts: (c.campaign_accounts || []).map(ca => ca.account?.id).filter(Boolean),
+    allAccounts: false,
+    selectedListId: c.list_id || '',
+    dailyLimitStr: String(c.daily_limit ?? 50),
+    dailyLimitMode: c.daily_limit_mode === 'manual' ? 'manual' : 'auto',
+    activeDays: c.active_days || [true, true, true, true, true, false, false],
+    fromTime: c.from_hour || '8:00 AM',
+    toTime: c.to_hour || '6:00 PM',
+    timezone: c.timezone || 'UTC',
+    startDate: c.start_date || '',
+    minDelayStr: String(Math.max(1, Math.round((c.min_delay_secs ?? 60) / 60))),
+    maxDelayStr: String(Math.max(2, Math.round((c.max_delay_secs ?? 300) / 60))),
+    instantStart: false,
+    emails: steps.map(s => ({
+      subject: s.subject || '',
+      body: s.body || '',
+      delay: s.delay_days ?? 1,
+      templateId: s.template_id || null,
+      includeUnsub: !!s.include_unsub,
+      threadMode: s.thread_mode === 'reply' ? 'reply' : 'new_thread',
+      abEnabled: Array.isArray(s.ab_variants) && (s.ab_variants as unknown[]).length > 0,
+      abVariants: Array.isArray(s.ab_variants) && (s.ab_variants as unknown[]).length > 0 ? s.ab_variants : [{ subject: '', body: '' }],
+    })),
+  };
+}
 
 const tabs = ['All', 'Active', 'Paused', 'Completed', 'Draft'];
 
@@ -50,6 +111,7 @@ function StatusDot({ status }: { status: string }) {
 }
 
 export default function CampaignsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState('All');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,29 +192,19 @@ export default function CampaignsPage() {
     }).catch(() => setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: 'active' } : x)));
   };
 
-  const moveToDraft = (c: Campaign) => {
-    setOpenMenuId(null);
-    const prev = c.status;
-    setCampaigns(cs => cs.map(x => x.id === c.id ? { ...x, status: 'draft' } : x));
-    fetch(`/api/campaigns/${c.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'draft' }),
-    }).catch(() => setCampaigns(cs => cs.map(x => x.id === c.id ? { ...x, status: prev } : x)));
-  };
-
   const cloneCampaign = async (c: Campaign) => {
     setOpenMenuId(null);
     setCloningId(c.id);
-    const res = await fetch(`/api/campaigns/${c.id}/clone`, { method: 'POST' });
-    const d = await res.json().catch(() => ({}));
+    const res = await fetch(`/api/campaigns/${c.id}`);
+    const full = await res.json().catch(() => null);
     setCloningId(null);
-    if (res.ok && d.id) {
-      setCampaigns(prev => [{ ...d, total_sent: 0, total_opened: 0, total_replied: 0, total_clicked: 0 }, ...prev]);
-      setTab('Draft');
-    } else {
-      alert(d.error || 'Clone failed — please try again.');
+    if (!res.ok || !full) {
+      alert('Clone failed — please try again.');
+      return;
     }
+    const draftId = genDraftId();
+    saveDraft(draftId, campaignToDraftState(full));
+    router.push(`/dashboard/campaigns/new?draftId=${draftId}`);
   };
 
   const deleteCampaign = (c: Campaign) => {
@@ -398,15 +450,6 @@ export default function CampaignsPage() {
                         <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                         {cloningId === c.id ? 'Cloning…' : 'Clone Campaign'}
                       </button>
-
-                      {c.status !== 'draft' && (
-                        <button
-                          onClick={() => moveToDraft(c)}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                          <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                          Move to Draft
-                        </button>
-                      )}
 
                       <div className="h-px bg-gray-100 dark:bg-gray-800 mx-2 my-1" />
 

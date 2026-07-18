@@ -238,6 +238,9 @@ export default function NewCampaignPage() {
       if (d.minDelayStr) setMinDelayStr(d.minDelayStr as string);
       if (d.maxDelayStr) setMaxDelayStr(d.maxDelayStr as string);
       if (typeof d.instantStart === 'boolean') setInstantStart(d.instantStart);
+      if (typeof d.isTestCampaign === 'boolean') setIsTestCampaign(d.isTestCampaign);
+      if (d.followupPriorityMode === 'manual' || d.followupPriorityMode === 'auto') setFollowupPriorityMode(d.followupPriorityMode);
+      if (typeof d.followupWeightPct === 'number') setFollowupWeightPct(d.followupWeightPct);
       setDraftBanner({ name: found.name });
       draftIdRef.current = found.id;
       removeDraft(found.id); // re-saved on nav-away/unload below if still unfinished
@@ -289,7 +292,7 @@ export default function NewCampaignPage() {
 
   // Keep formRef in sync so the unmount cleanup can read latest state
   useEffect(() => {
-    formRef.current = { name, goal, fromName, emails, selectedAccounts, allAccounts, selectedListId, dailyLimitStr, dailyLimitMode, activeDays, fromTime, toTime, timezone, startDate, minDelayStr, maxDelayStr, instantStart };
+    formRef.current = { name, goal, fromName, emails, selectedAccounts, allAccounts, selectedListId, dailyLimitStr, dailyLimitMode, activeDays, fromTime, toTime, timezone, startDate, minDelayStr, maxDelayStr, instantStart, isTestCampaign, followupPriorityMode, followupWeightPct };
   });
 
   const toggleDay = (i: number) => setActiveDays(d => d.map((v, idx) => idx === i ? !v : v));
@@ -338,7 +341,7 @@ export default function NewCampaignPage() {
         {draftBanner && (
           <div className="mb-5 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
             <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p className="text-sm text-blue-800 flex-1">Draft restored: <strong>{draftBanner.name}</strong> — your progress was saved automatically.</p>
+            <p className="text-sm text-blue-800 flex-1">Loaded: <strong>{draftBanner.name}</strong> — review and edit anything below, then launch.</p>
             <button onClick={() => {
               setName(''); setGoal('Book a Meeting'); setFromName(''); setEmails([{ ...DEFAULT_EMAIL }]);
               setSelectedAccounts([]); setAllAccounts(false); setSelectedListId(''); setDailyLimitStr('50');
