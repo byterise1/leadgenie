@@ -73,6 +73,7 @@ type SendOptions = {
   references?: string;
   gmailThreadId?: string;  // Gmail thread ID — forces follow-up into existing thread via API
   captureRealMessageId?: boolean; // gmail-oauth only: fetch the Message-ID Gmail actually assigned (it ignores our custom header) so later follow-ups' In-Reply-To matches what the recipient really received
+  unsubscribeUrl?: string; // when set, adds RFC 8058 List-Unsubscribe / List-Unsubscribe-Post headers (Gmail/Yahoo bulk-sender requirement — a body link alone isn't enough)
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -218,6 +219,10 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
   if (opts.messageId) headers.push(`Message-ID: ${opts.messageId}`);
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
+  if (opts.unsubscribeUrl) {
+    headers.push(`List-Unsubscribe: <${opts.unsubscribeUrl}>`);
+    headers.push(`List-Unsubscribe-Post: List-Unsubscribe=One-Click`);
+  }
   headers.push('');
 
   const rawMessage = [
@@ -433,10 +438,14 @@ export async function sendEmail(account: EmailAccount, opts: SendOptions): Promi
 
   // Build nodemailer options — set explicit Message-ID and thread headers
   const mailOpts: any = { ...opts };
-  if (opts.messageId || opts.inReplyTo || opts.references) {
+  if (opts.messageId || opts.inReplyTo || opts.references || opts.unsubscribeUrl) {
     mailOpts.headers = {
       ...(mailOpts.headers || {}),
       ...(opts.messageId ? { 'Message-ID': opts.messageId } : {}),
+      ...(opts.unsubscribeUrl ? {
+        'List-Unsubscribe': `<${opts.unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      } : {}),
     };
   }
   if (opts.inReplyTo) mailOpts.inReplyTo = opts.inReplyTo;

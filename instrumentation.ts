@@ -396,6 +396,7 @@ export async function register() {
           text: body,
           html: fullHtml,
           messageId: explicitMessageId,
+          unsubscribeUrl: (step.include_unsub && sentEmail?.id) ? unsubUrl : undefined,
           // inReplyTo/references (a real RFC822 Message-ID) and gmailThreadId
           // (Gmail's internal API bookkeeping) are independent and both get
           // passed when applicable — NEVER let gmailThreadId overwrite

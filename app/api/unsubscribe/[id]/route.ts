@@ -2,31 +2,20 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createNotification } from '@/lib/notifications';
 import { checkCampaignAutoComplete } from '@/lib/campaign-scheduling';
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
+// Shared by GET (recipient clicks the in-body link) and POST (RFC 8058
+// one-click unsubscribe — Gmail/Yahoo send this in the background when the
+// recipient uses their own "Unsubscribe" UI next to the sender name, never
+// rendering our page, so it must complete the unsubscribe without any
+// redirect/confirmation step).
+async function processUnsubscribe(id: string) {
   const { data: sentEmail } = await supabaseAdmin
     .from('sent_emails')
     .select('id,lead_id,campaign_id')
     .eq('id', id)
     .maybeSingle();
 
-  if (!sentEmail) {
-    return new Response(
-      `<!DOCTYPE html><html><head><title>Invalid link</title><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f9fafb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}</style>
-</head><body>
-<div style="background:#fff;max-width:420px;width:100%;border-radius:20px;padding:48px 32px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.07)">
-  <div style="width:52px;height:52px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:24px">⚠</div>
-  <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:10px">Link not found</h2>
-  <p style="color:#6b7280;font-size:14px;line-height:1.6">This unsubscribe link is no longer valid or has already been used.</p>
-</div>
-</body></html>`,
-      { headers: { 'Content-Type': 'text/html' } }
-    );
-  }
+  if (!sentEmail) return { sentEmail: null, lead: null, alreadyUnsubbed: false };
 
-  // Check if already unsubscribed
   const { data: lead } = await supabaseAdmin
     .from('leads')
     .select('status, first_name, email')
@@ -46,13 +35,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         .eq('lead_id', sentEmail.lead_id),
     ]);
 
-    // If this was the last pending/active lead in the campaign, mark it
-    // completed — previously only the email-sending worker's own success
-    // path did this, so a campaign whose final lead unsubscribed instead of
-    // finishing normally would sit at "active" forever with nothing left to send.
     if (sentEmail.campaign_id) await checkCampaignAutoComplete(sentEmail.campaign_id);
 
-    // Notify the campaign owner (if they have unsubscribe notifications enabled)
     const { data: campaign } = await supabaseAdmin
       .from('campaigns')
       .select('user_id, name')
@@ -71,6 +55,38 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         );
       }
     }
+  }
+
+  return { sentEmail, lead, alreadyUnsubbed };
+}
+
+// RFC 8058 one-click unsubscribe target for the List-Unsubscribe-Post header.
+// Mail clients POST here directly (no page render, no user-visible response) —
+// must be idempotent and return quickly.
+export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await processUnsubscribe(id);
+  return new Response(null, { status: 200 });
+}
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const { sentEmail, lead, alreadyUnsubbed } = await processUnsubscribe(id);
+
+  if (!sentEmail) {
+    return new Response(
+      `<!DOCTYPE html><html><head><title>Invalid link</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f9fafb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}</style>
+</head><body>
+<div style="background:#fff;max-width:420px;width:100%;border-radius:20px;padding:48px 32px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.07)">
+  <div style="width:52px;height:52px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:24px">⚠</div>
+  <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:10px">Link not found</h2>
+  <p style="color:#6b7280;font-size:14px;line-height:1.6">This unsubscribe link is no longer valid or has already been used.</p>
+</div>
+</body></html>`,
+      { headers: { 'Content-Type': 'text/html' } }
+    );
   }
 
   const firstName = lead?.first_name?.trim() || '';
