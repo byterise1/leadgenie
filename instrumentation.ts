@@ -7,7 +7,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.REDIS_URL) {
     const { Worker } = await import('bullmq');
     const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const { sendEmail, replaceVars } = await import('./lib/mailer');
+    const { sendEmail, replaceVars, heloName } = await import('./lib/mailer');
     const crypto = await import('crypto');
     const { PRODUCTION_STEP_DELAY_UNIT_MS, jitterMs, isWithinSendingWindow, computeFollowupWeightPct, allocateCapacity, checkCampaignAutoComplete } = await import('./lib/campaign-scheduling');
     const { notifyUserByEmail } = await import('./lib/resend');
@@ -387,7 +387,7 @@ export async function register() {
         // meant a reply to a follow-up (a different message than step 0) could never
         // be matched via In-Reply-To during inbox sync, since the follow-up's own ID
         // was never captured or stored — a real, silent "reply not counted" bug.
-        const explicitMessageId = `<${crypto.randomUUID().replace(/-/g, '')}@leadgenie.app>`;
+        const explicitMessageId = `<${crypto.randomUUID().replace(/-/g, '')}@${heloName(account)}>`;
 
         const { threadId, sentMessageId } = await sendEmail(account, {
           from: fromHeader,

@@ -49,6 +49,19 @@ export type EmailAccount = {
   smtp_pass?: string | null;
 };
 
+// EHLO/HELO identity for the SMTP handshake. nodemailer defaults to
+// os.hostname() when no `name` is given, but discards it unless it contains
+// a dot (i.e. looks like an FQDN) — on Railway the container hostname has no
+// dot, so nodemailer silently substitutes the loopback address [127.0.0.1].
+// Announcing "EHLO [127.0.0.1]" to Titan/Zoho/Gmail on every send is one of
+// the most universally-flagged spam signals there is. Use the sending
+// account's own domain instead, so the handshake identifies as the domain
+// actually sending the mail.
+export function heloName(account: EmailAccount): string {
+  const domain = account.email?.split('@')[1]?.trim().toLowerCase();
+  return domain && domain.includes('.') ? domain : 'leadsgenie.site';
+}
+
 type SendOptions = {
   from: string;
   to: string;
@@ -288,6 +301,7 @@ async function createSmtpTransport(account: EmailAccount) {
       const socket = await createSocksSocket(targetHost, targetPort);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return nodemailer.createTransport({
+        name: heloName(account),
         socket,
         secure: false,
         requireTLS: true,
@@ -302,6 +316,7 @@ async function createSmtpTransport(account: EmailAccount) {
     const host = await randomIPv4(targetHost);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
+      name: heloName(account),
       host,
       port: targetPort,
       secure: false,
@@ -358,6 +373,7 @@ async function createSmtpTransport(account: EmailAccount) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return nodemailer.createTransport({
+      name: heloName(account),
       socket: finalSocket,
       secure: false,   // socket is already in the right state (plain or TLS)
       requireTLS: false,
@@ -372,6 +388,7 @@ async function createSmtpTransport(account: EmailAccount) {
   const host = await randomIPv4(smtpHostname);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return nodemailer.createTransport({
+    name: heloName(account),
     host,
     port: smtpPort,
     secure: isSecure,
