@@ -498,7 +498,7 @@ export { createSmtpTransport as createTransport };
 
 export function replaceVars(text: string, lead: Record<string, string | null>): string {
   return text
-    .replace(/\{\{first_name\}\}/g, lead.first_name || '')
+    .replace(/\{\{first_name\}\}/g, lead.first_name || 'there')
     .replace(/\{\{last_name\}\}/g, lead.last_name || '')
     .replace(/\{\{company\}\}/g, lead.company || '')
     .replace(/\{\{title\}\}/g, lead.title || '')
