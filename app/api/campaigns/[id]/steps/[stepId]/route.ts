@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from('email_steps').select('id, step_number, delay_days').eq('id', stepId).eq('campaign_id', campaignId).maybeSingle();
   if (!step) return NextResponse.json({ error: 'Step not found' }, { status: 404 });
 
-  const { subject, body, delay_days, include_unsub, thread_mode, newPosition } = await req.json();
+  const { subject, body, delay_days, include_unsub, include_tracking, thread_mode, newPosition, ab_variants } = await req.json();
 
   const contentFields: Record<string, unknown> = {};
   if (subject !== undefined) contentFields.subject = subject;
@@ -40,7 +40,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const delayChanged = typeof delay_days === 'number' && delay_days !== step.delay_days;
   if (typeof delay_days === 'number') contentFields.delay_days = delay_days;
   if (include_unsub !== undefined) contentFields.include_unsub = !!include_unsub;
+  if (include_tracking !== undefined) contentFields.include_tracking = !!include_tracking;
   if (thread_mode === 'reply' || thread_mode === 'new_thread') contentFields.thread_mode = thread_mode;
+  // Diversity-rotation variants (see lib/variant-select.ts) — same array
+  // shape as at creation time ({subject, body}[]), just editable afterward
+  // too now (previously only settable at campaign creation).
+  if (Array.isArray(ab_variants)) contentFields.ab_variants = ab_variants;
 
   if (Object.keys(contentFields).length) {
     const { error } = await supabaseAdmin.from('email_steps').update(contentFields).eq('id', stepId);
@@ -71,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // position.
     const { data: steps } = await supabaseAdmin
       .from('email_steps')
-      .select('id, step_number, subject, body, thread_mode, include_unsub, template_id, ab_variants')
+      .select('id, step_number, subject, body, thread_mode, include_unsub, include_tracking, template_id, ab_variants')
       .eq('campaign_id', campaignId)
       .order('step_number', { ascending: true });
 
@@ -100,10 +105,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
-    type ContentFields = { subject: string; body: string; thread_mode: string; include_unsub: boolean; template_id: string | null; ab_variants: unknown };
+    type ContentFields = { subject: string; body: string; thread_mode: string; include_unsub: boolean; include_tracking: boolean; template_id: string | null; ab_variants: unknown };
     const contents: ContentFields[] = ordered.map(s => ({
       subject: s.subject, body: s.body, thread_mode: s.thread_mode,
-      include_unsub: s.include_unsub, template_id: s.template_id, ab_variants: s.ab_variants,
+      include_unsub: s.include_unsub, include_tracking: s.include_tracking, template_id: s.template_id, ab_variants: s.ab_variants,
     }));
     const [moved] = contents.splice(oldIndex, 1);
     contents.splice(clamped, 0, moved);

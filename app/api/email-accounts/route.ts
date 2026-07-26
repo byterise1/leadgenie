@@ -170,14 +170,19 @@ export async function POST(req: NextRequest) {
   };
   const defaultLimit = DEFAULT_DAILY_LIMITS[type] ?? 50;
 
-  // "Already warmed up" skips the 14-day ramp for real campaign sending —
-  // starts at a healthy 85 instead of the neutral 50 baseline — but stays
-  // warmup_enabled=true so it keeps participating in the periodic warmup
-  // cycle and health keeps updating from real signals (bounces, auth
-  // errors, ping engagement) instead of freezing forever. See
-  // campaignDailyCap() in lib/warmup-health.ts for how alreadyWarmedUp
-  // short-circuits straight to the mature-cap formula.
-  const ALREADY_WARMED_START_HEALTH = 85;
+  // "Already warmed up" skips the 14-day ramp for REAL CAMPAIGN sending only —
+  // campaignDailyCap() in lib/warmup-health.ts short-circuits straight to the
+  // mature-cap formula when this flag is set. It must NOT grant instant trust:
+  // health_score always starts at the same neutral baseline as any other new
+  // account and is earned back from real computeHealthScore() signals (bounces,
+  // auth errors, ping engagement) via the periodic warmup cycle — an
+  // unverified self-declared checkbox was previously used to hand a
+  // brand-new mailbox health_score:85/status:'active' with zero real
+  // history, which is the confirmed root cause of a real spam-placement
+  // incident (a fresh, unearned mailbox went straight into live cold
+  // campaigns). Scoped to new connections going forward only — existing
+  // accounts are not retroactively rewritten.
+  const NEW_ACCOUNT_START_HEALTH = 50;
 
   const { data, error } = await supabaseAdmin
     .from('email_accounts')
@@ -191,8 +196,8 @@ export async function POST(req: NextRequest) {
       smtp_pass: smtp_pass || null,
       imap_host: imap_host || null,
       imap_port: imap_port ? Number(imap_port) : null,
-      status: alreadyWarmedUp ? 'active' : 'warming',
-      health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
+      status: 'warming',
+      health_score: NEW_ACCOUNT_START_HEALTH,
       warmup_enabled: true,
       already_warmed_up: alreadyWarmedUp,
       join_shared_network: joinSharedNetwork,

@@ -46,6 +46,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         );
       }
     }
+
+    // No matching sent_emails row — this id may be a warmup ping instead
+    // (same tracking-pixel mechanism, separate table, IDs never collide
+    // across the two since each is its own UUID space). Real open-tracking
+    // for warmup, replacing the old "assume opened the instant found"
+    // simulation in the warmup-engage worker — see 20260726_warmup_open_tracking.sql.
+    if (!updated) {
+      await supabaseAdmin
+        .from('warmup_emails')
+        .update({ opened_at: new Date().toISOString() })
+        .eq('id', id)
+        .is('opened_at', null)
+        .or(`sent_at.is.null,sent_at.lt.${cutoff}`);
+    }
   }
 
   return new NextResponse(GIF, {

@@ -1,0 +1,16 @@
+-- Real open-tracking for warmup pings, reusing the same tracking-pixel
+-- mechanism real campaign sends already use (/api/track/open/[id]).
+--
+-- Previously, the warmup-engage worker credited an "open" event the instant
+-- a ping was found in the recipient's mailbox (instrumentation.ts, both the
+-- Gmail-API and IMAP paths set `engaged = true` unconditionally on finding
+-- the message) — that's a 100% simulated signal, not a real tracked event,
+-- and it fed into email_account_events / open7d without ever being backed
+-- by an actual fetch. This column lets the engage worker instead issue a
+-- real HTTP hit against a genuine tracking pixel embedded in the warmup
+-- email body, so the resulting "open" signal flows through the identical,
+-- auditable pipeline used for real campaign opens rather than a bare DB
+-- flag — making it a trustworthy input to health scoring instead of an
+-- unverified assumption (the same class of problem already_warmed_up's
+-- fake trust caused, see 20260712_already_warmed_up.sql).
+ALTER TABLE warmup_emails ADD COLUMN IF NOT EXISTS opened_at timestamptz;

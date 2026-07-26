@@ -285,15 +285,18 @@ export async function register() {
         originalSubject = firstSent?.subject || undefined;
       }
 
-      // A/B variant selection: randomly pick A (base) or B/C... (ab_variants array)
+      // Variant selection: least-used across A (base) + however many
+      // ab_variants exist, so recipients don't all land on the same wording
+      // by chance the way pure uniform random risked at small counts (see
+      // lib/variant-select.ts).
       const abVariants: { subject: string; body: string }[] = Array.isArray(step.ab_variants) ? step.ab_variants : [];
       const hasAb = abVariants.length > 0 && abVariants[0]?.body?.trim();
       let chosenVariant = 'A';
       let chosenSubject = step.subject || '';
       let chosenBody = step.body || '';
       if (hasAb) {
-        // 50/50 split: 0 = A, 1 = B
-        const pick = Math.floor(Math.random() * (abVariants.length + 1));
+        const { pickLeastUsedVariant } = await import('./lib/variant-select');
+        const pick = await pickLeastUsedVariant(supabase, campaign.id, stepNumber, abVariants.length + 1);
         if (pick > 0) {
           chosenVariant = String.fromCharCode(65 + pick); // 'B', 'C', etc.
           chosenSubject = abVariants[pick - 1].subject || step.subject || '';
@@ -337,7 +340,7 @@ export async function register() {
         body += `\n\n--\nDon't want these emails? Unsubscribe: ${unsubUrl}`;
       }
 
-      const trackPixel = sentEmail?.id
+      const trackPixel = sentEmail?.id && step.include_tracking !== false
         ? `<img src="${SITE_URL}/api/track/open/${sentEmail.id}" width="1" height="1" alt="" border="0">`
         : '';
 
@@ -1467,7 +1470,22 @@ export async function register() {
     }
 
     new SyncWorker('warmup-engage', async (job: any) => {
-      const { fromAccountId, toAccountId, subject, chainDepth = 0, pairIndex } = job.data;
+      const { fromAccountId, toAccountId, subject, chainDepth = 0, pairIndex, warmupEmailId } = job.data;
+
+      // Real open-tracking: fetch the actual pixel embedded in the ping,
+      // through the same endpoint real campaign opens use, instead of just
+      // asserting "engaged" the instant the message is found. Falls back to
+      // the old assume-engaged behavior only for jobs queued before this
+      // shipped (no warmupEmailId present).
+      async function markRealOpen(): Promise<boolean> {
+        if (!warmupEmailId) return true;
+        try {
+          const res = await fetch(`${SITE_URL}/api/track/open/${warmupEmailId}?w=1`);
+          return res.ok;
+        } catch {
+          return false;
+        }
+      }
       const { sendEmail, getAccessToken } = await import('./lib/mailer');
 
       const [{ data: toAcc }, { data: fromAcc }] = await Promise.all([
@@ -1504,7 +1522,7 @@ export async function register() {
             const unread = detail.labelIds?.includes('UNREAD');
             if (inSpam) { landedInSpam = true; await gmailModify(msg.id, ['INBOX'], ['SPAM'], token); }
             if (unread) await gmailModify(msg.id, [], ['UNREAD'], token);
-            engaged = true;
+            engaged = await markRealOpen();
 
             // Occasional "importance" actions — star, archive, or label, never more than one
             const importanceRoll = Math.random();
@@ -1560,7 +1578,7 @@ export async function register() {
                 const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), body: '--warmup-ping--', seen: false }, { uid: true }) as number[];
                 if (uids?.length > 0) {
                   await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true });
-                  engaged = true;
+                  engaged = await markRealOpen();
                   // IMAP has no universal "archive folder" or custom keyword support across
                   // providers — only the star-equivalent (\Flagged) is reliable here.
                   if (Math.random() < 0.1) {
@@ -1753,18 +1771,29 @@ export async function register() {
       const pair = WARMUP_PAIRS[pairIndex];
       const { subject, body } = pair;
       try {
+        // Insert first (like real campaign sends do with sent_emails) so the
+        // row's real id can be embedded in a genuine tracking pixel — the
+        // warmup-engage worker later fetches this same URL for real instead
+        // of just asserting "engaged" the moment it finds the message.
+        const { data: warmupEmail } = await supabase
+          .from('warmup_emails')
+          .insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() })
+          .select('id')
+          .single();
+        const trackPixel = warmupEmail?.id
+          ? `<img src="${SITE_URL}/api/track/open/${warmupEmail.id}?w=1" width="1" height="1" alt="" border="0">`
+          : '';
         await sendEmail(
           { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
+          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>${trackPixel}` }
         );
-        await supabase.from('warmup_emails').insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() });
         const { data: priorHist } = await supabase.from('warmup_pairings').select('send_count').eq('from_account_id', account.id).eq('to_account_id', toAccount.id).maybeSingle();
         const newSendCount = (priorHist?.send_count ?? 0) + 1;
         await supabase.from('warmup_pairings').upsert(
           { from_account_id: account.id, to_account_id: toAccount.id, last_sent_at: new Date().toISOString(), send_count: newSendCount },
           { onConflict: 'from_account_id,to_account_id' },
         );
-        await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex }, { delay: pickEngageDelayMs() });
+        await engageQueue.add('engage', { fromAccountId: account.id, toAccountId: toAccount.id, subject, chainDepth: 0, pairIndex, warmupEmailId: warmupEmail?.id }, { delay: pickEngageDelayMs() });
         await logAccountEvent(account.id, 'sent', {});
         return { ok: true };
       } catch (e: any) {

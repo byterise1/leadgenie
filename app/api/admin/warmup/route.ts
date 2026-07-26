@@ -108,7 +108,7 @@ export async function GET() {
         score: a.health_score ?? 50,
         factors: {
           inboxRate: rates?.inbox_rate ?? null, spamRate: rates?.spam_rate ?? null,
-          bounceRate: rates?.bounce_rate ?? null, replyRate: null,
+          bounceRate: rates?.bounce_rate ?? null, replyRate: null, openRate: null,
           authScore: 0, consistency: a.consecutive_stable_days ?? 0, blacklistPenalty: 0,
         },
         warmupDay: a.warmup_day ?? 0, warmupTarget: a.warmup_target ?? 14,

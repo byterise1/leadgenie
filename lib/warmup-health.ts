@@ -40,6 +40,7 @@ export type HealthFactors = {
   spamRate: number | null;    // 0-100
   bounceRate: number | null;  // 0-100, one decimal
   replyRate: number | null;   // 0-100, one decimal
+  openRate: number | null;    // 0-100, one decimal — now backed by a real tracking-pixel fetch (see 20260726_warmup_open_tracking.sql), not just "found in mailbox"
   authScore: number;          // 0/5/10/15 — SPF+DKIM+DMARC pass count * 5
   consistency: number;        // 0-10
   blacklistPenalty: number;   // 0 or -20 — severe but not as catastrophic as an active bounce storm (DNSBL false positives/delisting lag are real)
@@ -64,6 +65,7 @@ export function computeHealthScore(opts: {
   const spamRate = sent > 0 ? Math.min(1, events.spam7d / sent) : null;
   const bounceRate = sent > 0 ? Math.min(1, events.bounce7d / sent) : null;
   const replyRate = sent > 0 ? Math.min(1, events.reply7d / sent) : null;
+  const openRate = sent > 0 ? Math.min(1, events.open7d / sent) : null;
   const inboxRate = sent > 0 ? Math.max(0, 1 - Math.min(1, events.spam7d / sent)) : null;
 
   // Baseline: everyone starts unproven. Small credit just for warmup age (up to +10 by ~day 13) -
@@ -86,6 +88,14 @@ export function computeHealthScore(opts: {
 
   // Reply rate — real engagement signal (up to +15).
   if (replyRate !== null) score += Math.min(15, replyRate * 150);
+
+  // Open rate — real engagement signal (up to +10), weighted lower than
+  // replies since an open is a weaker signal of genuine engagement. Only
+  // meaningful now that warmup opens are backed by a real tracking-pixel
+  // fetch rather than being asserted the instant a ping is found (see
+  // 20260726_warmup_open_tracking.sql) — previously open7d was tracked but
+  // deliberately left out of scoring because it wasn't a real signal.
+  if (openRate !== null) score += Math.min(10, openRate * 100);
 
   // Domain authentication — SPF/DKIM/DMARC each worth 5 (up to +15).
   const authPass = [domainAuth.spf, domainAuth.dkim, domainAuth.dmarc].filter(s => s === 'pass').length;
@@ -116,6 +126,7 @@ export function computeHealthScore(opts: {
       spamRate: spamRate !== null ? Math.round(spamRate * 100) : null,
       bounceRate: bounceRate !== null ? Math.round(bounceRate * 1000) / 10 : null,
       replyRate: replyRate !== null ? Math.round(replyRate * 1000) / 10 : null,
+      openRate: openRate !== null ? Math.round(openRate * 1000) / 10 : null,
       authScore,
       consistency,
       blacklistPenalty,

@@ -31,7 +31,7 @@ type Campaign = {
   total_opened: number;
   total_replied: number;
   total_clicked: number;
-  email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean; thread_mode?: 'reply' | 'new_thread' }[];
+  email_steps: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; step_number?: number; include_unsub?: boolean; include_tracking?: boolean; thread_mode?: 'reply' | 'new_thread'; ab_variants?: { subject: string; body: string }[] }[];
   sent_count_by_step?: Record<number, number>;
   campaign_accounts: { account: {
     id: string; email: string; type: string; status?: string;
@@ -196,14 +196,19 @@ export default function CampaignDetailPage() {
   const stepBusy = stepBusyAction !== null;
   const [stepError, setStepError] = useState('');
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ subject: string; body: string; delay_days: number; thread_mode: 'reply' | 'new_thread' }>({ subject: '', body: '', delay_days: 1, thread_mode: 'reply' });
+  const [editForm, setEditForm] = useState<{ subject: string; body: string; delay_days: number; thread_mode: 'reply' | 'new_thread'; include_tracking: boolean; ab_variants: { subject: string; body: string }[] }>({ subject: '', body: '', delay_days: 1, thread_mode: 'reply', include_tracking: true, ab_variants: [] });
   const [addingStep, setAddingStep] = useState(false);
   const [newStepForm, setNewStepForm] = useState<{ subject: string; body: string; delay_days: number; thread_mode: 'reply' | 'new_thread' }>({ subject: '', body: '', delay_days: 1, thread_mode: 'reply' });
 
-  function startEditStep(step: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; thread_mode?: 'reply' | 'new_thread' }) {
+  function startEditStep(step: { id: string; subject: string; body?: string; delay_days?: number; delay?: number; thread_mode?: 'reply' | 'new_thread'; include_tracking?: boolean; ab_variants?: { subject: string; body: string }[] }) {
     setStepError('');
     setEditingStepId(step.id);
-    setEditForm({ subject: step.subject || '', body: step.body || '', delay_days: step.delay_days ?? step.delay ?? 1, thread_mode: step.thread_mode === 'new_thread' ? 'new_thread' : 'reply' });
+    setEditForm({
+      subject: step.subject || '', body: step.body || '', delay_days: step.delay_days ?? step.delay ?? 1,
+      thread_mode: step.thread_mode === 'new_thread' ? 'new_thread' : 'reply',
+      include_tracking: step.include_tracking !== false,
+      ab_variants: Array.isArray(step.ab_variants) ? step.ab_variants : [],
+    });
   }
 
   async function saveEditStep(stepId: string) {
@@ -662,6 +667,42 @@ export default function CampaignDetailPage() {
                           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Email body</label>
                           <textarea value={editForm.body} onChange={e => setEditForm(f => ({ ...f, body: e.target.value }))}
                             rows={5} className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Track opens</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Adds an invisible tracking pixel — real testing showed removing it helped cold outreach reach the primary Inbox instead of Promotions</p>
+                          </div>
+                          <button type="button" onClick={() => setEditForm(f => ({ ...f, include_tracking: !f.include_tracking }))}
+                            className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${editForm.include_tracking ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${editForm.include_tracking ? 'translate-x-5' : ''}`} />
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Additional versions (rotated evenly, not identical wording to everyone)</label>
+                          {editForm.ab_variants.map((variant, vIdx) => (
+                            <div key={vIdx} className="border border-violet-100 dark:border-violet-900 rounded-xl p-3 bg-violet-50/30 dark:bg-violet-950/10 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-bold text-violet-700 dark:text-violet-400">Version {vIdx + 2}</p>
+                                <button type="button"
+                                  onClick={() => setEditForm(f => ({ ...f, ab_variants: f.ab_variants.filter((_, i2) => i2 !== vIdx) }))}
+                                  className="text-[11px] text-gray-400 hover:text-red-500 font-semibold">Remove ×</button>
+                              </div>
+                              {!isReplyEdit && (
+                                <input placeholder={`Subject line for Version ${vIdx + 2}`} value={variant.subject}
+                                  onChange={e => setEditForm(f => ({ ...f, ab_variants: f.ab_variants.map((v, i2) => i2 === vIdx ? { ...v, subject: e.target.value } : v) }))}
+                                  className="w-full text-sm px-3 py-2 rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-violet-400 transition" />
+                              )}
+                              <textarea rows={4} placeholder="Alternative email body..." value={variant.body}
+                                onChange={e => setEditForm(f => ({ ...f, ab_variants: f.ab_variants.map((v, i2) => i2 === vIdx ? { ...v, body: e.target.value } : v) }))}
+                                className="w-full text-sm px-3 py-2 rounded-lg border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-violet-400 transition font-mono" />
+                            </div>
+                          ))}
+                          <button type="button"
+                            onClick={() => setEditForm(f => ({ ...f, ab_variants: [...f.ab_variants, { subject: '', body: '' }] }))}
+                            className="text-xs font-semibold text-violet-600 hover:text-violet-800">+ Add another version</button>
                         </div>
                         {i > 0 && (
                           <div>
