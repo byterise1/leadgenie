@@ -2026,6 +2026,43 @@ export async function register() {
 
       console.log(`[warmup] Pool: ${allWarmupAccounts.length} accounts (pool: ${allWarmupAccounts.filter(a => a.is_pool_account).length}, users: ${allWarmupAccounts.filter(a => !a.is_pool_account).length})`);
 
+      // ── Stale-account watchdog ──────────────────────────────────────────
+      // Real production bug found 2026-07-27: for some accounts, the
+      // decoupled 'warmup-send' queue's LAST job of the day (isFinal:true —
+      // the one that calls finalizeWarmupDay, advances warmup_day, and
+      // stamps warmup_last_run_date) silently stopped completing during
+      // automatic cron cycles (confirmed via BullMQ job history: zero
+      // isFinal:true completions for 12 days straight for 4 real accounts,
+      // while the SAME accounts' finalize worked instantly when triggered
+      // manually — so the finalize logic itself is fine, something about
+      // the automatic path drops the scheduled job, most likely a mid-flight
+      // Railway redeploy killing an account's in-flight random 0-8min start
+      // offset or its queued follow-up before it fires). The visible symptom
+      // was wildly uneven send volume across accounts: a stuck
+      // warmup_last_run_date keeps satisfying the "< today" sent_today
+      // reset above on EVERY 6h cycle instead of once a day, so a stuck
+      // account's sent_today gets reset and re-accumulated up to 4x/day
+      // instead of advancing its ramp day like everyone else.
+      // Self-heal here every cycle: any enabled, non-paused account whose
+      // warmup_last_run_date is more than 1 full day old gets caught up via
+      // the same finalizeWarmupDay() the normal flow uses, before the batch
+      // below runs — bounds how stale an account can ever get to one missed
+      // cycle (6h) instead of persisting indefinitely regardless of cause.
+      const yesterdayDate = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+      const staleAccounts = allWarmupAccounts.filter(a =>
+        !a.warmup_paused && (a.warmup_last_run_date == null || a.warmup_last_run_date < yesterdayDate)
+      );
+      if (staleAccounts.length) {
+        console.warn(`[warmup] ${staleAccounts.length} account(s) stuck on a stale warmup_last_run_date (>1 day) — self-healing via finalizeWarmupDay: ${staleAccounts.map(a => `${a.email} (last run ${a.warmup_last_run_date ?? 'never'})`).join(', ')}`);
+        for (const a of staleAccounts) {
+          try {
+            await finalizeWarmupDay(a.id, (a.warmup_day ?? 0) + 1);
+          } catch (e: any) {
+            console.error(`[warmup] stale-account catch-up failed for ${a.email}: ${e.message}`);
+          }
+        }
+      }
+
       const { detectProvider, computeHealthScore, dailySendCap, canRecover, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
       const { pickWarmupPartner } = await import('./lib/warmup-pairing');

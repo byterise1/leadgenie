@@ -26,15 +26,61 @@ function countAllCapsWords(text: string): number {
   return (text.match(/\b[A-Z]{4,}\b/g) || []).length;
 }
 
+export type SenderRisk = {
+  email: string;
+  healthScore?: number | null;
+  spfStatus?: string | null;
+  dkimStatus?: string | null;
+  dmarcStatus?: string | null;
+  blacklistStatus?: string | null;
+};
+
 export function checkDeliverability(opts: {
   subject: string;
   body: string;
   includeTracking: boolean;
   senderDomains: string[];
+  senderAccounts?: SenderRisk[];
 }): DeliverabilityResult {
-  const { subject, body, includeTracking, senderDomains } = opts;
+  const { subject, body, includeTracking, senderDomains, senderAccounts = [] } = opts;
   const flags: DeliverabilityFlag[] = [];
   const combined = `${subject}\n${body}`;
+
+  // Real, already-tracked signals for THIS sending account — previously this
+  // checker only ever looked at content + whether the domain was personal
+  // Gmail, so a custom domain with a real DNS blacklist hit or a failing
+  // SPF/DKIM/DMARC record (both already computed and stored on the account
+  // by the warmup engine) showed "Low Risk" here even while actually
+  // landing in spam for real recipients. These are stronger, more direct
+  // signals than the content heuristics below — check them first.
+  const blacklisted = senderAccounts.filter(a => a.blacklistStatus === 'listed');
+  if (blacklisted.length > 0) {
+    flags.push({
+      label: `Blacklisted sender${blacklisted.length > 1 ? 's' : ''}`,
+      detail: `${blacklisted.map(a => a.email).join(', ')} is on a real DNS blacklist right now — mail from this account will land in spam for most recipients until it's delisted, regardless of content.`,
+      penalty: 50,
+    });
+  }
+
+  const authFailing = senderAccounts.filter(a =>
+    a.spfStatus === 'fail' || a.dkimStatus === 'fail' || a.dmarcStatus === 'fail'
+  );
+  if (authFailing.length > 0) {
+    flags.push({
+      label: `Domain authentication failing`,
+      detail: `${authFailing.map(a => a.email).join(', ')} has a failing SPF, DKIM, or DMARC record — this is one of the strongest real spam-placement signals, independent of content. Fix DNS records for this domain before sending.`,
+      penalty: 35,
+    });
+  }
+
+  const lowHealth = senderAccounts.filter(a => typeof a.healthScore === 'number' && a.healthScore < 50);
+  if (lowHealth.length > 0) {
+    flags.push({
+      label: `Low sender health score`,
+      detail: `${lowHealth.map(a => `${a.email} (${a.healthScore})`).join(', ')} — health score already factors in this account's real recent inbox/spam/bounce outcomes. Below 50 means it's been landing in spam or bouncing recently, not a content issue.`,
+      penalty: 25,
+    });
+  }
 
   const personalDomains = Array.from(new Set(senderDomains.filter(isPersonalWebmailDomain)));
   if (personalDomains.length > 0) {

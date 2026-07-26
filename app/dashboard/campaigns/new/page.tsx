@@ -25,6 +25,10 @@ type RealAccount = {
   warmup_enabled?: boolean;
   already_warmed_up?: boolean;
   smtp_host?: string | null;
+  spf_status?: string | null;
+  dkim_status?: string | null;
+  dmarc_status?: string | null;
+  blacklist_status?: string | null;
 };
 
 type LeadList = { id: string; name: string; count: number };

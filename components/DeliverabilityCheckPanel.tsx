@@ -4,7 +4,14 @@ import { useMemo, useState } from 'react';
 import { checkDeliverability, riskLabel } from '@/lib/deliverability-check';
 import { domainFromEmail } from '@/lib/personal-webmail';
 
-type SenderAccount = { email: string };
+type SenderAccount = {
+  email: string;
+  health_score?: number | null;
+  spf_status?: string | null;
+  dkim_status?: string | null;
+  dmarc_status?: string | null;
+  blacklist_status?: string | null;
+};
 
 const TONE_COLOR: Record<string, string> = {
   low: 'text-emerald-700 bg-emerald-50 border-emerald-200',
@@ -27,7 +34,15 @@ export default function DeliverabilityCheckPanel({
 
   const result = useMemo(() => {
     const senderDomains = senderAccounts.map(a => domainFromEmail(a.email)).filter((d): d is string => !!d);
-    return checkDeliverability({ subject, body, includeTracking, senderDomains });
+    const senderRisk = senderAccounts.map(a => ({
+      email: a.email,
+      healthScore: a.health_score,
+      spfStatus: a.spf_status,
+      dkimStatus: a.dkim_status,
+      dmarcStatus: a.dmarc_status,
+      blacklistStatus: a.blacklist_status,
+    }));
+    return checkDeliverability({ subject, body, includeTracking, senderDomains, senderAccounts: senderRisk });
   }, [subject, body, includeTracking, senderAccounts]);
 
   const risk = riskLabel(result.score);

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmModal from '@/components/ConfirmModal';
-import PostmasterPanel from '@/components/PostmasterPanel';
 
 type Account = {
   id: string;
@@ -648,7 +647,7 @@ export default function EmailAccountsPage() {
         ))}
       </div>
 
-      <PostmasterPanel />
+      {/* <PostmasterPanel /> hidden for now */}
 
       {/* Duplicate warning */}
       {(() => {
