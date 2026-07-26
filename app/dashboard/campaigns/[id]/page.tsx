@@ -104,6 +104,7 @@ export default function CampaignDetailPage() {
   const [error, setError] = useState('');
   const [toggling, setToggling] = useState(false);
   const [tab, setTab] = useState<'overview' | 'leads'>('overview');
+  const [abStats, setAbStats] = useState<{ step_number: number; variant: string; sent: number; opened: number; replied: number }[]>([]);
 
   const refresh = useCallback(() => {
     fetch(`/api/campaigns/${id}`)
@@ -116,6 +117,13 @@ export default function CampaignDetailPage() {
       .then(d => { if (Array.isArray(d)) setLeads(d); })
       .catch(() => {})
       .finally(() => setLeadsLoading(false));
+    // A/B test results (sent/opened/replied per version) — same "keep it
+    // live" polling as the rest of this page, since results change as more
+    // leads get sent to and open/reply mid-campaign.
+    fetch(`/api/campaigns/${id}/ab-stats`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setAbStats(d); })
+      .catch(() => {});
   }, [id]);
 
   // Stats/lead progress keep changing while a campaign is running (sends, opens,
@@ -637,6 +645,44 @@ export default function CampaignDetailPage() {
                         </div>
                       )}
                     </div>
+
+                    {Array.isArray(step.ab_variants) && step.ab_variants.length > 0 && (() => {
+                      const rows = abStats.filter(s => s.step_number === (step.step_number ?? 0));
+                      if (!rows.length) return (
+                        <div className="mt-2 ml-11 text-[11px] text-gray-400 dark:text-gray-500">
+                          A/B test set up ({step.ab_variants!.length + 1} versions) — results appear here once this step starts sending.
+                        </div>
+                      );
+                      const withRate = rows.map(r => ({ ...r, rate: r.sent > 0 ? r.opened / r.sent : 0 }));
+                      const maxSent = Math.max(...withRate.map(r => r.sent));
+                      const bestRate = maxSent > 0 ? Math.max(...withRate.filter(r => r.sent > 0).map(r => r.rate)) : 0;
+                      return (
+                        <div className="mt-2 ml-11 border border-violet-100 dark:border-violet-900 rounded-xl overflow-hidden">
+                          <div className="px-3 py-1.5 bg-violet-50/60 dark:bg-violet-950/20 text-[11px] font-bold text-violet-700 dark:text-violet-400">
+                            A/B Test Results
+                          </div>
+                          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {withRate.sort((a, b) => a.variant.localeCompare(b.variant)).map(r => {
+                              const isWinning = maxSent >= 5 && r.sent > 0 && r.rate === bestRate && bestRate > 0;
+                              return (
+                                <div key={r.variant} className="px-3 py-2 flex items-center justify-between gap-3 text-xs">
+                                  <span className="font-bold text-gray-700 dark:text-gray-200 shrink-0">
+                                    Version {r.variant}
+                                    {isWinning && <span className="ml-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">▲ Winning</span>}
+                                  </span>
+                                  <span className="text-gray-400 dark:text-gray-500">{r.sent} sent</span>
+                                  <span className="text-gray-400 dark:text-gray-500">{r.opened} opened ({r.sent > 0 ? Math.round(r.rate * 100) : 0}%)</span>
+                                  <span className="text-gray-400 dark:text-gray-500">{r.replied} replied</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {maxSent < 5 && (
+                            <div className="px-3 py-1.5 text-[10px] text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-800/30">Needs at least 5 sent on a version before calling a winner.</div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {editingStepId === step.id && (() => {
                       const step0Subj = (sortedSteps[0]?.subject || '').trim();
