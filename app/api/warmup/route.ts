@@ -104,11 +104,20 @@ export async function GET() {
     const lastActivityAt = lastActivityMap.get(a.id) ?? null;
     const accountAgeHours = a.created_at ? (Date.now() - new Date(a.created_at).getTime()) / 3_600_000 : 999;
     const hoursSinceActivity = lastActivityAt ? (Date.now() - new Date(lastActivityAt).getTime()) / 3_600_000 : null;
-    // Fresh: just connected, hasn't had time for its first 6h cycle yet — not a problem.
-    const isFresh = accountAgeHours < 6 && !lastActivityAt;
-    // Stale: enabled, not paused, not erroring, old enough to have sent by now, but
-    // nothing has gone in or out in over 20h (worker runs every 6h — 3+ missed cycles).
+    // "Fresh" was originally just "connected < 6h ago" — but a "Reset warmup"
+    // (wipes history, warmup_day back to 0) on an OLD account (created weeks
+    // ago) has an old accountAgeHours, so it failed this check and fell
+    // straight into "stale/⚠ Not sending" — a genuinely confusing false
+    // alarm on an account that had just been intentionally reset, not one
+    // that stopped working. A reset account (warmup_day 0, never run) is
+    // just as "hasn't had its first cycle yet" as a brand-new connection.
+    const neverRunSinceReset = (a.warmup_day ?? 0) === 0 && !a.warmup_last_run_date;
+    const isFresh = !lastActivityAt && (accountAgeHours < 6 || neverRunSinceReset);
+    // Stale: enabled, not paused, not erroring, not fresh (see above), old
+    // enough to have sent by now, but nothing has gone in or out in over 20h
+    // (worker runs every 6h — 3+ missed cycles).
     const isStale = !!a.warmup_enabled && !a.warmup_paused && a.status !== 'error'
+      && !isFresh
       && accountAgeHours >= 6
       && (hoursSinceActivity === null || hoursSinceActivity > 20);
 

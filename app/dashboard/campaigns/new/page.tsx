@@ -229,7 +229,18 @@ export default function NewCampaignPage() {
       if (d.name) setName(d.name as string);
       if (d.goal) setGoal(d.goal as string);
       if (d.fromName) setFromName(d.fromName as string);
-      if (Array.isArray(d.emails) && d.emails.length) setEmails(d.emails as EmailStep[]);
+      if (Array.isArray(d.emails) && d.emails.length) {
+        // Drafts saved before A/B testing shipped lack abEnabled/abVariants
+        // entirely — restoring them as-is and then toggling A/B on crashes
+        // the render (email.abVariants.map on undefined). Backfill defaults
+        // on restore so old drafts behave like a fresh campaign.
+        const normalized = (d.emails as Partial<EmailStep>[]).map(e => ({
+          ...e,
+          abEnabled: e.abEnabled ?? false,
+          abVariants: e.abVariants ?? [{ subject: '', body: '' }],
+        })) as EmailStep[];
+        setEmails(normalized);
+      }
       if (Array.isArray(d.selectedAccounts)) setSelectedAccounts(d.selectedAccounts as string[]);
       if (typeof d.allAccounts === 'boolean') setAllAccounts(d.allAccounts);
       if (d.selectedListId) setSelectedListId(d.selectedListId as string);
