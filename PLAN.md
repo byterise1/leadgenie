@@ -108,6 +108,11 @@
 
 **Also this session:** reverted a same-day uncommitted UI relabel (A/B testing wording "Version" → "Variant"/"A/B Test") back to "Version" per explicit user instruction — kept as "Version N" everywhere. `PostmasterPanel` on the email-accounts page confirmed hidden (commented out) per user instruction, not shown.
 
+**Two more real bugs found + fixed same session (commit `58146cc`), both reproduced/verified before shipping, not guessed:**
+1. **A/B toggle crash on old drafts** — user reported "Rotate multiple versions" not enabling. Root cause: `campaigns/new/page.tsx`'s draft-restore path (`setEmails(d.emails as EmailStep[])`) trusted old localStorage drafts to already have `abEnabled`/`abVariants`, but any draft saved before A/B testing shipped (2026-07-26) lacks both fields — clicking the toggle then threw `Cannot read properties of undefined (reading 'map')` inside the render instead of showing "Version 2." Reproduced the exact crash in a standalone script using the real transformation code, confirmed the fix (backfill `abEnabled ?? false` / `abVariants ?? [{subject:'',body:''}]` on restore) eliminates it.
+2. **Warmup dashboard falsely showed "⚠ Not sending" on freshly-reset accounts** — `app/api/warmup/route.ts`'s `is_fresh`/`is_stale` logic only checked `created_at` age (< 6h = fresh), so the 4 accounts reset to Day 0 this session (old `created_at`, brand-new warmup state) immediately looked "stale"/broken instead of "just connected" — user flagged this directly from a live screenshot. Fixed: an account with `warmup_day: 0` and no `warmup_last_run_date` now counts as fresh regardless of connection age. Verified against the real 4 reset accounts' data: all now compute `is_fresh:true, is_stale:false`.
+3. Verified `npx tsc --noEmit` + full `npm run build` clean, plus a real local `npm run dev` smoke-test — killed immediately after confirming the server started, since it also boots a second live copy of every BullMQ worker against the SAME production Redis/Supabase as Railway, which would double-process real jobs if left running.
+
 ### Remaining Work & Roadmap — living checklist, update whenever priorities shift
 
 **Production-readiness (things blocking a real launch):**
