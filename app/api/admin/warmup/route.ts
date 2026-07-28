@@ -197,7 +197,45 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { id, warmup_enabled, warmup_pool_mode, set_all_pool_mode } = body;
+  const { id, warmup_enabled, warmup_pool_mode, set_all_pool_mode, resume_paused } = body;
+
+  // Manual resume of a bounce/spam-triggered pause. Auto-recovery (48h wait +
+  // clean signals, previously handled inside instrumentation.ts's warmup
+  // cycle) was retired in favor of requiring an admin to actually look at the
+  // account before it resumes sending — a pause is a real trust event, not
+  // something that should silently clear itself on a timer. Still applies the
+  // same "step back and re-ramp" the old auto-recovery used, so a resumed
+  // account rebuilds volume gradually instead of jumping straight back to
+  // full cap.
+  if (resume_paused && id) {
+    const { data: account, error: fetchError } = await supabaseAdmin
+      .from('email_accounts')
+      .select('id, user_id, email, warmup_day, warmup_paused')
+      .eq('id', id)
+      .single();
+    if (fetchError || !account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    if (!account.warmup_paused) return NextResponse.json({ error: 'Account is not paused' }, { status: 400 });
+
+    const { data, error } = await supabaseAdmin
+      .from('email_accounts')
+      .update({
+        warmup_paused: false,
+        warmup_pause_reason: null,
+        warmup_paused_at: null,
+        warmup_day: Math.max(0, (account.warmup_day ?? 0) - 5),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    await supabaseAdmin.from('notifications').insert({
+      user_id: account.user_id,
+      message: `${account.email} resumed by admin review — warmup restarting at reduced volume to rebuild reputation safely.`,
+      type: 'info',
+    });
+    return NextResponse.json(data);
+  }
 
   // Bulk: set pool mode for ALL user accounts at once
   if (set_all_pool_mode && VALID_POOL_MODES.includes(set_all_pool_mode)) {

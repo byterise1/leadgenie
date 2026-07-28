@@ -100,7 +100,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { type, smtp_port, imap_port } = body;
-  const alreadyWarmedUp = !!body.already_warmed_up;
   // Defaults to joined (true) unless the connect-modal checkbox was
   // explicitly unchecked — matches the checkbox defaulting checked.
   const joinSharedNetwork = body.join_shared_network !== false;
@@ -170,18 +169,14 @@ export async function POST(req: NextRequest) {
   };
   const defaultLimit = DEFAULT_DAILY_LIMITS[type] ?? 50;
 
-  // "Already warmed up" skips the 14-day ramp for REAL CAMPAIGN sending only —
-  // campaignDailyCap() in lib/warmup-health.ts short-circuits straight to the
-  // mature-cap formula when this flag is set. It must NOT grant instant trust:
-  // health_score always starts at the same neutral baseline as any other new
-  // account and is earned back from real computeHealthScore() signals (bounces,
-  // auth errors, ping engagement) via the periodic warmup cycle — an
-  // unverified self-declared checkbox was previously used to hand a
-  // brand-new mailbox health_score:85/status:'active' with zero real
-  // history, which is the confirmed root cause of a real spam-placement
-  // incident (a fresh, unearned mailbox went straight into live cold
-  // campaigns). Scoped to new connections going forward only — existing
-  // accounts are not retroactively rewritten.
+  // Every new mailbox goes through real warmup, full stop — no self-declared
+  // "already warmed up" shortcut. That checkbox let an unverified flag hand a
+  // brand-new mailbox instant trust (health_score:85/status:'active') with
+  // zero real sending history, which is the confirmed root cause of a real
+  // spam-placement incident (a fresh, unearned mailbox went straight into
+  // live cold campaigns). already_warmed_up is intentionally always false on
+  // insert now — only a verified admin action should ever grant mature-cap
+  // sending, never a client-supplied flag.
   const NEW_ACCOUNT_START_HEALTH = 50;
 
   const { data, error } = await supabaseAdmin
@@ -199,7 +194,7 @@ export async function POST(req: NextRequest) {
       status: 'warming',
       health_score: NEW_ACCOUNT_START_HEALTH,
       warmup_enabled: true,
-      already_warmed_up: alreadyWarmedUp,
+      already_warmed_up: false,
       join_shared_network: joinSharedNetwork,
       daily_limit: defaultLimit,
     })

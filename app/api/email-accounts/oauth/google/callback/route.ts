@@ -4,9 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const rawState = searchParams.get('state'); // "userId:alreadyWarmedUp(0|1):joinSharedNetwork(0|1)"
-  const [state, alreadyWarmedUpFlag, joinSharedNetworkFlag] = rawState ? rawState.split(':') : [null, '0', '1'];
-  const alreadyWarmedUp = alreadyWarmedUpFlag === '1';
+  const rawState = searchParams.get('state'); // "userId:joinSharedNetwork(0|1)"
+  const [state, joinSharedNetworkFlag] = rawState ? rawState.split(':') : [null, '1'];
   const joinSharedNetwork = joinSharedNetworkFlag !== '0';
   const oauthError = searchParams.get('error');
 
@@ -73,22 +72,24 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     if (crossUserDup) return NextResponse.redirect(`${siteOrigin}/dashboard/email-accounts?error=already_connected`);
 
-    // "Already warmed up" (checkbox on the connect modal, carried through
-    // Google's redirect via `state`) skips the 14-day ramp for real sending
-    // — starts at a healthy 85 instead of the neutral 50 baseline — but
-    // stays warmup_enabled=true so health keeps updating from real signals
-    // instead of freezing. See campaignDailyCap() in lib/warmup-health.ts.
-    const ALREADY_WARMED_START_HEALTH = 85;
+    // Every new mailbox starts at the neutral baseline and goes through real
+    // warmup — no self-declared "already warmed up" shortcut. That checkbox
+    // let an unverified flag hand a brand-new mailbox instant trust
+    // (health_score:85/status:'active') with zero real sending history,
+    // which was the confirmed root cause of a real spam-placement incident.
+    // already_warmed_up is intentionally never set true here or anywhere in
+    // the connect flow going forward — only a verified admin action should
+    // ever grant mature-cap sending.
     await supabaseAdmin.from('email_accounts').insert({
       user_id: state,
       type: 'gmail-oauth',
       email: info.email,
       smtp_user: info.email,
       smtp_pass: tokens.refresh_token,
-      status: alreadyWarmedUp ? 'active' : 'warming',
-      health_score: alreadyWarmedUp ? ALREADY_WARMED_START_HEALTH : 50,
+      status: 'warming',
+      health_score: 50,
       warmup_enabled: true,
-      already_warmed_up: alreadyWarmedUp,
+      already_warmed_up: false,
       join_shared_network: joinSharedNetwork,
     });
   }

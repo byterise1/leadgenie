@@ -2063,7 +2063,7 @@ export async function register() {
         }
       }
 
-      const { detectProvider, computeHealthScore, dailySendCap, canRecover, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
+      const { detectProvider, computeHealthScore, dailySendCap, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
       const { pickWarmupPartner } = await import('./lib/warmup-pairing');
       const { checkBlacklists, AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
@@ -2169,24 +2169,18 @@ export async function register() {
             const isBlacklisted = blacklistStatus === 'listed';
             const isBlacklistedAuthoritative = isBlacklisted && blacklistDetails?.[AUTHORITATIVE_PAUSE_ZONE] === true;
 
-            // ── Pause / recovery check ──
+            // ── Pause check ──
+            // Recovery used to happen automatically here (48h wait + clean
+            // signals) — retired in favor of a manual admin review/resume
+            // (POST /api/admin/warmup {id, resume_paused: true}). A pause is
+            // a real trust/reputation event; it should stay in effect until
+            // someone actually looks at it, not clear itself silently on a
+            // timer. dayAdjustment stays available for the admin resume
+            // action to apply its own step-back-and-re-ramp.
             const events7d = await fetchEventCounts(account.id, Date.now() - 7 * 86400_000);
             trace('after-events7d');
-            let paused = !!account.warmup_paused;
-            let dayAdjustment = 0;
-
-            if (paused) {
-              const events3d = await fetchEventCounts(account.id, Date.now() - 3 * 86400_000);
-              if (canRecover({ sent: events3d.sent7d, bounce: events3d.bounce7d, spam: events3d.spam7d }, account.warmup_paused_at)) {
-                paused = false;
-                dayAdjustment = -5; // recovery mode: step back and re-ramp instead of resuming at full volume
-                await supabase.from('notifications').insert({
-                  user_id: account.user_id,
-                  message: `${account.email} recovered — warmup resuming at reduced volume to rebuild reputation safely.`,
-                  type: 'info',
-                });
-              }
-            }
+            const paused = !!account.warmup_paused;
+            const dayAdjustment = 0;
 
             trace(`pause-check paused=${paused} alreadyRanToday=${alreadyRanToday}`);
             if (paused || alreadyRanToday) {

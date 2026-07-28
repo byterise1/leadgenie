@@ -388,6 +388,7 @@ function AdminWarmupPageInner() {
   const [showAddPool, setShowAddPool] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
   const [globalPoolMode, setGlobalPoolMode] = useState<PoolMode>('admin_pool');
   const [settingGlobalMode, setSettingGlobalMode] = useState(false);
   const [triggeringWarmup, setTriggeringWarmup] = useState(false);
@@ -449,6 +450,23 @@ function AdminWarmupPageInner() {
     });
     setTogglingId(null);
     showToast(enabled ? 'Warmup enabled' : 'Warmup disabled');
+  };
+
+  const resumePaused = async (id: string, email: string) => {
+    if (!confirm(`Resume warmup/sending for ${email}? It will restart at reduced volume and re-ramp — only do this after reviewing why it was paused.`)) return;
+    setResumingId(id);
+    const res = await fetch('/api/admin/warmup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, resume_paused: true }),
+    });
+    const d = await res.json();
+    setResumingId(null);
+    if (!res.ok) { showToast(d.error || 'Resume failed'); return; }
+    const patch = { warmup_paused: false, warmup_pause_reason: null, warmup_day: d.warmup_day };
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    setPoolAccounts(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    showToast(`${email} resumed — re-ramping at reduced volume`);
   };
 
   const setPoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
@@ -735,7 +753,15 @@ function AdminWarmupPageInner() {
                       <div className="flex items-center gap-1.5">
                         <p className="text-[10px] text-amber-600 font-bold">Pool account</p>
                         {a.warmup_paused && (
-                          <span title={a.warmup_pause_reason || undefined} className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                          <>
+                            <span title={a.warmup_pause_reason || undefined} className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                            <button
+                              onClick={() => resumePaused(a.id, a.email)}
+                              disabled={resumingId === a.id}
+                              className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+                              {resumingId === a.id ? 'Resuming…' : 'Resume'}
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -890,7 +916,15 @@ function AdminWarmupPageInner() {
                           {a.status === 'login' ? 'Login Error' : a.status}
                         </span>
                         {a.warmup_paused && (
-                          <span title={a.warmup_pause_reason || undefined} className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                          <>
+                            <span title={a.warmup_pause_reason || undefined} className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                            <button
+                              onClick={() => resumePaused(a.id, a.email)}
+                              disabled={resumingId === a.id}
+                              className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+                              {resumingId === a.id ? 'Resuming…' : 'Resume'}
+                            </button>
+                          </>
                         )}
                       </td>
                       <td className="px-4 py-3">
