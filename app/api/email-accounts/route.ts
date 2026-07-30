@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, recordRateLimitHit } from '@/lib/rate-limit';
+import { verifyAccountCredentials } from '@/lib/account-verify';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 
 // The account's configured daily_limit is a ceiling the user set — it says
@@ -161,6 +162,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Real credential check before saving anything — gmail-oauth already proved
+  // itself via Google's own consent flow, so only imap/smtp/gmail-app need
+  // this. Catches wrong passwords, Titan's "third-party app access" toggle
+  // being off, etc. immediately instead of silently saving a mailbox that can
+  // never actually send.
+  if (type !== 'gmail-oauth') {
+    const verify = await verifyAccountCredentials({
+      type, email, smtp_host: smtp_host || null, smtp_port: smtp_port ? Number(smtp_port) : null,
+      smtp_user: smtp_user || email, smtp_pass: smtp_pass || null,
+      imap_host: imap_host || null, imap_port: imap_port ? Number(imap_port) : null,
+    });
+    if (!verify.ok) {
+      return NextResponse.json({ error: `Couldn't connect to this mailbox — ${verify.error}` }, { status: 422 });
+    }
+  }
+
   const DEFAULT_DAILY_LIMITS: Record<string, number> = {
     'gmail-oauth': 50,
     'gmail-app': 50,
@@ -202,6 +219,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await recordRateLimitHit(user.id, 'email_account_add');
   // Enrich with real-time capacity (just added → 0 sent today, warmup day 0)
   const effLimit = effectiveDailyLimit({ ...data, warmup_day: 0 });
   return NextResponse.json({ ...data, sent_today_real: 0, effective_daily_limit: effLimit, remaining_today: effLimit });

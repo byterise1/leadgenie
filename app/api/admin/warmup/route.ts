@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, recordRateLimitHit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 import { predictDeliverability, diagnose, computeDomainRollup } from '@/lib/warmup-diagnosis';
 
@@ -228,6 +228,7 @@ export async function PATCH(req: NextRequest) {
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await recordRateLimitHit(admin.id, 'warmup_toggle');
 
     await supabaseAdmin.from('notifications').insert({
       user_id: account.user_id,
@@ -244,6 +245,7 @@ export async function PATCH(req: NextRequest) {
       .update({ warmup_pool_mode: set_all_pool_mode })
       .neq('is_pool_account', true);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await recordRateLimitHit(admin.id, 'warmup_toggle');
     return NextResponse.json({ ok: true, set_all_pool_mode });
   }
 
@@ -267,5 +269,6 @@ export async function PATCH(req: NextRequest) {
     .from('email_accounts').update(updates).eq('id', id).neq('is_pool_account', true).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await recordRateLimitHit(admin.id, 'warmup_toggle');
   return NextResponse.json(data);
 }

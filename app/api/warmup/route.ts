@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, recordRateLimitHit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 import { predictDeliverability, diagnose, computeFleetBenchmark } from '@/lib/warmup-diagnosis';
 
@@ -214,6 +214,7 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await recordRateLimitHit(user.id, 'warmup_toggle');
     return NextResponse.json(data);
   }
 
@@ -241,5 +242,6 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await recordRateLimitHit(user.id, 'warmup_toggle');
   return NextResponse.json(data);
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, recordRateLimitHit } from '@/lib/rate-limit';
 import { detectProvider, campaignDailyCap } from '@/lib/warmup-health';
 import { PRODUCTION_STEP_DELAY_UNIT_MS, planBacklogSmoothing } from '@/lib/campaign-scheduling';
 
@@ -143,6 +143,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.error('[start] campaign update failed:', updateErr.message);
     return NextResponse.json({ error: `Could not activate campaign: ${updateErr.message}` }, { status: 500 });
   }
+  await recordRateLimitHit(user.id, 'campaign_start');
 
   // Scheduling itself is no longer decided here — the recurring campaign-scheduler
   // worker (instrumentation.ts) picks up every 'pending' and 'active' lead on its

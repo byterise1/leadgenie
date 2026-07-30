@@ -30,7 +30,7 @@ const TYPE_COLORS: Record<Account['type'], string> = {
   'smtp': 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-gray-200',
 };
 
-type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp';
+type ConnectStep = null | 'choose' | 'gmail-oauth' | 'gmail-app' | 'imap' | 'smtp' | 'bulk';
 
 function SmtpForm({ onBack, onConnect, connecting }: { onBack: () => void; onConnect: (email: string, extra?: Record<string, string>) => void; connecting?: boolean }) {
   const [form, setForm] = useState({ email: '', host: '', port: '587', user: '', pass: '', imapHost: '', imapPort: '993' });
@@ -167,6 +167,133 @@ function ImapForm({ onBack, onConnect, connecting }: { onBack: () => void; onCon
           {connecting ? (
             <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Connecting…</>
           ) : 'Connect Account'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type BulkRowResult = { email: string; ok: boolean; error?: string };
+
+function BulkForm({ onBack, onSomeSucceeded }: { onBack: () => void; onSomeSucceeded: () => void }) {
+  const [form, setForm] = useState({ smtpHost: '', smtpPort: '465', imapHost: '', imapPort: '993', password: '' });
+  const [list, setList] = useState('');
+  const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const setHost = (v: string) => setForm(f => ({ ...f, smtpHost: v, imapHost: f.imapHost || v.replace(/^smtp\./i, 'imap.') }));
+
+  const [submitting, setSubmitting] = useState(false);
+  const [results, setResults] = useState<BulkRowResult[] | null>(null);
+  const [summary, setSummary] = useState<{ total: number; succeeded: number; failed: number } | null>(null);
+
+  // Accepts one mailbox per line — either just the email (uses the shared
+  // password field) or "email:password" / "email,password" for a per-row
+  // password.
+  const parsedEntries = list.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const m = line.split(/[:,]/);
+    return { email: m[0]?.trim(), smtp_pass: m[1]?.trim() };
+  }).filter(e => e.email);
+
+  const valid = form.smtpHost && parsedEntries.length > 0 && (form.password || parsedEntries.every(e => e.smtp_pass));
+
+  const submit = async () => {
+    setSubmitting(true);
+    setResults(null);
+    try {
+      const res = await fetch('/api/email-accounts/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'imap',
+          smtp_host: form.smtpHost, smtp_port: form.smtpPort,
+          imap_host: form.imapHost || undefined, imap_port: form.imapPort,
+          shared_password: form.password || undefined,
+          entries: parsedEntries,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResults([{ email: '(request)', ok: false, error: data.error || 'Bulk add failed' }]);
+      } else {
+        setResults(data.results);
+        setSummary({ total: data.total, succeeded: data.succeeded, failed: data.failed });
+        if (data.succeeded > 0) onSomeSucceeded();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Connect many IMAP/SMTP mailboxes at once (e.g. several Titan mailboxes across domains). Each one is tested live before it's saved — bad credentials or a disabled provider setting show up per row, nothing broken gets added silently.</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Host</label>
+          <input placeholder="smtp.titan.email" value={form.smtpHost} onChange={e => setHost(e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">SMTP Port</label>
+          <select value={form.smtpPort} onChange={e => set('smtpPort', e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            {['465', '587', '25'].map(p => <option key={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Host</label>
+          <input placeholder="imap.titan.email" value={form.imapHost} onChange={e => set('imapHost', e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">IMAP Port</label>
+          <select value={form.imapPort} onChange={e => set('imapPort', e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition">
+            {['993', '143'].map(p => <option key={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Shared password (optional)</label>
+        <input type="password" placeholder="Leave blank if using per-row passwords below" value={form.password} onChange={e => set('password', e.target.value)}
+          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition"/>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Mailboxes (one per line)</label>
+        <textarea rows={6} placeholder={'jack@yourdomain.com\nlogan@yourdomain.com\nvictoria@yourdomain.com:different-password'} value={list} onChange={e => setList(e.target.value)}
+          className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition font-mono"/>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{parsedEntries.length} mailbox{parsedEntries.length === 1 ? '' : 'es'} detected. Add <code>:password</code> after an email to override the shared password for that row.</p>
+      </div>
+
+      {results && (
+        <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+          {summary && (
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-300">
+              {summary.succeeded}/{summary.total} connected
+            </div>
+          )}
+          <div className="max-h-56 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800">
+            {results.map((r, i) => (
+              <div key={i} className="px-3 py-2 flex items-start justify-between gap-2 text-xs">
+                <span className="font-mono text-gray-700 dark:text-gray-200 truncate">{r.email}</span>
+                {r.ok
+                  ? <span className="text-emerald-600 font-bold shrink-0">✓ Connected</span>
+                  : <span className="text-rose-600 shrink-0 text-right">{r.error}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-2">
+        <button onClick={onBack} className="flex-1 py-2.5 border border-gray-200 text-gray-600 dark:text-gray-300 font-semibold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Back</button>
+        <button disabled={!valid || submitting} onClick={submit}
+          className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          {submitting ? (
+            <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>Connecting…</>
+          ) : `Connect ${parsedEntries.length || ''} mailbox${parsedEntries.length === 1 ? '' : 'es'}`}
         </button>
       </div>
     </div>
@@ -485,6 +612,17 @@ const CONNECT_OPTIONS = [
     icon: (
       <svg className="w-6 h-6 text-gray-500 dark:text-gray-500 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'bulk' as const,
+    name: 'Bulk Add (IMAP/SMTP)',
+    desc: 'Connect many mailboxes at once — same host, live pass/fail per row',
+    tag: null,
+    icon: (
+      <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h7"/>
       </svg>
     ),
   },
@@ -946,6 +1084,10 @@ export default function EmailAccountsPage() {
 
               {step === 'smtp' && (
                 <SmtpForm onBack={() => setStep('choose')} connecting={connecting} onConnect={(email, extra) => addAccount('smtp', email, extra)} />
+              )}
+
+              {step === 'bulk' && (
+                <BulkForm onBack={() => setStep('choose')} onSomeSucceeded={fetchAccounts} />
               )}
             </div>
           </div>
