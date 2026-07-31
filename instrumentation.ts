@@ -1987,7 +1987,7 @@ export async function register() {
       const PHASE1_COLS = 'spf_status, dkim_status, dmarc_status, domain_checked_at, warmup_paused, warmup_pause_reason, warmup_paused_at, consecutive_stable_days, bounce_count, spam_count, reply_count, open_count, auth_error_count';
       const PHASE23_COLS = 'domain, join_shared_network, blacklist_status, blacklist_details, blacklist_checked_at, mx_status';
       const TRUST_COLS = 'trust_score, network_isolated, network_isolation_reason, network_isolated_at, abuse_flag_count';
-      const BASE_COLS = 'id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date';
+      const BASE_COLS = 'id, user_id, email, type, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, warmup_day, warmup_target, health_score, sent_today, is_pool_account, warmup_pool_mode, warmup_last_run_date, created_at';
 
       const tier3 = await supabase.from('email_accounts')
         .select(`${BASE_COLS}, ${PHASE1_COLS}, ${PHASE23_COLS}, ${TRUST_COLS}`)
@@ -2048,10 +2048,28 @@ export async function register() {
       // the same finalizeWarmupDay() the normal flow uses, before the batch
       // below runs — bounds how stale an account can ever get to one missed
       // cycle (6h) instead of persisting indefinitely regardless of cause.
+      //
+      // Real bug found 2026-07-30: `warmup_last_run_date == null` is also
+      // true for a BRAND NEW account that has simply never had its first
+      // cycle yet — this isn't the "stuck" case above, but the filter
+      // couldn't tell them apart, so every freshly-connected account (a
+      // 49-mailbox bulk-add reproduced this at full scale) got force-run
+      // through finalizeWarmupDay with zero real send/domain-auth data
+      // (health ~11, since inbox/auth confidence scale with real evidence
+      // that doesn't exist yet), which immediately tripped network
+      // isolation (`shouldIsolateFromNetwork`, health<20) before the
+      // account's real first send even happened moments later in the same
+      // cycle — permanently locking a perfectly healthy new account out of
+      // pairing for the isolation system's 48h minimum wait. Gate the
+      // null-date case on account age too, so only a genuinely stuck
+      // account (old enough to have already missed a cycle) qualifies.
       const yesterdayDate = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
-      const staleAccounts = allWarmupAccounts.filter(a =>
-        !a.warmup_paused && (a.warmup_last_run_date == null || a.warmup_last_run_date < yesterdayDate)
-      );
+      const oneDayAgoMs = Date.now() - 86400_000;
+      const staleAccounts = allWarmupAccounts.filter(a => {
+        if (a.warmup_paused) return false;
+        if (a.warmup_last_run_date != null) return a.warmup_last_run_date < yesterdayDate;
+        return a.created_at ? new Date(a.created_at).getTime() < oneDayAgoMs : false;
+      });
       if (staleAccounts.length) {
         console.warn(`[warmup] ${staleAccounts.length} account(s) stuck on a stale warmup_last_run_date (>1 day) — self-healing via finalizeWarmupDay: ${staleAccounts.map(a => `${a.email} (last run ${a.warmup_last_run_date ?? 'never'})`).join(', ')}`);
         for (const a of staleAccounts) {

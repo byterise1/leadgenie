@@ -190,11 +190,15 @@ export async function PATCH(req: NextRequest) {
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
+    // Only this account's OWN sent history is wiped. Rows where it was
+    // merely a pairing partner's RECIPIENT belong to that other account's
+    // audit trail/dashboard "last activity" check — deleting those too
+    // (as this used to) silently corrupted every account that had ever
+    // paired with the one being reset, with no reset of its own requested.
     await Promise.all([
       supabaseAdmin.from('email_account_events').delete().eq('account_id', account_id),
       supabaseAdmin.from('warmup_history').delete().eq('email', account.email),
       supabaseAdmin.from('warmup_emails').delete().eq('from_account_id', account_id),
-      supabaseAdmin.from('warmup_emails').delete().eq('to_account_id', account_id),
     ]);
 
     const { data, error } = await supabaseAdmin
