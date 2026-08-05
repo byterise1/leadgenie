@@ -2000,9 +2000,17 @@ export async function register() {
 
       // Reset sent_today only for accounts that haven't run today yet (first cycle of the day).
       // Subsequent 6h cycles skip the reset so the count stays visible all day.
+      // Excludes paused accounts: warmup_last_run_date is deliberately frozen
+      // for them (day/ramp stays exactly as an admin left it), so this
+      // staleness check would otherwise read as "hasn't run today" forever
+      // and zero out sent_today every single cycle — wiping out the real
+      // count from the soft-pause trickle send below before anyone sees it,
+      // even though a real email genuinely went out. Paused accounts'
+      // sent_today is entirely owned by that trickle logic instead.
       const todayDate = new Date().toISOString().slice(0, 10);
       await supabase.from('email_accounts').update({ sent_today: 0 })
         .eq('warmup_enabled', true)
+        .eq('warmup_paused', false)
         .neq('status', 'error')
         .or(`warmup_last_run_date.is.null,warmup_last_run_date.lt.${todayDate}`);
 
