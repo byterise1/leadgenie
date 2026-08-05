@@ -1714,6 +1714,21 @@ export async function register() {
     // Admin-pool / shared-network candidate context. Pass an already-fetched
     // account list to avoid a duplicate query (the main cycle already has
     // one); omit it to fetch fresh (used by the decoupled send worker).
+    // "Authentication failed…" / Spamhaus-DBL pauses mean the mailbox is
+    // genuinely broken or actively harmful — stays fully excluded from the
+    // network. A pure rate-based pause (elevated spam/bounce %) does NOT —
+    // per competitor research (Instantly/Smartlead/Mailreach all keep
+    // warmup running through a reputation dip rather than going fully dark;
+    // engagement from a real partner IS the repair mechanism), a
+    // soft-paused account stays eligible to RECEIVE warmup pings even
+    // though its own day/ramp/full-volume sending stays frozen until an
+    // admin reviews it. See the pause-check block in the 'warmup' cycle
+    // worker below for the send-side (trickle) half of this.
+    function isHardPauseReason(reason: string | null | undefined): boolean {
+      if (!reason) return false;
+      return reason.startsWith('Authentication failed') || reason.includes('Spamhaus DBL');
+    }
+
     async function loadWarmupPoolContext(preFetched?: any[]) {
       const { computeNetworkBalance } = await import('./lib/warmup-pairing');
       let accounts = preFetched;
@@ -1723,7 +1738,7 @@ export async function register() {
           .eq('warmup_enabled', true).neq('status', 'error');
         accounts = data ?? [];
       }
-      const isEligiblePairingTarget = (a: any) => !a.warmup_paused && !a.network_isolated && a.blacklist_status !== 'listed';
+      const isEligiblePairingTarget = (a: any) => !isHardPauseReason(a.warmup_pause_reason) && !a.network_isolated && a.blacklist_status !== 'listed';
       const adminPoolAccounts = accounts.filter(a => a.is_pool_account && isEligiblePairingTarget(a));
       const sharedNetworkAccounts = accounts.filter(a => !a.is_pool_account && a.join_shared_network !== false && isEligiblePairingTarget(a));
       const dynamicBalance = computeNetworkBalance(sharedNetworkAccounts.length, adminPoolAccounts.length);
@@ -2210,17 +2225,34 @@ export async function register() {
             // Recovery used to happen automatically here (48h wait + clean
             // signals) — retired in favor of a manual admin review/resume
             // (POST /api/admin/warmup {id, resume_paused: true}). A pause is
-            // a real trust/reputation event; it should stay in effect until
-            // someone actually looks at it, not clear itself silently on a
-            // timer. dayAdjustment stays available for the admin resume
+            // a real trust/reputation event; it should stay in effect (the
+            // "Paused" badge, full-volume sending, day/ramp advancement all
+            // stay frozen) until someone actually looks at it — that part is
+            // unchanged. dayAdjustment stays available for the admin resume
             // action to apply its own step-back-and-re-ramp.
+            //
+            // What DID change (2026-08-06, competitor research — see
+            // PLAN.md): a pure rate-based pause (elevated spam/bounce %) used
+            // to fully isolate the account — zero sends, excluded as a
+            // pairing target too. That's the opposite of how Instantly/
+            // Smartlead/Mailreach actually handle a reputation dip: they
+            // keep warmup itself running (usually throttled), because
+            // real engagement — opens/replies/stars from a paired mailbox —
+            // IS the repair mechanism; going fully dark just leaves the
+            // account idle without doing anything to rebuild trust.
+            // "Authentication failed" and Spamhaus-DBL-listed pauses are
+            // different in kind (the mailbox is genuinely broken or actively
+            // harmful, not just going through a rough patch) and stay fully
+            // isolated exactly as before.
             const events7d = await fetchEventCounts(account.id, Date.now() - 7 * 86400_000);
             trace('after-events7d');
             const paused = !!account.warmup_paused;
+            const hardPaused = paused && isHardPauseReason(account.warmup_pause_reason);
+            const softPaused = paused && !hardPaused;
             const dayAdjustment = 0;
 
-            trace(`pause-check paused=${paused} alreadyRanToday=${alreadyRanToday}`);
-            if (paused || alreadyRanToday) {
+            trace(`pause-check paused=${paused} hard=${hardPaused} alreadyRanToday=${alreadyRanToday}`);
+            if (hardPaused || alreadyRanToday) {
               // Still compute health from existing signals so the dashboard stays live even
               // while paused/idle, but don't advance day or send anything.
               const health = computeHealthScore({
@@ -2252,6 +2284,69 @@ export async function register() {
                 bounce_rate: health.factors.bounceRate,
               }).eq('email', account.email).eq('date', today);
               trace('early-return: done');
+              return;
+            }
+
+            if (softPaused) {
+              // Trickle: one real warmup send per calendar day (not per 6h
+              // cycle — checked directly against warmup_emails rather than
+              // reusing warmup_last_run_date, since that field belongs to
+              // finalizeWarmupDay's day-advance/un-pause bookkeeping, which
+              // is deliberately NOT touched here — warmup_day and
+              // warmup_paused both stay exactly as an admin left them). Low
+              // enough to stay well under the account's own send-volume
+              // pause thresholds while still keeping real engagement (open/
+              // reply/star from a real paired partner) flowing — that's the
+              // actual reputation-repair mechanism, not sitting idle.
+              const todayStartUTC = new Date();
+              todayStartUTC.setUTCHours(0, 0, 0, 0);
+              const { count: trickleSentToday } = await supabase
+                .from('warmup_emails').select('id', { count: 'exact', head: true })
+                .eq('from_account_id', account.id).gte('sent_at', todayStartUTC.toISOString());
+              if (!trickleSentToday) {
+                const { pool, poolBalance } = poolForAccount(account, poolCtx);
+                const eligibleCandidates = pool.length
+                  ? (await Promise.all(pool.map(toPairingCandidate))).filter(c => {
+                      const fwd = `${account.id}→${c.id}`, rev = `${c.id}→${account.id}`;
+                      return !sentPairs.has(fwd) && !sentPairs.has(rev);
+                    })
+                  : [];
+                if (eligibleCandidates.length) {
+                  const fromCandidate = await toPairingCandidate(account);
+                  const picked = pickWarmupPartner(fromCandidate, eligibleCandidates, historyFor(account.id), poolBalance);
+                  const toAccount = picked ? accountsById.get(picked.id) : undefined;
+                  if (toAccount) {
+                    sentPairs.add(`${account.id}→${toAccount.id}`);
+                    const result = await performWarmupSend(account, toAccount);
+                    if (result.ok) {
+                      historyFor(account.id).set(toAccount.id, { lastSentAt: new Date().toISOString(), sendCount: (historyFor(account.id).get(toAccount.id)?.sendCount ?? 0) + 1 });
+                      await supabase.from('email_accounts').update({ sent_today: (account.sent_today ?? 0) + 1 }).eq('id', account.id);
+                    }
+                  }
+                }
+              }
+              trace('soft-pause: trickle attempted, still frozen at current day');
+              const health = computeHealthScore({
+                events: events7d, domainAuth: { spf: spfStatus, dkim: dkimStatus, dmarc: dmarcStatus },
+                consecutiveStableDays: account.consecutive_stable_days ?? 0, warmupDay: account.warmup_day ?? 0,
+                hasAuthErrorNow: false, isBlacklisted,
+              });
+              const trustFields = await computeTrustFields(account, health.score, isBlacklisted, 0);
+              await safeUpdateAccount(account.id, {
+                health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+                blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+                blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
+                domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+                last_health_calc_at: new Date().toISOString(),
+                ...trustFields,
+              });
+              await supabase.from('warmup_history').update({
+                health_score: health.score,
+                inbox_rate: health.factors.inboxRate,
+                spam_rate: health.factors.spamRate,
+                bounce_rate: health.factors.bounceRate,
+              }).eq('email', account.email).eq('date', today);
+              trace('soft-pause: done');
               return;
             }
 
