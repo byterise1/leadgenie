@@ -1,6 +1,6 @@
 # Lead Genie — Living Project Plan
 > **Rule**: Update this file after EVERY change. One edit to data/style/copy here means update every place it appears across all pages.
-> **Last updated**: 2026-07-13
+> **Last updated**: 2026-08-05
 
 ---
 
@@ -652,6 +652,49 @@ Gaps vs. competitor tools (Instantly/Smartlead-style): mailbox assignment is ran
 
 ---
 
+## 2026-07-31 — 50-mailbox Titan bulk-add resolved, bulk-add endpoint shipped, two real warmup bugs found+fixed
+
+**Bulk onboarding, done end-to-end.** The 50-mailbox/10-domain Titan rollout (blocked since 2026-07-27 on a Titan-side password/provisioning issue, see `[memory] project-deliverability-spam-investigation.md`) was retried after the user confirmed via Titan's own webmail that the password now works. All 49 remaining mailboxes passed real SMTP+IMAP verification (zero auth failures this time — confirms the earlier block really was Titan-side, not permanent). Hit a NEW blocker mid-batch: the single-mailbox `POST /api/email-accounts` route's `email_account_add` rate limit is only 10/hour/owner — real, but not the actual constraint for legitimate bulk onboarding. Found a complete, already-built fix sitting uncommitted from earlier work: `POST /api/email-accounts/bulk` (`app/api/email-accounts/bulk/route.ts` + `lib/account-verify.ts` + a `BulkForm` UI in `app/dashboard/email-accounts/page.tsx`) with its own `email_account_bulk_add: 100/hr` budget, plus a `checkRateLimit`/`recordRateLimitHit` split in `lib/rate-limit.ts` so failed/duplicate attempts stop burning the same budget as real successes. Committed + deployed (`36c92fd`), verified live on Railway before using it (pre-deploy test correctly 405'd). Used it with explicit 20s pacing between chunks per the user's request not to rush. **Result: 49/50 connected** (`caleb@`/`camila@byterisellc.online` were already connected from 2026-07-29). One exception left alone, not auto-fixed: `nathan@byterisellc.online` already exists but under `chrisavans321@gmail.com`, not the admin owner (`byterisellc@gmail.com`) the 30/20 split implies — flagged for the user, not silently reassigned (would touch a live mailbox).
+
+**Verified warmup/pairing/tracking/DNS actually work, not just assumed live** — manually triggered a full cycle (BullMQ `warmup` queue, `{manual:true}`) instead of waiting for the next 6h auto-cycle: all 50 sent real warmup emails, 33/50 paired with each other specifically (confirmed via `warmup_pairings`), SPF/DKIM/DMARC/MX all `pass` + blacklist `clean` for all 50 (real DNS lookups, domains already properly configured), and the open-tracking pixel showed real fetches (131/229 recent sends already had a genuine `opened_at` from the actual `/api/track/open` endpoint, not simulated).
+
+**Real bug #1 found and fixed (commit `096d57b`): brand-new accounts were getting falsely network-isolated within ~10-90 minutes of being connected.** User reported `sophia@`/`chloe@byterisellc.space` showing "isn't sending" — investigation traced it to the `instrumentation.ts` warmup worker's stale-account self-heal watchdog treating `warmup_last_run_date == null` as "stuck for a day" without checking account age, so it also caught accounts that are simply BRAND NEW and have never had their first cycle yet. This force-ran `finalizeWarmupDay` with zero real send/domain-auth data, computing an artificial health score (~11) that immediately tripped `shouldIsolateFromNetwork` (health<20) — before the account's real first send (which happens moments later in the same cycle and produces a normal, healthy ~29) ever had a chance to count. Once isolated, the 48h minimum-wait in `canRejoinNetwork` locks it there regardless of how healthy it becomes afterward. This wasn't limited to the new batch — `caleb@`/`nathan@`/`camila@byterisellc.online` (connected days earlier) showed the identical signature, meaning this has silently affected every new mailbox connection for days. **Fix**: gated the null-run-date branch on account age (`created_at` added to the query, only genuinely-aged accounts qualify as self-heal targets). **Remediated the existing damage**: cleared `network_isolated`/`network_isolation_reason`/`network_isolated_at`/`abuse_flag_count` on all 50 accounts caught by this bug, after confirming each one's real current health (29-50) and trust (27-51) were genuinely fine — none of it reflected an actual reputation problem.
+
+**Real bug #2 found and fixed in the same commit: resetting one account's warmup silently wiped OTHER accounts' send history.** `PATCH /api/warmup {resetWarmup:true}` deleted `warmup_emails` rows where the reset account was either the sender OR the recipient — the recipient-side rows belong to the OTHER account's own audit trail (and its dashboard's "last activity" detection), not the one being reset. This is what made `sophia@`/`chloe@`'s dashboard show a false "nothing sent" alarm even though they'd genuinely sent (their only pairing partner so far, a repeatedly-reset test account, had its own history wiped, taking their shared record with it). **Fix**: reset now only deletes the resetting account's own sent (`from_account_id`) rows.
+
+~~**Open, not yet acted on — a labeling/design question**~~ — resolved 2026-08-05, see below.
+
+Also confirmed: the admin "🧪 Test…" dropdown (`app/api/admin/warmup/simulate/route.ts`) is a working-as-intended admin-only diagnostic (injects a fake bounce/spam/auth-error to verify pause/recovery logic instantly) — inert unless clicked, not a bug.
+
+`npx tsc --noEmit` clean after every change this session. Temp scripts/logs holding the plaintext Titan password were deleted after use, same pattern as 2026-07-27.
+
+---
+
+## 2026-08-05 — Root-caused the mass spam-placement pause wave; closed out the remaining flagged warmup items
+
+User reported ~21 of the 50 new mailboxes auto-paused within days of onboarding, all citing 30-52% spam-placement over the trailing week. Investigated with real data before touching anything (per the project's evidence-first rule) rather than guessing.
+
+**Ruled out infrastructure first**: pulled live `spf_status/dkim_status/dmarc_status/mx_status/blacklist_status` for all 51 IMAP accounts — every single one `pass`/`clean`, paused and non-paused alike. Not a DNS/auth/blacklist problem. Also noticed the SAME elevated spam rate on `uaeshopify123@gmail.com` (Gmail, unrelated to the Titan batch, day 4: 67% inbox / 33% spam) — a completely different mailbox provider showing the same pattern at the same early-ramp stage is strong evidence the cause is something common to the SEND CONTENT itself, not per-domain infra.
+
+**Real root cause found in `instrumentation.ts`'s warmup-send code (both the original ping at ~line 1786 and every reply at ~line 1645): every warmup email's HTML body embedded two classic spam-filter red flags on 100% of sends:**
+1. A CSS-hidden, zero-font-size `<span>` wrapping the internal `--warmup-ping--` search marker (`display:none;font-size:0`) — this exact pattern (readable-looking text hidden from the viewer but present in the source) is a named heuristic in SpamAssassin-class filters (hidden/cloaked text), used to catch keyword-stuffing and phishing content. It's been in every warmup send since the marker was introduced.
+2. A 1×1 tracking-pixel `<img>` pointing at the platform's own `/api/track/open/{id}` — found to be **entirely non-functional dead weight**: the warmup-engage worker's `markRealOpen()` already calls that same endpoint directly, server-side, the moment native IMAP/Gmail state confirms real engagement (line ~1480). The `<img>` tag is never actually rendered/fetched by anything (these are mailbox-to-mailbox automated sends — no mail client ever opens them), so it added an external image reference to a shared, brand-new-looking domain on every send with zero tracking benefit.
+
+Both are content-level anti-patterns that look exactly like autogenerated bulk mail to any real spam filter — worse the newer/less-trusted the sending domain, which matches the data exactly (older accounts like `chrisavans321@gmail.com`/`ashley@byterisellc.com` mostly rode it out; the whole brand-new batch didn't).
+
+**Fix (same session)**: removed both from the HTML body in both send paths. The `--warmup-ping--` marker stays in the plain-text part only (already invisible to any client, since real clients render the html part) — IMAP `SEARCH BODY`/Gmail search match raw text across all MIME parts, so spam-folder/open detection is unaffected. `markRealOpen()`'s own direct fetch is untouched. `npx tsc --noEmit` clean.
+
+**Why the 21 paused accounts were deliberately NOT bulk-resumed today**: `shouldPause()`'s spam-rate check reads a rolling 7-day window of real `email_account_events` rows — resuming doesn't clear that history, and the fix only prevents *new* sends from tripping the same signal. Resuming right now would very likely re-trip the same >30% spam-rate pause within one 6h cycle (the trailing window is still dominated by pre-fix sends), while also burning the real cost of the resume's built-in 5-day ramp step-back for nothing. Recommended: let the fix run for a few days so clean post-fix sends dilute/age out the old flagged ones, then use the existing per-account "Resume" button in `/admin/warmup`.
+
+**Closed out the two remaining flagged items that were safe to act on** (zero real campaign data attached, confirmed by direct query before touching anything):
+- Deleted the zero-usage `allusnahk321@gmail.com` duplicate row (`b93e326c-...`, a personal self-signup with 0 sent_emails/campaign_leads/campaign_accounts/inbox_threads anywhere) via the same cascade the app's own `DELETE /api/email-accounts/[id]` route uses. The admin pool row (`ca40cf49-...`) is now the sole surviving identity for that mailbox.
+- Reassigned `nathan@byterisellc.online` from `chrisavans321@gmail.com` to the admin owner (`byterisellc@gmail.com`) — zero usage anywhere, straightforward `user_id` update. This makes the Titan batch's ownership split exactly 30/20 as originally intended (was 31/19 with nathan misplaced).
+- Fixed the "Pool Mode" label issue: `app/admin/warmup/page.tsx`'s Pool Mode column now shows a small "= Both (Shared Network is on)" note under any account set to "Admin Pool" whose `join_shared_network` is still on (the actual effective behavior, per `poolForAccount()` in `instrumentation.ts`) instead of implying a restriction that isn't real — no pairing behavior changed, display-only.
+
+**Elevated in severity, deliberately left untouched — needs your own review, not a pick made for you**: the `uaeshopify123@gmail.com` duplicate (`41cee467-...` vs `24ab154c-...`) turned out NOT to be inert test data like the other two. Direct query found both rows are actively used by real campaigns right now: `41cee467` has 10 `sent_emails` + is attached to 2 `campaign_accounts`; `24ab154c` has 57 `sent_emails` + is locked to 23 `campaign_leads` (the Smart Priority Engine's per-lead mailbox lock). Deleting or merging either would strip real send-history attribution and could break in-flight campaign sends for those 23 leads. Same physical mailbox is also effectively double-booked for real sending volume across two separate identities/rate limits at once — worth your attention beyond just the duplicate-row cleanup question.
+
+---
+
 ## 10. Pending / Future Items
 
 - [ ] Wire real Supabase data to accounts + templates (currently mock data in campaign wizard)
@@ -665,6 +708,8 @@ Gaps vs. competitor tools (Instantly/Smartlead-style): mailbox assignment is ran
 
 | Date | Change |
 |---|---|
+| 2026-08-05 | Root-caused mass spam-placement pause wave (hidden-text marker + dead tracking pixel in every warmup email); fixed allusnahk321 duplicate + nathan ownership + Pool Mode label; flagged uaeshopify123 duplicate as higher-severity (real campaign data on both rows) |
+| 2026-07-31 | 50-mailbox Titan bulk-add resolved (49/50 connected); bulk-add endpoint shipped+deployed; fixed false network-isolation of brand-new accounts + reset wiping other accounts' history |
 | 2026-06-06 | Initial plan created |
 | 2026-06-06 | Replaced SVG avatars with pravatar.cc real photos across all pages |
 | 2026-06-06 | Removed lightning bolt SVG from hero and CTA titles |

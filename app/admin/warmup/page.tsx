@@ -959,6 +959,19 @@ function AdminWarmupPageInner() {
                           <option value="user_to_user">User ↔ User</option>
                           <option value="both">Both</option>
                         </select>
+                        {/* "Admin Pool" only actually restricts pairing when
+                            Shared Network is opted out (poolForAccount in
+                            instrumentation.ts) — with it on (the default),
+                            this mode pairs with everyone, same as "Both".
+                            Surface that instead of letting the dropdown imply
+                            a restriction that isn't real. */}
+                        {/* This table is already filtered server-side to
+                            is_pool_account != true (see app/api/admin/warmup
+                            route.ts), so every row here is a non-pool
+                            account. */}
+                        {(a.warmup_pool_mode || 'admin_pool') === 'admin_pool' && a.join_shared_network !== false && (
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">= Both (Shared Network is on)</p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Toggle on={a.warmup_enabled} disabled={togglingId === a.id} onToggle={() => toggleWarmup(a.id, a.warmup_enabled)}/>
@@ -974,7 +987,7 @@ function AdminWarmupPageInner() {
           </div>
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <p className="text-xs text-gray-400 dark:text-gray-500">{filtered.length} account{filtered.length !== 1 ? 's' : ''} shown</p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">Pool Mode: Admin Pool = warms with platform accounts only · User ↔ User = warms with other users · Both = all accounts</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">Pool Mode: Admin Pool = platform accounts only (unless Shared Network is also on for that account, in which case it behaves like Both) · User ↔ User = warms with other users · Both = all accounts</p>
           </div>
         </div>
       </div>

@@ -1642,7 +1642,16 @@ export async function register() {
         try {
           await sendEmail(
             { id: toAcc.id, type: toAcc.type, email: toAcc.email, smtp_host: toAcc.smtp_host, smtp_port: toAcc.smtp_port, smtp_user: toAcc.smtp_user, smtp_pass: toAcc.smtp_pass },
-            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText.replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>` }
+            // Marker lives ONLY in the plain-text part (already invisible to
+            // any client that renders the html part, which is every real
+            // client) — a CSS-hidden zero-size span is a textbook spam/
+            // cloaking heuristic (SpamAssassin HIDDEN_TEXT-class rules) and
+            // was a real contributor to elevated spam-placement across the
+            // whole fleet, not just this batch (see PLAN.md 2026-08-05).
+            // IMAP/Gmail body search matches raw message text across all
+            // MIME parts, so dropping it from the html part doesn't break
+            // spam-folder/open detection below.
+            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText.replace(/\n/g, '<br>')}</p>` }
           );
           await logAccountEvent(fromAccountId, 'reply', { via: toAcc.email });
           await supabase.from('email_accounts').update({ reply_count: (fromAcc.reply_count ?? 0) + 1 }).eq('id', fromAccountId);
@@ -1772,20 +1781,30 @@ export async function register() {
       const { subject, body } = pair;
       try {
         // Insert first (like real campaign sends do with sent_emails) so the
-        // row's real id can be embedded in a genuine tracking pixel — the
-        // warmup-engage worker later fetches this same URL for real instead
-        // of just asserting "engaged" the moment it finds the message.
+        // row's real id is available for markRealOpen() below — that call
+        // fetches /api/track/open/{id} directly from the worker itself once
+        // native IMAP/Gmail state confirms real engagement; it was NEVER
+        // actually triggered by a pixel loading in a rendered client (these
+        // are mailbox-to-mailbox automated sends, nothing ever renders the
+        // html). So the <img> tag that used to be embedded in the email body
+        // served no tracking purpose at all — it was pure dead weight that
+        // added an external image reference to a shared third-party-looking
+        // domain on every single warmup email sent by the platform. Same for
+        // the CSS-hidden zero-size marker span: a textbook spam/cloaking
+        // heuristic. Both were real, code-level contributors to the elevated
+        // spam-placement rate across the whole fleet (confirmed via evidence:
+        // rate was elevated identically on brand-new Titan AND Gmail
+        // accounts alike, with SPF/DKIM/DMARC/MX/blacklist all clean — see
+        // PLAN.md 2026-08-05). Plain-text marker is untouched and still
+        // findable by IMAP/Gmail body search across all MIME parts.
         const { data: warmupEmail } = await supabase
           .from('warmup_emails')
           .insert({ from_account_id: account.id, to_account_id: toAccount.id, subject, body, sent_at: new Date().toISOString() })
           .select('id')
           .single();
-        const trackPixel = warmupEmail?.id
-          ? `<img src="${SITE_URL}/api/track/open/${warmupEmail.id}?w=1" width="1" height="1" alt="" border="0">`
-          : '';
         await sendEmail(
           { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p><span style="display:none;font-size:0">--warmup-ping--</span>${trackPixel}` }
+          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
         );
         const { data: priorHist } = await supabase.from('warmup_pairings').select('send_count').eq('from_account_id', account.id).eq('to_account_id', toAccount.id).maybeSingle();
         const newSendCount = (priorHist?.send_count ?? 0) + 1;
