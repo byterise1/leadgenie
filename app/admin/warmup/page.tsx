@@ -449,6 +449,37 @@ function AdminWarmupPageInner() {
     showToast(`${email} resumed — re-ramping at reduced volume`);
   };
 
+  // Paused accounts keep sending a real trickle + keep receiving engagement
+  // (see instrumentation.ts's soft-pause path) instead of going fully dark,
+  // and warmup_pause_reason recomputes live off real signals every cycle —
+  // so "Recovered — safe to Resume" only appears once the real trailing-7d
+  // rate has actually cleared the pause threshold. Only THOSE accounts are
+  // safe to bulk-resume in one click; an account still genuinely over
+  // threshold would likely just re-pause on its next cycle if resumed early,
+  // burning the day-step-back for nothing.
+  const recoveredAccounts = accounts.filter(a => a.warmup_paused && a.warmup_pause_reason?.startsWith('Recovered'));
+  const [resumingAll, setResumingAll] = useState(false);
+  const resumeAllRecovered = async () => {
+    if (!recoveredAccounts.length) return;
+    if (!confirm(`Resume ${recoveredAccounts.length} account(s) whose real signals have already cleared the pause threshold? Each restarts at reduced volume and re-ramps.`)) return;
+    setResumingAll(true);
+    for (const a of recoveredAccounts) {
+      setResumingId(a.id);
+      const res = await fetch('/api/admin/warmup', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: a.id, resume_paused: true }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const patch = { warmup_paused: false, warmup_pause_reason: null, warmup_day: d.warmup_day };
+        setAccounts(prev => prev.map(x => x.id === a.id ? { ...x, ...patch } : x));
+      }
+    }
+    setResumingId(null);
+    setResumingAll(false);
+    showToast(`Resumed ${recoveredAccounts.length} recovered account(s)`);
+  };
+
   const setPoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_pool_mode } : a));
     await fetch('/api/admin/warmup', {
@@ -696,7 +727,11 @@ function AdminWarmupPageInner() {
                         <p className="text-[10px] text-amber-600 font-bold">Pool account</p>
                         {a.warmup_paused && (
                           <>
-                            <span title={a.warmup_pause_reason || undefined} className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                            <span title={a.warmup_pause_reason || undefined} className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 cursor-help ${
+                              a.warmup_pause_reason?.startsWith('Recovered') ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {a.warmup_pause_reason?.startsWith('Recovered') ? 'Paused · Recovered' : 'Paused'}
+                            </span>
                             <button
                               onClick={() => resumePaused(a.id, a.email)}
                               disabled={resumingId === a.id}
@@ -779,7 +814,16 @@ function AdminWarmupPageInner() {
 
       {/* All Users' Accounts */}
       <div className="space-y-3">
-        <h2 className="text-sm font-bold text-gray-900 dark:text-white">User Warmup Accounts</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white">User Warmup Accounts</h2>
+          {recoveredAccounts.length > 0 && (
+            <button onClick={resumeAllRecovered} disabled={resumingAll}
+              title="Only accounts whose real trailing-7-day signals have already cleared the pause threshold"
+              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+              {resumingAll ? 'Resuming…' : `▶ Resume ${recoveredAccounts.length} Recovered`}
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 max-w-xs">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -857,7 +901,11 @@ function AdminWarmupPageInner() {
                         </span>
                         {a.warmup_paused && (
                           <>
-                            <span title={a.warmup_pause_reason || undefined} className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 bg-rose-50 text-rose-700 cursor-help">Paused</span>
+                            <span title={a.warmup_pause_reason || undefined} className={`ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 cursor-help ${
+                              a.warmup_pause_reason?.startsWith('Recovered') ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {a.warmup_pause_reason?.startsWith('Recovered') ? 'Paused · Recovered' : 'Paused'}
+                            </span>
                             <button
                               onClick={() => resumePaused(a.id, a.email)}
                               disabled={resumingId === a.id}
