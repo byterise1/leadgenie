@@ -720,6 +720,10 @@ User asked (after seeing the admin dashboard showing 35 of 57 accounts paused) w
 
 `npx tsc --noEmit` clean after every change. All commits deployed to Railway and confirmed Online before live-verification.
 
+**Same-day follow-up (commit `c69a689`): user reported the paused-accounts dashboard "still showing errors" — same spam % as before the throttle fix.** Checked with real data before responding: `dylan@byterisellc.online`'s trailing 7-day window right now is genuinely 11 spam / 29 sent = 38% (matches the displayed 39% almost exactly) — not stale display, real math. Explanation, confirmed via evidence not assumption: only ONE trickle send had gone out per paused account since the throttle fix deployed, because warmup only runs during business hours (07:00–21:00 UTC) and the fix landed ~19:57 UTC — under an hour of window that day, then none until the next business-hours cycle. The 7-day window is still ~97% pre-fix data; it mathematically cannot have moved yet. Real proof the root-cause content fix (`e52784e`) works: non-paused accounts already show 0–13% spam, down from 20–50%+.
+
+**Real gap found in the same investigation and fixed**: `warmup_pause_reason` was written once at the moment a pause first triggers and never updated again while paused — so even once the rate genuinely improves day by day, the admin would keep seeing the exact same frozen percentage forever with no way to tell. Fixed: the soft-pause branch now recomputes `shouldPause()` fresh off the same live event window every cycle and rewrites the reason text — still requires an admin's Resume click (`warmup_paused` itself untouched, sticky by design), but the text itself now tracks reality and flips to "Recovered — safe to Resume" the instant real signals clear the threshold. Live-verified: triggered a fresh cycle, `dylan@byterisellc.online`'s reason text moved from the original frozen "39%" to a freshly recomputed "38%", `last_health_calc_at` matched the trigger time exactly.
+
 ---
 
 ## 10. Pending / Future Items
