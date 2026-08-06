@@ -2123,7 +2123,7 @@ export async function register() {
         }
       }
 
-      const { detectProvider, computeHealthScore, dailySendCap, isWeekendUTC, WEEKEND_MULTIPLIER } = await import('./lib/warmup-health');
+      const { detectProvider, computeHealthScore, dailySendCap, isWeekendUTC, WEEKEND_MULTIPLIER, shouldPause } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
       const { pickWarmupPartner } = await import('./lib/warmup-pairing');
       const { checkBlacklists, AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
@@ -2340,12 +2340,27 @@ export async function register() {
                 hasAuthErrorNow: false, isBlacklisted,
               });
               const trustFields = await computeTrustFields(account, health.score, isBlacklisted, 0);
+              // warmup_paused itself stays true regardless (still needs an
+              // admin's Resume click — untouched, see above), but the
+              // REASON TEXT was previously frozen at whatever it said the
+              // moment the account first paused, forever, with no way to
+              // tell whether real progress was happening underneath. The
+              // trailing-7d spam/bounce rate this recomputes from is the
+              // exact same real signal window shouldPause() itself reads —
+              // recompute it fresh each cycle so the admin can actually see
+              // the rate coming down day by day (or know the moment it's
+              // safe to resume) instead of staring at a stale number.
+              const liveCheck = shouldPause(events7d, false, isBlacklistedAuthoritative);
+              const livePauseReason = liveCheck.pause
+                ? liveCheck.reason
+                : `Recovered — real signals now pass the pause threshold (were: ${account.warmup_pause_reason}). Safe to Resume.`;
               await safeUpdateAccount(account.id, {
                 health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
                 blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
                 blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
                 domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
                 last_health_calc_at: new Date().toISOString(),
+                warmup_pause_reason: livePauseReason,
                 ...trustFields,
               });
               await supabase.from('warmup_history').update({
