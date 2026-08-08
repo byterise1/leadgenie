@@ -2296,22 +2296,28 @@ export async function register() {
             }
 
             if (softPaused) {
-              // Trickle: one real warmup send per calendar day (not per 6h
-              // cycle — checked directly against warmup_emails rather than
-              // reusing warmup_last_run_date, since that field belongs to
-              // finalizeWarmupDay's day-advance/un-pause bookkeeping, which
-              // is deliberately NOT touched here — warmup_day and
-              // warmup_paused both stay exactly as an admin left them). Low
-              // enough to stay well under the account's own send-volume
-              // pause thresholds while still keeping real engagement (open/
+              // Trickle: up to trickleCapToday real warmup sends per calendar
+              // day (not per 6h cycle — checked directly against
+              // warmup_emails rather than reusing warmup_last_run_date, since
+              // that field belongs to finalizeWarmupDay's day-advance/un-pause
+              // bookkeeping, which is deliberately NOT touched here —
+              // warmup_day and warmup_paused both stay exactly as an admin
+              // left them). Capped well under the account's own full
+              // send-volume target while still keeping real engagement (open/
               // reply/star from a real paired partner) flowing — that's the
-              // actual reputation-repair mechanism, not sitting idle.
+              // actual reputation-repair mechanism, not sitting idle. Was
+              // hard-capped at 1/day, which meant the 7-day trailing pause
+              // window couldn't fully refresh with clean data for a week
+              // minimum even after the underlying cause was fixed — often
+              // reading as "stuck paused for weeks" in practice. Raised so
+              // genuine recovery shows up in days, not weeks.
               const todayStartUTC = new Date();
               todayStartUTC.setUTCHours(0, 0, 0, 0);
               const { count: trickleSentToday } = await supabase
                 .from('warmup_emails').select('id', { count: 'exact', head: true })
                 .eq('from_account_id', account.id).gte('sent_at', todayStartUTC.toISOString());
-              if (!trickleSentToday) {
+              const trickleCapToday = Math.max(1, Math.min(3, Math.floor((account.warmup_target ?? 10) * 0.3)));
+              if ((trickleSentToday ?? 0) < trickleCapToday) {
                 const { pool, poolBalance } = poolForAccount(account, poolCtx);
                 const eligibleCandidates = pool.length
                   ? (await Promise.all(pool.map(toPairingCandidate))).filter(c => {
@@ -2340,29 +2346,48 @@ export async function register() {
                 hasAuthErrorNow: false, isBlacklisted,
               });
               const trustFields = await computeTrustFields(account, health.score, isBlacklisted, 0);
-              // warmup_paused itself stays true regardless (still needs an
-              // admin's Resume click — untouched, see above), but the
-              // REASON TEXT was previously frozen at whatever it said the
-              // moment the account first paused, forever, with no way to
-              // tell whether real progress was happening underneath. The
-              // trailing-7d spam/bounce rate this recomputes from is the
+              // The trailing-7d spam/bounce rate this recomputes from is the
               // exact same real signal window shouldPause() itself reads —
-              // recompute it fresh each cycle so the admin can actually see
-              // the rate coming down day by day (or know the moment it's
-              // safe to resume) instead of staring at a stale number.
+              // recompute it fresh each cycle. Soft pauses (unlike hard
+              // auth/blacklist pauses) now auto-clear the instant real
+              // signals pass the same threshold that triggered the pause,
+              // instead of freezing until an admin notices a "Safe to
+              // Resume" badge and clicks it — that manual gate made sense
+              // for reviewing the ORIGINAL pause, but once recovery is
+              // already proven by real data, waiting on a human click just
+              // adds idle days for no safety benefit. Same reduced-volume
+              // re-ramp (day -5) the manual Resume endpoint uses, so it
+              // doesn't jump straight back to full volume.
               const liveCheck = shouldPause(events7d, false, isBlacklistedAuthoritative);
-              const livePauseReason = liveCheck.pause
-                ? liveCheck.reason
-                : `Recovered — real signals now pass the pause threshold (were: ${account.warmup_pause_reason}). Safe to Resume.`;
-              await safeUpdateAccount(account.id, {
-                health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
-                blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
-                blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
-                domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
-                last_health_calc_at: new Date().toISOString(),
-                warmup_pause_reason: livePauseReason,
-                ...trustFields,
-              });
+              if (!liveCheck.pause) {
+                await safeUpdateAccount(account.id, {
+                  health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+                  blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+                  blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
+                  domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+                  last_health_calc_at: new Date().toISOString(),
+                  warmup_paused: false,
+                  warmup_pause_reason: null,
+                  warmup_paused_at: null,
+                  warmup_day: Math.max(0, (account.warmup_day ?? 0) - 5),
+                  ...trustFields,
+                });
+                await supabase.from('notifications').insert({
+                  user_id: account.user_id,
+                  message: `${account.email} auto-resumed — real signals now pass the pause threshold, warmup restarting at reduced volume to rebuild reputation safely.`,
+                  type: 'info',
+                });
+              } else {
+                await safeUpdateAccount(account.id, {
+                  health_score: health.score, spf_status: spfStatus, dkim_status: dkimStatus, dmarc_status: dmarcStatus, mx_status: mxStatus,
+                  blacklist_status: blacklistStatus, blacklist_details: blacklistDetails,
+                  blacklist_checked_at: needsBlacklistCheck ? new Date().toISOString() : account.blacklist_checked_at,
+                  domain_checked_at: needsAuthCheck ? new Date().toISOString() : account.domain_checked_at,
+                  last_health_calc_at: new Date().toISOString(),
+                  warmup_pause_reason: liveCheck.reason,
+                  ...trustFields,
+                });
+              }
               await supabase.from('warmup_history').update({
                 health_score: health.score,
                 inbox_rate: health.factors.inboxRate,

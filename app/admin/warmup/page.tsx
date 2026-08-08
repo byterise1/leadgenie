@@ -449,37 +449,12 @@ function AdminWarmupPageInner() {
     showToast(`${email} resumed — re-ramping at reduced volume`);
   };
 
-  // Paused accounts keep sending a real trickle + keep receiving engagement
-  // (see instrumentation.ts's soft-pause path) instead of going fully dark,
-  // and warmup_pause_reason recomputes live off real signals every cycle —
-  // so "Recovered — safe to Resume" only appears once the real trailing-7d
-  // rate has actually cleared the pause threshold. Only THOSE accounts are
-  // safe to bulk-resume in one click; an account still genuinely over
-  // threshold would likely just re-pause on its next cycle if resumed early,
-  // burning the day-step-back for nothing.
-  const recoveredAccounts = accounts.filter(a => a.warmup_paused && a.warmup_pause_reason?.startsWith('Recovered'));
-  const [resumingAll, setResumingAll] = useState(false);
-  const resumeAllRecovered = async () => {
-    if (!recoveredAccounts.length) return;
-    if (!confirm(`Resume ${recoveredAccounts.length} account(s) whose real signals have already cleared the pause threshold? Each restarts at reduced volume and re-ramps.`)) return;
-    setResumingAll(true);
-    for (const a of recoveredAccounts) {
-      setResumingId(a.id);
-      const res = await fetch('/api/admin/warmup', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: a.id, resume_paused: true }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        const patch = { warmup_paused: false, warmup_pause_reason: null, warmup_day: d.warmup_day };
-        setAccounts(prev => prev.map(x => x.id === a.id ? { ...x, ...patch } : x));
-      }
-    }
-    setResumingId(null);
-    setResumingAll(false);
-    showToast(`Resumed ${recoveredAccounts.length} recovered account(s)`);
-  };
-
+  // Soft pauses (unlike hard auth/blacklist pauses) now auto-clear
+  // server-side the instant real trailing-7d signals pass the pause
+  // threshold — see instrumentation.ts's soft-pause path — so an account
+  // showing "Paused" here is always still genuinely over threshold. The
+  // manual Resume button below is an admin override, not a "recovered,
+  // safe to click" action.
   const setPoolMode = async (id: string, warmup_pool_mode: PoolMode) => {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, warmup_pool_mode } : a));
     await fetch('/api/admin/warmup', {
@@ -727,10 +702,8 @@ function AdminWarmupPageInner() {
                         <p className="text-[10px] text-amber-600 font-bold">Pool account</p>
                         {a.warmup_paused && (
                           <>
-                            <span title={a.warmup_pause_reason || undefined} className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 cursor-help ${
-                              a.warmup_pause_reason?.startsWith('Recovered') ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                            }`}>
-                              {a.warmup_pause_reason?.startsWith('Recovered') ? 'Paused · Recovered' : 'Paused'}
+                            <span title={a.warmup_pause_reason || undefined} className="text-[10px] font-bold rounded-full px-1.5 py-0.5 cursor-help bg-rose-50 text-rose-700">
+                              Paused
                             </span>
                             <button
                               onClick={() => resumePaused(a.id, a.email)}
@@ -816,13 +789,6 @@ function AdminWarmupPageInner() {
       <div className="space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white">User Warmup Accounts</h2>
-          {recoveredAccounts.length > 0 && (
-            <button onClick={resumeAllRecovered} disabled={resumingAll}
-              title="Only accounts whose real trailing-7-day signals have already cleared the pause threshold"
-              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors">
-              {resumingAll ? 'Resuming…' : `▶ Resume ${recoveredAccounts.length} Recovered`}
-            </button>
-          )}
         </div>
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 max-w-xs">
@@ -901,10 +867,8 @@ function AdminWarmupPageInner() {
                         </span>
                         {a.warmup_paused && (
                           <>
-                            <span title={a.warmup_pause_reason || undefined} className={`ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 cursor-help ${
-                              a.warmup_pause_reason?.startsWith('Recovered') ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                            }`}>
-                              {a.warmup_pause_reason?.startsWith('Recovered') ? 'Paused · Recovered' : 'Paused'}
+                            <span title={a.warmup_pause_reason || undefined} className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 cursor-help bg-rose-50 text-rose-700">
+                              Paused
                             </span>
                             <button
                               onClick={() => resumePaused(a.id, a.email)}
