@@ -258,3 +258,12 @@ export function isWeekendUTC(d: Date = new Date()): boolean {
 
 // Weekends are lighter, not fully dark — real people still check email occasionally.
 export const WEEKEND_MULTIPLIER = 0.35;
+
+// Suspended through the same WARMUP_SOFT_PAUSE_GRACE_UNTIL window (defined
+// below, next to shouldPause) — user asked on 2026-08-08 to specifically
+// test full-volume weekend sending during this 1-week observation window,
+// not just weekday behavior. Self-expiring together with the pause grace
+// window — both revert to normal on the same date with no extra code change.
+export function isWarmupWeekendThrottled(d: Date = new Date()): boolean {
+  return isWeekendUTC(d) && d.getTime() >= WARMUP_SOFT_PAUSE_GRACE_UNTIL.getTime();
+}

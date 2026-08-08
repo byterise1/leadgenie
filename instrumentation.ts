@@ -2123,7 +2123,7 @@ export async function register() {
         }
       }
 
-      const { detectProvider, computeHealthScore, dailySendCap, isWeekendUTC, WEEKEND_MULTIPLIER, shouldPause } = await import('./lib/warmup-health');
+      const { detectProvider, computeHealthScore, dailySendCap, isWarmupWeekendThrottled, WEEKEND_MULTIPLIER, shouldPause } = await import('./lib/warmup-health');
       const { checkDomainAuth } = await import('./lib/domain-health');
       const { pickWarmupPartner } = await import('./lib/warmup-pairing');
       const { checkBlacklists, AUTHORITATIVE_PAUSE_ZONE } = await import('./lib/blacklist-check');
@@ -2401,8 +2401,9 @@ export async function register() {
             const day = Math.max(0, (account.warmup_day ?? 0) + 1 + dayAdjustment);
             const provider = detectProvider(account);
             const priorHealth = account.health_score ?? 50;
-            const weekendFactor = isWeekendUTC() ? WEEKEND_MULTIPLIER : 1;
-            const emailsToday = Math.max(isWeekendUTC() ? 0 : 1, Math.round(
+            const weekendThrottled = isWarmupWeekendThrottled();
+            const weekendFactor = weekendThrottled ? WEEKEND_MULTIPLIER : 1;
+            const emailsToday = Math.max(weekendThrottled ? 0 : 1, Math.round(
               dailySendCap({ provider, warmupDay: day, health: priorHealth, domainAuthAllPass }) * weekendFactor
             ));
 
