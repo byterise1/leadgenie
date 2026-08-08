@@ -2407,6 +2407,24 @@ export async function register() {
               dailySendCap({ provider, warmupDay: day, health: priorHealth, domainAuthAllPass }) * weekendFactor
             ));
 
+            // Stamp warmup_last_run_date NOW, the moment today's send batch is
+            // decided — not only at the end via finalizeWarmupDay(), which for
+            // any account with emailsToday > 1 doesn't run until the LAST
+            // decoupled 'warmup-send' job fires, potentially hours from now
+            // (see the scheduling loop below). Until this stamp existed here,
+            // alreadyRanToday (computed at the top of this cycle from the same
+            // column) stayed stuck on YESTERDAY's date for that whole window —
+            // so every recurring cron pass that same day re-entered this exact
+            // block and scheduled ANOTHER full day's batch on top of the first,
+            // compounding with every cycle that ran before the day's real
+            // finalize. Real production impact, found via live warmup_history
+            // data: accounts were genuinely sending 1.5-3x their intended daily
+            // cap on affected days (e.g. a 14/day target account sending 23),
+            // which both wastes ramp budget and looks exactly like bulk
+            // automated mail to a spam filter. finalizeWarmupDay() still
+            // re-stamps this same value later — harmless, same date either way.
+            await supabase.from('email_accounts').update({ warmup_last_run_date: todayStr }).eq('id', account.id);
+
             // Domain/blacklist results are written NOW rather than only at the
             // very end of this account's processing — for a high-volume
             // account the rest of today's sends happen via decoupled jobs
