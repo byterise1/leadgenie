@@ -744,6 +744,16 @@ User asked to specifically test full-volume weekend sending too (normally `daily
 
 **How to apply for a future session**: through 2026-08-15, weekends get full normal send volume (no 0.35× cut) AND rate-based pausing stays suspended — both by explicit user request to stress-test the system for a full week including weekends. If investigating "why did this account send full volume on a Saturday" or "why didn't this pause despite high spam" before that date, check `WARMUP_SOFT_PAUSE_GRACE_UNTIL` in `lib/warmup-health.ts` first, not a bug.
 
+### Real bug: duplicate same-day send scheduling caused 1.5-3x over-volume — 2026-08-09, commit `40ed482`
+
+User pasted a per-day warmup history table and asked why it looked inconsistent, and specifically asked to check for "day 10, why 23 sent"-style anomalies across the fleet. That exact example turned out to be real: `caleb@byterisellc.online` genuinely sent 23 emails on day 10 against a 14/day target. A fleet-wide check found **40 day-rows across ~16 accounts** with the same pattern (1.5-3x the account's real daily cap), dating back to mid-July — predates and is independent of this week's other warmup changes.
+
+**Root cause**: `warmup_last_run_date` (the field that gates "has this account already run today") is only stamped inside `finalizeWarmupDay()`, which for any account sending more than 1/day doesn't run until the LAST decoupled `warmup-send` job fires — hours later, near the end of the business-hours window. Every recurring cron pass before that point saw a stale date, thought the account hadn't run yet, and scheduled an entire additional day's batch on top of the one already in flight.
+
+**Why it matters**: over-sending 1.5-3x the intended volume both burns ramp budget and looks exactly like bulk automated mail to a real spam filter — plausibly a real, previously-unidentified contributor to the platform's ongoing spam-placement issues, on top of the content-based cause already fixed in `e52784e`.
+
+**Fix**: stamp `warmup_last_run_date` immediately once the day's send batch is decided (right after computing `emailsToday`), not only at finalization. `npx tsc --noEmit` clean. Not yet re-verified live post-fix — check a few high-volume accounts' `emails_sent` vs their computed daily cap over the next few days.
+
 ---
 
 ## 10. Pending / Future Items
@@ -759,6 +769,7 @@ User asked to specifically test full-volume weekend sending too (normally `daily
 
 | Date | Change |
 |---|---|
+| 2026-08-09 | Fixed a real bug: duplicate same-day send scheduling caused accounts to send 1.5-3x their intended daily cap (warmup_last_run_date wasn't stamped until hours after the day's first send) — 40 affected day-rows across ~16 accounts found, predates this week's other changes, plausible spam-rate contributor |
 | 2026-08-08 | Soft pauses auto-clear on real recovery (no manual click) + trickle cap 1/day→3/day; temporary 1-week pause-suspension + weekend-throttle-suspension window through 2026-08-15 (user-requested full-volume system test); removed now-dead "Resume N Recovered" button/badge |
 | 2026-08-06 | Warmup pause now throttles (competitor-matched) instead of fully isolating rate-based pauses; fixed a live-verification-found sent_today reset bug; merged the uaeshopify123 duplicate (zero data lost); pool mode bulk-set to Both; removed admin Test button; full duplicate/pairing/fairness audit — all clean |
 | 2026-08-05 | Root-caused mass spam-placement pause wave (hidden-text marker + dead tracking pixel in every warmup email); fixed allusnahk321 duplicate + nathan ownership + Pool Mode label; flagged uaeshopify123 duplicate as higher-severity (real campaign data on both rows) |
