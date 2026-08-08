@@ -191,11 +191,23 @@ export function campaignDailyCap(opts: {
   return Math.round(caps.matureCap * Math.max(0.5, health / 100));
 }
 
+// Temporary observation window, requested explicitly by the user on
+// 2026-08-08: let every account run uninterrupted for a full week so the
+// real spam ratio and warmup progress can actually be read across the whole
+// fleet, instead of accounts dropping in and out of soft-pause mid-week and
+// muddying the read. Only suppresses the RATE-based (soft) pause below —
+// hard auth-failure/Spamhaus-DBL pauses are a "clear issue" tier the user
+// explicitly wants kept active even during this window. Self-expiring by
+// design — remove this block (and the check below) once past the date, or
+// extend the date if the user asks for more time.
+export const WARMUP_SOFT_PAUSE_GRACE_UNTIL = new Date('2026-08-15T00:00:00Z');
+
 export function shouldPause(events: EventCounts, hasAuthErrorNow: boolean, isBlacklistedAuthoritative?: boolean): { pause: boolean; reason: string | null } {
   if (hasAuthErrorNow) return { pause: true, reason: 'Authentication failed — mailbox credentials need attention.' };
   // Listed on the most authoritative zone (Spamhaus DBL) — actively harmful to
   // keep sending from, same priority tier as a hard auth failure.
   if (isBlacklistedAuthoritative) return { pause: true, reason: 'Domain is listed on Spamhaus DBL — paused until delisted.' };
+  if (Date.now() < WARMUP_SOFT_PAUSE_GRACE_UNTIL.getTime()) return { pause: false, reason: null };
   const sent = events.sent7d;
 
   if (sent >= 5) {
