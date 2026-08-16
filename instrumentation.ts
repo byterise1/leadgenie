@@ -1365,6 +1365,25 @@ export async function register() {
       };
     }
 
+    // What fraction of the (non-pool) warmup fleet is currently
+    // network_isolated — the circuit-breaker signal computeTrustFields uses
+    // below. A cheap COUNT query rather than threading a fleet snapshot
+    // through every call site (computeTrustFields is called from several
+    // different contexts — the main batch cycle, finalizeWarmupDay, the
+    // stale-account self-heal — not all of which have the full account list
+    // in scope). Re-queried fresh each call rather than cached for the
+    // cycle's duration: staleness here is exactly the wrong direction to
+    // fail in (a cached pre-outage 0% would keep isolating right through
+    // an active cascade).
+    async function getNetworkIsolatedFraction(): Promise<number> {
+      const { count: total } = await supabase.from('email_accounts')
+        .select('id', { count: 'exact', head: true }).eq('warmup_enabled', true).neq('is_pool_account', true);
+      if (!total) return 0;
+      const { count: isolated } = await supabase.from('email_accounts')
+        .select('id', { count: 'exact', head: true }).eq('warmup_enabled', true).neq('is_pool_account', true).eq('network_isolated', true);
+      return (isolated ?? 0) / total;
+    }
+
     // Trust Score + Automatic Abuse Detection + Reputation Protection
     // (lib/warmup-trust.ts). Returns the fields to merge into the caller's
     // own safeUpdateAccount() call — no separate DB write here, avoids
@@ -1413,14 +1432,34 @@ export async function register() {
       } else {
         const isolation = shouldIsolateFromNetwork({ trustScore, healthScore, isBlacklisted, abuseFlagCount });
         if (isolation.isolate) {
-          fields.network_isolated = true;
-          fields.network_isolation_reason = isolation.reason;
-          fields.network_isolated_at = new Date().toISOString();
-          await supabase.from('notifications').insert({
-            user_id: account.user_id,
-            message: `${account.email} isolated from the shared warmup network: ${isolation.reason}`,
-            type: 'warning',
-          });
+          // Circuit breaker — real incident 2026-08-13: a shared engagement-
+          // pipeline outage (warmup-send/warmup-engage stopped completing
+          // jobs) meant nobody's pings were getting opened/replied-to. Trust
+          // score and abuse-flag-count are BOTH downstream of that same
+          // pingsReceived7d/opensAsRecipient7d signal, so a systemic outage
+          // reads identically to "everyone is individually abusive" and one
+          // bad cycle mass-isolated the entire 52-account fleet at once. That
+          // then became permanent on its own: isolated accounts are excluded
+          // as pairing targets, so once isolation eats the whole pool nobody
+          // can send/engage to rebuild trust and rejoin — a closed loop with
+          // no way out. isBlacklisted and healthScore<20 are NOT gated here —
+          // both are legitimate regardless of network-wide engagement state
+          // (an objective external fact / a real per-account crash respectively).
+          const isEngagementDrivenReason = !isBlacklisted && healthScore >= 20;
+          const NETWORK_FAILURE_THRESHOLD = 0.25;
+          const isolatedFraction = await getNetworkIsolatedFraction();
+          if (isEngagementDrivenReason && isolatedFraction >= NETWORK_FAILURE_THRESHOLD) {
+            console.warn(`[warmup] Circuit breaker: NOT isolating ${account.email} (would-be reason: "${isolation.reason}") — ${Math.round(isolatedFraction * 100)}% of the network is already isolated, treating this as a systemic engagement-pipeline outage rather than individual abuse. Investigate warmup-send/warmup-engage queue health instead of letting isolation keep spreading.`);
+          } else {
+            fields.network_isolated = true;
+            fields.network_isolation_reason = isolation.reason;
+            fields.network_isolated_at = new Date().toISOString();
+            await supabase.from('notifications').insert({
+              user_id: account.user_id,
+              message: `${account.email} isolated from the shared warmup network: ${isolation.reason}`,
+              type: 'warning',
+            });
+          }
         }
       }
 
