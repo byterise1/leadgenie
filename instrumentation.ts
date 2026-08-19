@@ -1553,7 +1553,9 @@ export async function register() {
           catch { unreachable = true; }
 
           if (token) {
-          const messages = await gmailSearch(`"--warmup-ping--" from:${fromAcc.email} newer_than:2d`, token);
+          // Subject+sender search, not body-text search — see the IMAP branch
+          // below for why (same root cause, same fix, both providers).
+          const messages = await gmailSearch(`subject:"${subject}" from:${fromAcc.email} newer_than:2d`, token);
           for (const msg of messages.slice(0, 1)) {
             const detail = await gmailGet(`/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From,Subject`, token);
             if (!detail) continue;
@@ -1602,7 +1604,19 @@ export async function register() {
                 try {
                   const lock = await client.getMailboxLock(folder);
                   try {
-                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), body: '--warmup-ping--' }, { uid: true }) as number[];
+                    // subject+from, not body: — BODY search on Titan was already found
+                    // (2026-08-17) to miss messages that are demonstrably sitting right
+                    // there (6 real inbox messages found by hand, 0 body-search matches).
+                    // SUBJECT and FROM are plain header searches every IMAP server indexes
+                    // immediately, so they don't have this failure mode. Confirmed
+                    // 2026-08-19 that this same body-search is what was silently starving
+                    // the whole engage worker of "engaged" signal fleet-wide: 0 failed/
+                    // errored engage jobs, connect+search always "succeeding", yet zero
+                    // warmup_emails ever got opened_at set and ~all accounts were
+                    // accumulating "received pings but never engaged" abuse flags,
+                    // dragging trust scores toward zero (contained, not caused, by the
+                    // 08-16 isolation circuit breaker). See PLAN.md.
+                    const uids = await client.search({ since: new Date(Date.now() - 3 * 86400_000), subject, from: fromAcc.email }, { uid: true }) as number[];
                     if (uids?.length > 0) {
                       landedInSpam = true;
                       await client.messageMove(uids, 'INBOX', { uid: true });
@@ -1614,7 +1628,7 @@ export async function register() {
 
               const inboxLock = await client.getMailboxLock('INBOX');
               try {
-                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), body: '--warmup-ping--', seen: false }, { uid: true }) as number[];
+                const uids = await client.search({ since: new Date(Date.now() - 2 * 86400_000), subject, from: fromAcc.email, seen: false }, { uid: true }) as number[];
                 if (uids?.length > 0) {
                   await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true });
                   engaged = await markRealOpen();
