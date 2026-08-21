@@ -1704,7 +1704,7 @@ export async function register() {
             // IMAP/Gmail body search matches raw message text across all
             // MIME parts, so dropping it from the html part doesn't break
             // spam-folder/open detection below.
-            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText.replace(/\n/g, '<br>')}</p>` }
+            { from: toAcc.email, to: replyTarget.toEmail, subject: `Re: ${replyTarget.subject}`, text: `${replyText}\n--warmup-ping--`, html: `<p>${replyText.replace(/\n/g, '<br>')}</p>`, headers: { 'X-Warmup-Ping': '1' } }
           );
           await logAccountEvent(fromAccountId, 'reply', { via: toAcc.email });
           await supabase.from('email_accounts').update({ reply_count: (fromAcc.reply_count ?? 0) + 1 }).eq('id', fromAccountId);
@@ -1872,7 +1872,7 @@ export async function register() {
           .single();
         await sendEmail(
           { id: account.id, type: account.type, email: account.email, smtp_host: account.smtp_host, smtp_port: account.smtp_port, smtp_user: account.smtp_user, smtp_pass: account.smtp_pass },
-          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>` }
+          { from: account.email, to: toAccount.email, subject, text: `${body}\n--warmup-ping--`, html: `<p>${body.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`, headers: { 'X-Warmup-Ping': '1' } }
         );
         const { data: priorHist } = await supabase.from('warmup_pairings').select('send_count').eq('from_account_id', account.id).eq('to_account_id', toAccount.id).maybeSingle();
         const newSendCount = (priorHist?.send_count ?? 0) + 1;
@@ -2594,7 +2594,14 @@ export async function register() {
                 try {
                   const lock = await client.getMailboxLock(folder);
                   try {
-                    const uids = await client.search({ since: new Date(Date.now() - 5 * 86400_000), body: '--warmup-ping--' }, { uid: true }) as number[];
+                    // HEADER search, not body: — same fix as the 08-19 per-pair engage
+                    // searches (see above and PLAN.md). This sweep has no fixed pair to
+                    // key subject/from off since it checks EVERY sender at once, so ping
+                    // sends now stamp a dedicated X-Warmup-Ping header (see lib/mailer.ts
+                    // SendOptions.headers) that's reliably indexed on Titan, unlike BODY
+                    // full-text search. Pings sent before this shipped won't carry the
+                    // header and will age out of the 5-day window on their own.
+                    const uids = await client.search({ since: new Date(Date.now() - 5 * 86400_000), header: { 'x-warmup-ping': '1' } }, { uid: true }) as number[];
                     if (uids?.length > 0) {
                       await client.messageMove(uids, 'INBOX', { uid: true });
                       console.log(`[warmup-backstop] rescued ${uids.length} stragglers from spam: ${account.email}`);

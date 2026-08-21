@@ -74,6 +74,7 @@ type SendOptions = {
   gmailThreadId?: string;  // Gmail thread ID — forces follow-up into existing thread via API
   captureRealMessageId?: boolean; // gmail-oauth only: fetch the Message-ID Gmail actually assigned (it ignores our custom header) so later follow-ups' In-Reply-To matches what the recipient really received
   unsubscribeUrl?: string; // when set, adds RFC 8058 List-Unsubscribe / List-Unsubscribe-Post headers (Gmail/Yahoo bulk-sender requirement — a body link alone isn't enough)
+  headers?: Record<string, string>; // arbitrary extra headers (e.g. X-Warmup-Ping) — reliably searchable via IMAP HEADER search, unlike BODY full-text search
 };
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
@@ -222,6 +223,9 @@ async function sendViaGmailApi(account: EmailAccount, opts: SendOptions): Promis
   if (opts.unsubscribeUrl) {
     headers.push(`List-Unsubscribe: <${opts.unsubscribeUrl}>`);
     headers.push(`List-Unsubscribe-Post: List-Unsubscribe=One-Click`);
+  }
+  if (opts.headers) {
+    for (const [k, v] of Object.entries(opts.headers)) headers.push(`${k}: ${v}`);
   }
   headers.push('');
 
